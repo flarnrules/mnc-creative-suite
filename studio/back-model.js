@@ -1,7 +1,6 @@
 'use strict';
 
 globalThis.MNC_BACKS = (() => {
-  const logoFilename='movie_night_club_logo_july_2023_square.png';
   const blends=['source-over','multiply','screen','overlay','soft-light'];
   const defaults={
     background:'#171a22',backgroundTo:'#293348',fill:'solid',angle:45,gradientMidpoint:'',
@@ -42,11 +41,11 @@ globalThis.MNC_BACKS = (() => {
     return layer;
   }
 
-  function newDesign(preset,id,assets=[],uploadedId='') {
+  function newDesign(preset,id,uploadedId='') {
     const design={...defaults,id,name:'Blank back',layers:[]};
     if(preset==='blank')return design;
     Object.assign(design,{
-      name:preset==='uploaded'?'Uploaded back':'MNC logo back',
+      name:preset==='uploaded'?'Uploaded back':'Standard MNC back',
       fill:'gradient',background:'#202f43',backgroundTo:'#151727',angle:Math.atan2(1050,750)*180/Math.PI,
       gradientMidpoint:'#1c2134',
       pattern:'rings',patternColor:'#c9b27f',patternOpacity:.08,patternSpacing:26,
@@ -56,16 +55,9 @@ globalThis.MNC_BACKS = (() => {
       design.layers.push({...newLayer('image','L-001'),name:'Uploaded artwork',assetId:uploadedId,w:86.7,h:90.5,fit:'cover'});
       return design;
     }
-    const logo=assets.find(asset=>asset.originalFilename===logoFilename);
-    if(logo){
-      design.layers.push(
-        {...newLayer('shape','L-001'),name:'Logo plate',color:'#f7f5ec',y:46.86,w:54.67,h:39.05},
-        {...newLayer('image','L-002'),name:'MNC logo',assetId:logo.id,y:46.86,w:52,h:37.14}
-      );
-    }
     design.layers.push(
-      {...newLayer('text','L-003'),name:'Club name',text:'MOVIE NIGHT CLUB',font:'system',size:33,y:73.6,h:7,color:'#efd39a'},
-      {...newLayer('text','L-004'),name:'Tagline',text:'COLLECT · PLAY · ARCHIVE',font:'system',size:18,y:77.7,h:5,color:'#efd39a'}
+      {...newLayer('text','L-001'),name:'Club name',text:'Movie\nNight\nClub',size:116,y:39,w:78,h:43,color:'#efd39a'},
+      {...newLayer('text','L-002'),name:'Game title',text:'Trading\nCard\nGame',size:61,y:71,w:78,h:23,color:'#efd39a'}
     );
     return design;
   }

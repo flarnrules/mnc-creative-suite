@@ -83,7 +83,7 @@
     if(state.backMode==='designed'&&active)return 'Shared back in use · '+backs.name(active);
     if(state.backMode==='calibration')return 'Print mode · Calibration numbers';
     if(state.backMode==='custom'&&state.customBack)return 'Shared back in use · Uploaded image';
-    return 'Shared back in use · Original MNC logo';
+    return 'Shared back in use · Standard MNC back';
   }
 
   function updateActiveStatus() {
@@ -210,7 +210,7 @@
 
   function createDesign(preset) {
     remember();
-    const design=backs.newDesign(preset,uniqueId('BACK-',state.backDesigns),state.assets,
+    const design=backs.newDesign(preset,uniqueId('BACK-',state.backDesigns),
       preset==='uploaded'?uploadedArtwork():'');
     design.name=uniqueName(design.name);
     state.backDesigns.push(design);
@@ -314,7 +314,7 @@
     changed();
   };
   $('backStartBlank').onclick=()=>createDesign('blank');
-  $('backStartLogo').onclick=()=>createDesign('logo');
+  $('backStartLogo').onclick=()=>createDesign('standard');
   $('backStartUpload').onclick=()=>createDesign('uploaded');
   $('backUse').onclick=()=>{const design=editDesign();if(design)useDesign(design);};
   $('backPreviewPrint').onclick=()=>{
