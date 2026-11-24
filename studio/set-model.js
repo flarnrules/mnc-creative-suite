@@ -2,7 +2,7 @@
 
 globalThis.MNC_SET_PLAN = (() => {
   const definitions = [
-    {id:'critic',name:'Critics',family:'Critic',target:9,glyph:'📰',choices:['📰','🗣','💬']},
+    {id:'critic',name:'Critics',family:'Critic',target:9,glyph:'🎤',choices:['🎤','📰','🗣','💬']},
     {id:'movie',name:'Films',family:'Movie',target:9,glyph:'🎞',choices:['🎞','🎥','🎬']},
     {id:'hero',name:'Heroes',family:'Character',category:'Hero',target:11,glyph:'⚔',choices:['⚔','🛡']},
     {id:'villain',name:'Villains',family:'Character',category:'Villain',target:11,glyph:'🦹',choices:['🦹','☠','😈','👹','🎯'],builtin:'villain'},

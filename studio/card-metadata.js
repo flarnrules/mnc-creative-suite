@@ -12,7 +12,7 @@ globalThis.MNC_CARD_METADATA = (() => {
     ['Villain',12],['Hero',12],['Creature',12],['Redshirt',8],['Sidekick',6],
     ['Critic',9],['Movie',20],['Item',21]
   ];
-  const familyIcons={Character:'♟',Critic:'💬',Movie:'🎬',Member:'👤',Item:'◆',
+  const familyIcons={Character:'♟',Critic:'🎤',Movie:'🎬',Member:'👤',Item:'◆',
     Archive:'▤',Meme:'💬',Moment:'◷',Location:'⌖',Byline:'✎',Award:'🏆',Reaction:'💬',Artifact:'◆'};
   const codePattern=/^[A-Z0-9][A-Z0-9-]{0,11}$/;
 

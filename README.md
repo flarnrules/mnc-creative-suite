@@ -1,6 +1,6 @@
 # MNC Creative Suite for GitHub Pages
 
-This browser build uses Creative Suite v0.9.13.2. It opens with demo artwork and a sample card. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+The browser edition opens to **Current Designs** with demo artwork and a sample card in the workspace. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
 
 ## Publish from your GitHub account
 
@@ -30,11 +30,12 @@ In **Card Designer**, set **Role / family** to **Item**. Choose **Meme items** (
 
 In an existing Pages checkout, copy the contents of this folder into the repository root, commit them, and push to the branch you use for Pages.
 
-## Send a card back
+## Make and share a card
 
-1. Open **Artwork** and import your image. Choose **Use on card** to use it on the sample or **New card** to start another.
-2. Edit the card. The browser stores your changes locally.
-3. Choose **Project & Backup → Export project JSON** and send that file for further editing. Import the JSON into a separate review project so it can be opened alongside your main collection.
+1. In **Current Designs**, choose a card type to start with its colors, glyph, and layout.
+2. Add a title in **Card Designer**. Import a picture in **Artwork** and choose **Use on selected card**.
+3. Your edits save in this browser. Use **Saved cards** to reopen a design, **New card** to start fresh, or **Duplicate card** to copy the current design. Reusable layouts live under **Art & look → Layout presets**.
+4. Use **Export PNG** for an image. To share editable cards and their artwork, send the file from **Project & Backup → Export project JSON**. Import the JSON into a separate review project so it can be opened alongside your main collection.
 
 ## Run a local preview
 

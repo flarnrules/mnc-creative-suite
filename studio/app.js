@@ -8,6 +8,7 @@ const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':
 const ascii=s=>String(s||'').normalize('NFKD').replace(/[^\x20-\x7e]/g,'?');
 const slug=s=>String(s||'file').replace(/[^a-z0-9_-]+/gi,'_').slice(0,70);
 const storageKey = 'mnc-creative-suite-friend-v1:' + new URL('./', location.href).pathname;
+const cardSelectionKey=storageKey+':active-card';
 const projectVersion=9;
 const catalog = window.MNC_CATALOG;
 const game = window.MNC_GAME;
@@ -71,13 +72,14 @@ function restoreProject(saved) {
   return next;
 }
 let state=getDefaults();
+let savedCardId='';
 try {
   const saved=localStorage.getItem(storageKey)||localStorage.getItem('mnc-creative-suite-v08')||localStorage.getItem('mnc-creative-suite-v07')||localStorage.getItem('mnc-creative-suite-v05')||localStorage.getItem('mnc-creative-suite-v04')||localStorage.getItem('mnc-card-lab-v03');
   if(saved) state=restoreProject(JSON.parse(saved));
+  savedCardId=localStorage.getItem(cardSelectionKey)||'';
 } catch(error) {console.warn('Could not read autosave',error);}
-let currentId=state.cards.find(c=>c.id===game.ashman.id)?.id||state.cards.find(inWorkingCatalog)?.id||state.cards[0]?.id||null;
-let activeTab='studio';
-let currentImageForNewCard=null;
+let currentId=state.cards.find(c=>c.id===savedCardId)?.id||state.cards.find(c=>c.id===game.ashman.id)?.id||state.cards.find(inWorkingCatalog)?.id||state.cards[0]?.id||null;
+let activeTab='visualLanguage';
 const fallbackImageData=window.MNC_IMAGE_DATA||{};
 const imageCache=new Map();
 const imageSizes=new Map();
@@ -86,19 +88,26 @@ function cardById(id){return id?state.cards.find(x=>x.id===id):undefined}
 function assetURI(a){if(!a)return ''; if(a.dataURI)return a.dataURI;const key=a.file?.split('/').pop().split('-')[0];return a.file||fallbackImageData[key]}
 function imgLoad(uri){if(!uri)return Promise.resolve(null);if(imageCache.has(uri))return imageCache.get(uri);const promise=new Promise(resolve=>{let im=new Image();im.onload=()=>{imageSizes.set(uri,{w:im.naturalWidth||im.width,h:im.naturalHeight||im.height});resolve(im);};im.onerror=()=>resolve(null);im.src=uri;});imageCache.set(uri,promise);return promise}
 let saveTimer=null;
+function cardSaveStatus(message) {
+  const status=$('cardSaveStatus');
+  if(status.textContent!==message)status.textContent=message;
+}
 function writeAutosave() {
   clearTimeout(saveTimer);
   saveTimer=null;
   try {
     localStorage.setItem(storageKey,JSON.stringify(state));
+    cardSaveStatus('Saved in this browser');
     if(!window.MNC_DISK?.connected)$('saveStatus').textContent='Project saved in this browser.';
   } catch(error) {
+    cardSaveStatus('Couldn’t save in this browser. Export a project backup.');
     if(!window.MNC_DISK?.connected)$('saveStatus').textContent='Browser storage is full or unavailable. Export a project JSON to keep your edits.';
   }
   window.MNC_DISK?.save();
 }
 function persist() {
   clearTimeout(saveTimer);
+  cardSaveStatus('Saving…');
   saveTimer=setTimeout(writeAutosave,250);
 }
 function editCardFields(card,fields) {
@@ -116,7 +125,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&saveTimer!
 function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}
 function downloadText(text,name,mime='text/plain'){dl(new Blob([text],{type:mime}),name)}
 function canvasPNG(cv,name){cv.toBlob(blob=>{if(blob)dl(blob,name)},'image/png')}
-function tab(name){
+function tab(name,options){
   if(activeTab==='layoutDesigner'&&name!=='layoutDesigner')window.MNC_closeLayoutTrace?.();
   activeTab=name;
   document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===name));
@@ -136,7 +145,7 @@ function tab(name){
   if(name==='shapes')window.MNC_refreshShapeDesigner?.();
   if(name==='mirror')window.MNC_refreshMirrorFinish?.();
   if(name==='setDesigner')window.MNC_refreshSetDesigner?.();
-  if(name==='visualLanguage')window.MNC_refreshVisualLanguage?.();
+  if(name==='visualLanguage')window.MNC_refreshVisualLanguage?.(options);
   if(name==='typeDesigner')window.MNC_refreshTypeDesigner?.();
   if(name==='data')renderSummary();
   window.MNC_tabChanged?.(name);
@@ -176,8 +185,7 @@ const presetAppearanceFields=[
 ];
 
 function saveDesignPreset(c,{defaultName,name:enteredName}={}) {
-  const selected=state.templates.find(t=>t.id===$('layoutPresets').value);
-  const name=(enteredName??prompt('Name this design preset:',defaultName||selected?.name||'MNC artwork-first'))?.trim();
+  const name=(enteredName??prompt('Name this layout preset:',defaultName||(c.title||'Untitled')+' layout'))?.trim();
   if(!name)return;
   const existing=state.templates.find(t=>t.name.toLowerCase()===name.toLowerCase());
   if(existing&&!confirm('Replace the design preset “'+existing.name+'”?'))return;
@@ -199,7 +207,7 @@ function saveDesignPreset(c,{defaultName,name:enteredName}={}) {
   else state.templates.push(template);
   renderTemplateOptions(template.id);
   persist();
-  $('presetStatus').textContent='Saved '+name+'.';
+  $('presetStatus').textContent='Saved layout preset “'+name+'”.';
   return template;
 }
 
@@ -268,8 +276,8 @@ function attachListeners(){
  $('assetSearch').oninput=renderLibrary;$('assetFilter').onchange=renderLibrary;
  $('newArtwork').addEventListener('change', async e=>{const fs=[...e.target.files];await importImages(fs);e.target.value=''});
  $('cardSearch').oninput=renderCardList; $('cardScope').onchange=renderCardList;
- $('addCard').onclick=()=>createCard(currentImageForNewCard,$('newRole').value);
- $('cloneCard').onclick=()=>{let c=deep(cardById(currentId));if(!c)return;c.id=uniqueId(game.isGameCard(c)?'MNC-LX':'MNC-P',state.cards);c.title+=' [variant]';if(game.isGameCard(c)||catalogCard(c)||MNC_CARD_METADATA.isPromo(c,collectionFor(c))){c.collectorNumber='';c.releaseReady=false;}for(const key of ['catalogId','catalogUnlisted','catalogStatus','collectionId','classification','conceptId','catalogEdits','catalogSource'])delete c[key];state.cards.push(c);currentId=c.id;persist();refreshAll()};
+ $('addCard').onclick=()=>openCardDesigns();
+ $('cloneCard').onclick=duplicateCard;
  $('saveCardPNG').onclick=async()=>{
    const c=cardById(currentId);
    if(!c)return;
@@ -324,7 +332,7 @@ function attachListeners(){
      persist();
      if(['family','template'].includes(key))refreshStudio();
      else {
-       if(key==='title')window.MNC_syncTypeIcon?.(c);
+       if(key==='title'){setPreviewTitle(c);window.MNC_syncTypeIcon?.(c);}
        window.MNC_updateCatalogCardLabel?.(c);drawStudioPreview();renderCardList();
      }
    });
@@ -391,7 +399,7 @@ async function importImages(files) {
       const stored=disk?.connected&&/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name)
         ? await disk.upload(file,file.name,'art'):null;
       if(stored){
-        imported.push(stored.id);currentImageForNewCard=stored.id;
+        imported.push(stored.id);
         continue;
       }
       const uri=await fileToData(file);
@@ -400,7 +408,7 @@ async function importImages(files) {
       state.assets.push({id,title:file.name.replace(/\.[^.]+$/,''),file:'',dataURI:uri,originalFilename:file.name,
         kind:file.type==='image/gif'?'Animation':'Imported artwork',credit:'Unverified - assign before release',
         source:'Browser import',reviewStatus:'candidate',accent:'#d6af80',w:image?.width||0,h:image?.height||0});
-      imported.push(id);currentImageForNewCard=id;
+      imported.push(id);
     }catch(error){alert('Could not import '+file.name+': '+error.message);}
   }
   persist();refreshAll();
@@ -431,45 +439,81 @@ function renderLibrary() {
     const actions=document.createElement('div');
     actions.className='asset-actions';
     const use=document.createElement('button');
-    use.textContent='Use on card';
+    use.textContent='Use on selected card';
     use.onclick=()=>{
       const c=cardById(currentId);
-      if(!c){createCard(asset.id,$('newRole').value);return;}
+      if(!c){openCardDesigns(asset.id);return;}
       setCardArtwork(c,asset.id);
       persist();tab('studio');
     };
     const create=document.createElement('button');
-    create.textContent='New card';
-    create.onclick=()=>createCard(asset.id,$('newRole').value);
+    create.textContent='New card with this art';
+    create.onclick=()=>openCardDesigns(asset.id);
     actions.append(use,create);info.append(actions);tile.append(thumb,info);grid.append(tile);
   }
 }
-function createCard(assetId, family='Character') {
+function openCardDesigns(assetId='') {
+  tab('visualLanguage',{assetId});
+  $('currentDesignsTitle').focus({preventScroll:true});
+}
+
+function cardDraft(assetId,family='Character',profile) {
   const asset=artById(assetId);
   const gameplay=Object.hasOwn(game.roles,family);
   const card={
-    id:uniqueId(gameplay?'MNC-LX':'MNC-P',state.cards), title:asset?.title||'Untitled',
+    title:asset?.title||'Untitled',
     family, parentFamily:family==='Critic'?'Member':null, rarity:'Unassigned',rarityGlyph:'·',symbols:'',
     sourceAssetId:asset?.id||'',artworkFilename:asset?catalog.filenameFor(asset):'',artist:'',lore:'',sourceRef:asset?'Asset: '+asset.originalFilename:'',
     edition:'2026 Preview',set:game.release,fit:'cover',zoom:1,panX:0,panY:0,
     typeSymbolMode:'standard',collectionSymbolMode:'standard',
-    template:family==='Movie'?'Standard':'Full Art',artworkProfile:'standard',accent:asset?.accent||'#bbac8b',
+    template:family==='Movie'?'Standard':family==='Archive'?'Archive':'Full Art',artworkProfile:'standard',accent:asset?.accent||'#bbac8b',
     titlePosition:[.075,.075],creditPosition:[.07,.958],microPosition:[.93,.958],
     showStats:false,gameData:{},tags:[],foilRecipe:{mode:'None',strength:.45,scale:1,angle:0,mask:'whole'}
   };
   if(gameplay)Object.assign(card,game.newFields(family));
-  applyTypeDesignPreset(card);
+  if(profile)Object.assign(card,{
+    characterCategory:profile.category||'',characterType:profile.type||'',roleSubtype:profile.subtype||''
+  });
+  applyTypeDesignPreset(card,profile?.id);
   if(asset?.id===game.ashArt.id){
     for(const field of ['artist','artistFirst','artistLast','sourceRef','episode','picker','fit','zoom','panX','panY'])card[field]=game.ashman[field];
   }
+  return card;
+}
+
+function openNewCard(card) {
   state.cards.push(card);
   currentId=card.id;
   $('cardSearch').value='';
-  $('cardScope').value=gameplay?'game':'all';
+  $('cardScope').value='all';
+  $('rightPane').scrollTop=0;
   persist();
   refreshAll();
   tab('studio');
+  window.MNC_editCardSection?.('content');
+  $('c_title').focus({preventScroll:true});
+  $('c_title').select();
   return card;
+}
+
+function createCard(assetId,family='Character',profile) {
+  const card=cardDraft(assetId,family,profile);
+  card.id=uniqueId(game.role(card)?'MNC-LX':'MNC-P',state.cards);
+  return openNewCard(card);
+}
+
+function duplicateCard() {
+  const source=cardById(currentId);
+  if(!source)return;
+  const card=deep(source);
+  card.id=uniqueId(game.isGameCard(card)?'MNC-LX':'MNC-P',state.cards);
+  card.title=(source.title||'Untitled')+' (copy)';
+  if(game.isGameCard(card)||catalogCard(card)||MNC_CARD_METADATA.isPromo(card,collectionFor(card))){
+    card.collectorNumber='';
+    card.releaseReady=false;
+  }
+  for(const key of ['catalogId','catalogUnlisted','catalogStatus','collectionId','classification','conceptId','catalogEdits','catalogSource'])delete card[key];
+  return openNewCard(card);
 }
 function refreshAssetsFilter(){let current=$('assetFilter').value;dropDownOptions($('assetFilter'),[['','All artwork types'],...Array.from(new Set(state.assets.map(a=>a.kind))).sort().map(t=>[t,t])],current)}
 function renderCardList() {
@@ -501,15 +545,52 @@ function renderCardList() {
 function renderTemplateOptions(selected=$('layoutPresets').value){
  const presets=state.templates.map(t=>[t.id,t.name]);
  const value=presets.some(([id])=>id===selected)?selected:'';
- dropDownOptions($('layoutPresets'),[['','Choose a preset'],...presets],value);
+ dropDownOptions($('layoutPresets'),[['',presets.length?'Choose a saved layout':'No saved layouts yet'],...presets],value);
+ $('layoutPresets').disabled=!presets.length;
  $('applyTemplate').disabled=!value||!cardById(currentId);
 }
-function refreshStudio(){const c=cardById(currentId);for(const id of ['cloneCard','saveCardPNG','openCardView'])$(id).disabled=!c;renderCardList();if(!c){studioFrame++;$('activeCardTitle').textContent='No card selected';$('cardPreview').getContext('2d').clearRect(0,0,CW,CH);return;}$('activeCardTitle').textContent=`${c.catalogId||c.id} · ${c.title}`;for(let k of ['title','family','rarity','symbols','artist','lore','template','fit','zoom','panX','panY'])$('c_'+k).value=c[k]??'';$('c_accent').value=/^#[0-9a-fA-F]{6}$/.test(c.accent)?c.accent:'#c3a470';$('c_tags').value=(c.tags||[]).join(', ');$('c_showStats').checked=!!c.showStats;if(typeof window.MNC_refreshLayers==='function')window.MNC_refreshLayers();for(let k of ['presence','influence','chaos','hp','attack','defense'])$('c_'+k).value=c.gameData?.[k]??0;dropDownOptions($('c_asset'),[['','Choose artwork'],...state.assets.map(a=>[a.id,a.title+' ['+a.id+']'])],c.sourceAssetId||'');dropDownOptions($('c_overlayAssetId'),[['','No overlay'],...state.assets.map(a=>[a.id,a.title])],c.overlayAssetId||'');$('c_overlayOpacity').value=c.overlayOpacity??.8;renderTemplateOptions();drawStudioPreview()}
+function setPreviewTitle(card) {
+  const label=$('activeCardTitle');
+  label.textContent=card?.title||(card?'Untitled':'No card selected');
+  label.title=card?(card.catalogId||card.id)+' · '+label.textContent:'';
+}
+function refreshStudio(){
+  const c=cardById(currentId);
+  const pane=$('rightPane'), cardId=c?.id||'';
+  const switched=pane.dataset.cardId!==cardId;
+  pane.dataset.cardId=cardId;
+  if(switched)$('presetStatus').textContent='';
+  for(const id of ['cloneCard','saveCardPNG','openCardView','cardEditLayout'])$(id).disabled=!c;
+  pane.hidden=$('cardPreview').hidden=!c;
+  $('cardPreviewEmpty').hidden=!!c;
+  renderCardList();
+  setPreviewTitle(c);
+  renderTemplateOptions(switched?'':undefined);
+  if(!c){
+    studioFrame++;
+    $('cardPreview').getContext('2d').clearRect(0,0,CW,CH);
+    return;
+  }
+  if(activeTab==='studio'&&savedCardId!==c.id){
+    savedCardId=c.id;
+    try{localStorage.setItem(cardSelectionKey,savedCardId);}catch{}
+  }
+  for(const key of ['title','family','rarity','symbols','artist','lore','template','fit','zoom','panX','panY'])$('c_'+key).value=c[key]??'';
+  $('c_accent').value=/^#[0-9a-fA-F]{6}$/.test(c.accent)?c.accent:'#c3a470';
+  $('c_tags').value=(c.tags||[]).join(', ');
+  $('c_showStats').checked=!!c.showStats;
+  window.MNC_refreshLayers?.();
+  for(const key of ['presence','influence','chaos','hp','attack','defense'])$('c_'+key).value=c.gameData?.[key]??0;
+  dropDownOptions($('c_asset'),[['','Choose artwork'],...state.assets.map(a=>[a.id,a.title+' ['+a.id+']'])],c.sourceAssetId||'');
+  dropDownOptions($('c_overlayAssetId'),[['','No overlay'],...state.assets.map(a=>[a.id,a.title])],c.overlayAssetId||'');
+  $('c_overlayOpacity').value=c.overlayOpacity??.8;
+  drawStudioPreview();
+}
 function refreshFoilCardOptions(){dropDownOptions($('foilCard'),state.cards.map(c=>[c.id,c.title+' ['+c.id+']']),currentId);populateFoil()}
 function readFoil(){return {mode:$('foilMode').value,mask:$('foilMask').value,strength:+$('foilStrength').value,scale:+$('foilScale').value,angle:+$('foilAngle').value,textureAssetId:cardById($('foilCard').value)?.foilRecipe?.textureAssetId||''}}
 function populateFoil(){let c=cardById($('foilCard').value);let r=c?.foilRecipe||{};$('foilMode').value=r.mode||'None';$('foilMask').value=r.mask||'whole';$('foilStrength').value=r.strength??.45;$('foilScale').value=r.scale??1;$('foilAngle').value=r.angle??0}
 function renderSummary(){window.MNC_showCatalogStatus?.();let p=state;$('projectSummary').innerHTML=`<div><b>${p.assets.length}</b><small>Images / GIFs</small></div><div><b>${p.cards.length}</b><small>Card designs</small></div><div><b>${p.sheets.reduce((n,s)=>n+s.slots.filter(id=>cardById(id)).length,0)}</b><small>Queued print slots</small></div>`}
-function refreshAll(){refreshAssetsFilter();renderLibrary();refreshStudio();refreshFoilCardOptions();renderFoil();renderSheets();renderSummary();if(activeTab==='backs')window.MNC_refreshBackDesigner?.();if(activeTab==='layoutDesigner')window.MNC_refreshLayoutDesigner?.();}
+function refreshAll(){refreshAssetsFilter();renderLibrary();refreshStudio();refreshFoilCardOptions();renderFoil();renderSheets();renderSummary();if(activeTab==='backs')window.MNC_refreshBackDesigner?.();if(activeTab==='layoutDesigner')window.MNC_refreshLayoutDesigner?.();if(activeTab==='visualLanguage')window.MNC_refreshDesigns?.();}
 /* Shared canvas rendering for the designers, labs, and exports. */
 function cardCutRadius(c){
  const radius=Number(c.cutRadius??38);

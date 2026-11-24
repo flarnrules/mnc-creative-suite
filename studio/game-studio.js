@@ -662,7 +662,7 @@
   function openCard(c) {
     currentId=c.id;
     $('cardSearch').value='';
-    $('cardScope').value=inWorkingCatalog(c)?'game':'all';
+    $('cardScope').value='all';
     tab('studio');
   }
 

@@ -641,10 +641,7 @@
     }
     input(host,'Symbol size (px)',front.values(card)[size]??29,(c,value)=>{front.editable(c)[size]=value||0;},
       {type:'number',min:0,max:200});
-    action(host,'Edit shared symbol',()=>{
-      if(id)$('symbolProfile').value=id;
-      tab('visualLanguage');
-    });
+    action(host,'Edit shared symbol',()=>window.MNC_openTypeStandard(id));
   }
 
   function borderFields(card){

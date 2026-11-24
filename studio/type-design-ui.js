@@ -149,7 +149,7 @@
     else layout.showCharacterSubtype=value==='true';
     changed();
   };
-  $('typeOpenSymbols').onclick=()=>{$('symbolProfile').value=$('typeDesignProfile').value;tab('visualLanguage');};
+  $('typeOpenSymbols').onclick=()=>window.MNC_openTypeStandard($('typeDesignProfile').value);
   $('typeOpenCard').onclick=()=>{
     const id=$('typePreviewCard').value||state.cards.find(card=>model.matching(card,$('typeDesignProfile').value))?.id;
     if(id)window.MNC_openStudioCard(cardById(id));else $('typeDesignStatus').textContent='Create or link a named card in Set Designer first.';

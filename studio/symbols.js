@@ -23,12 +23,18 @@ globalThis.MNC_SYMBOLS = (() => {
 
   function restore(project) {
     const prior=project.visualLanguage||{};
-    project.visualLanguage={version:1,profiles:Object.fromEntries(
-      [...MNC_SET_PLAN.definitions,...MNC_SET_PLAN.auxiliaries].map(profile=>[
-        profile.id,{symbol:normalize(prior.profiles?.[profile.id]?.symbol,profile.id),
-          presetId:String(prior.profiles?.[profile.id]?.presetId||''),
-          placement:globalThis.MNC_FRONT?MNC_FRONT.settings(prior.profiles?.[profile.id]?.placement):{offsets:{},text:{}}}
-      ]))};
+    const previousCritic={...defaults('critic'),glyph:'📰'};
+    project.visualLanguage={version:2,profiles:Object.fromEntries(
+      [...MNC_SET_PLAN.definitions,...MNC_SET_PLAN.auxiliaries].map(({id})=>{
+        const value=prior.profiles?.[id];
+        const symbol=normalize(value?.symbol,id);
+        // Update the original default in existing saves and retain customized standards.
+        if(id==='critic'&&(prior.version??1)<2&&Object.entries(previousCritic).every(([key,value])=>symbol[key]===value)){
+          symbol.glyph=defaults(id).glyph;
+        }
+        return [id,{symbol,presetId:String(value?.presetId||''),
+          placement:globalThis.MNC_FRONT?MNC_FRONT.settings(value?.placement):{offsets:{},text:{}}}];
+      }))};
     for(const card of project.cards){
       if(card.typeSymbol)card.typeSymbol=normalize(card.typeSymbol,MNC_SET_PLAN.profileFor(card));
       if(card.collectionSymbol)card.collectionSymbol=normalize(card.collectionSymbol,'collection');

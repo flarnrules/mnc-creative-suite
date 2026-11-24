@@ -3,10 +3,10 @@
 <title>MNC Creative Suite · 0.9.13.2</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="layout-designer.css"><link rel="stylesheet" href="workspace.css"></head>
 <body>
 <header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.13.2</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
-<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="studio">Card Designer</button>
+<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="visualLanguage">Current Designs</button>
+<button type="button" data-tab="studio">Card Designer</button>
 <button type="button" data-tab="layoutDesigner">Layout Designer</button>
 <button type="button" data-tab="setDesigner">Set Designer</button>
-<button type="button" data-tab="visualLanguage">Visual language</button>
 <button type="button" data-tab="typeDesigner">Type Designer</button>
 <button type="button" data-tab="shapes">Shape Designer</button>
 <button type="button" data-tab="mirror">Mirror Finish</button>
@@ -151,82 +151,103 @@
   </div>
 </section>
 
-<section class="page" id="visualLanguage">
+<section class="page active" id="visualLanguage" aria-labelledby="currentDesignsTitle">
   <div class="sectionhead">
-    <div><h2>Visual language</h2><p>Symbols and standard designs for the set.</p></div>
-    <div class="buttonbar"><button id="symbolRefresh" type="button">Refresh glyph folder</button><button id="symbolExportChart" type="button">Export chart PNG</button></div>
+    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Choose a card type to start with its colors, glyph, and layout.</p></div>
+    <div class="buttonbar">
+      <button id="openSavedCards" type="button" data-tab="studio">Open saved cards</button>
+      <button id="toggleDesignStandards" type="button" aria-controls="designStandards" aria-expanded="false">Edit type standards</button>
+    </div>
   </div>
-  <div class="symbols-workspace tool-workspace">
+  <div id="designGallery" class="tool-scroll">
+    <p id="designArtworkNote" class="status-line" hidden></p>
+    <p class="design-palette-key">Swatches show accent, background, and border.</p>
+    <div id="designChoices"></div>
+    <button id="createArchiveCard" type="button">New archive card</button>
+  </div>
+  <div id="designStandards" class="symbols-workspace tool-workspace" hidden>
     <div class="panel symbol-chart" id="symbolChart"></div>
     <div class="panel symbol-editor">
-      <label class="label">Standard<select id="symbolProfile"></select></label>
+      <label class="label">Type or mark<select id="symbolProfile"></select></label>
       <div class="symbol-context-window" id="symbolContextWindow">
+        <h3>Glyph preview</h3>
         <p id="symbolContextLocation" class="status-line"></p>
         <label class="label">Preview card<select id="symbolContextCard"></select></label>
-        <label class="label" id="symbolPreviewModeRow" hidden>Placement preview
+        <label class="label" id="symbolPreviewModeRow" hidden>Preview style
           <select id="symbolPreviewMode">
             <option value="standard">Selected standard</option>
             <option value="card">Card’s saved glyph and placement</option>
           </select>
         </label>
         <div class="symbol-context-canvases">
-          <canvas id="symbolContextMini" width="250" height="350" tabindex="0" aria-label="Full card and glyph outline"></canvas>
-          <canvas id="symbolContextSection" width="600" height="378" tabindex="0" aria-label="Close-up of the rendered glyph"></canvas>
+          <figure><canvas id="symbolContextMini" width="250" height="350" tabindex="0" aria-label="Full card and glyph outline"></canvas><figcaption>Full card</figcaption></figure>
+          <figure><canvas id="symbolContextSection" width="600" height="378" tabindex="0" aria-label="Close-up of the rendered glyph"></canvas><figcaption>Glyph close-up</figcaption></figure>
         </div>
         <div id="symbolPlacementTools">
-          <p class="status-line">Drag the glyph in either preview. Arrow keys move it 1 px. Hold Shift to move it 10 px.</p>
+          <p class="status-line">Drag the outlined glyph to move it.</p>
           <label class="label">Glyph size <output id="symbolPlacementSizeLabel"></output><input id="symbolPlacementSize" type="range" min="0" max="250" step="1"></label>
-          <div class="three">
-            <label class="label">Size (px)<input id="symbolPlacementSizeNumber" type="number" min="0" max="250" step="1"></label>
-            <label class="label">Left / right (px)<input id="symbolPlacementX" type="number" min="-750" max="750" step="1"></label>
-            <label class="label">Up / down (px)<input id="symbolPlacementY" type="number" min="-1050" max="1050" step="1"></label>
-          </div>
-          <div class="symbol-move-pad" role="group" aria-label="Move glyph">
-            <button id="symbolMoveLeft" type="button">Left</button>
-            <button id="symbolMoveUp" type="button">Up</button>
-            <button id="symbolMoveDown" type="button">Down</button>
-            <button id="symbolMoveRight" type="button">Right</button>
-            <button id="symbolPlacementReset" type="button">Reset</button>
-          </div>
-          <div class="buttonbar">
-            <button id="symbolPlacementCard" type="button">Use glyph and placement on card</button>
-            <button id="symbolPlacementType" type="button">Use placement for type</button>
-          </div>
+          <details class="inspector-subsection">
+            <summary>Position and apply</summary>
+            <div class="three">
+              <label class="label">Size (px)<input id="symbolPlacementSizeNumber" type="number" min="0" max="250" step="1"></label>
+              <label class="label">Left / right (px)<input id="symbolPlacementX" type="number" min="-750" max="750" step="1"></label>
+              <label class="label">Up / down (px)<input id="symbolPlacementY" type="number" min="-1050" max="1050" step="1"></label>
+            </div>
+            <div class="symbol-move-pad" role="group" aria-label="Move glyph">
+              <button id="symbolMoveLeft" type="button">Left</button>
+              <button id="symbolMoveUp" type="button">Up</button>
+              <button id="symbolMoveDown" type="button">Down</button>
+              <button id="symbolMoveRight" type="button">Right</button>
+              <button id="symbolPlacementReset" type="button">Reset</button>
+            </div>
+            <p class="status-line">Focus a preview and use arrow keys to move 1 px or Shift and an arrow key to move 10 px.</p>
+            <div class="buttonbar">
+              <button id="symbolPlacementCard" type="button">Apply glyph to preview card</button>
+              <button id="symbolPlacementType" type="button">Use placement for type</button>
+            </div>
+          </details>
         </div>
         <p id="symbolContextStatus" class="status-line" role="status"></p>
       </div>
-      <details class="panel-section"><summary>Glyph-only preview</summary><div class="symbol-large"><canvas id="symbolLarge" width="512" height="512" aria-label="Selected symbol"></canvas></div></details>
-      <div class="pair">
-        <label class="label">Source<select id="symbolSource"><option value="text">Font symbol</option><option value="image">PNG glyph</option><option value="builtin">Drawn type glyph</option><option value="hidden">Hidden</option></select></label>
-        <label class="label">Icon background<select id="symbolBackdrop"><option value="none">None</option><option value="circle">Circle</option></select></label>
-      </div>
+      <label class="label">Glyph source<select id="symbolSource"><option value="text">Text or emoji</option><option value="image">PNG image</option><option value="builtin">Drawn type glyph</option><option value="hidden">Hidden</option></select></label>
       <div id="symbolTextFields">
-        <label class="label">Symbol<input id="symbolGlyph" maxlength="32"></label>
+        <label class="label">Glyph<input id="symbolGlyph" maxlength="32"></label>
         <div id="symbolCandidates" class="buttonbar"></div>
-        <div class="pair">
-          <label class="label">Font<select id="symbolFont"></select></label>
-          <label class="label">Presentation<select id="symbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label>
-        </div>
-        <p id="symbolFontStatus" class="status-line" role="status"></p>
-        <div class="font-comparison"><figure><canvas id="symbolSegoe" width="180" height="130" aria-label="Segoe UI Symbol comparison"></canvas><figcaption>Segoe UI Symbol</figcaption></figure><figure><canvas id="symbolTimes" width="180" height="130" aria-label="Times New Roman comparison"></canvas><figcaption>Times New Roman</figcaption></figure></div>
-        <button id="symbolFreeze" type="button">Save this appearance as a 512 px PNG</button>
+        <details class="panel-section">
+          <summary>Font and presentation</summary>
+          <div class="pair">
+            <label class="label">Font<select id="symbolFont"></select></label>
+            <label class="label">Presentation<select id="symbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label>
+          </div>
+          <p id="symbolFontStatus" class="status-line" role="status"></p>
+          <div class="font-comparison"><figure><canvas id="symbolSegoe" width="180" height="130" aria-label="Segoe UI Symbol comparison"></canvas><figcaption>Segoe UI Symbol</figcaption></figure><figure><canvas id="symbolTimes" width="180" height="130" aria-label="Times New Roman comparison"></canvas><figcaption>Times New Roman</figcaption></figure></div>
+          <button id="symbolFreeze" type="button">Save glyph as PNG</button>
+        </details>
       </div>
       <div id="symbolImageFields" hidden>
         <label class="label">Glyph image<select id="symbolAsset"></select></label>
-        <div class="pair">
+        <div class="buttonbar"><label class="file-label secondary">Upload PNG<input id="symbolUpload" type="file" accept="image/png,.png"></label><button id="symbolFindDrawing" type="button">Find matching drawing</button></div>
+        <details class="panel-section">
+          <summary>Image appearance</summary>
           <label class="label">Image style<select id="symbolImageMode"><option value="tint">Single ink silhouette</option><option value="original">Original image</option></select></label>
           <label class="toggle"><input id="symbolRemoveWhite" type="checkbox" checked> Clear white background</label>
-        </div>
+        </details>
       </div>
-      <div class="pair">
+      <p id="symbolStatus" class="status-line" role="status"></p>
+      <details class="panel-section">
+        <summary>Glyph ink and background</summary>
+        <label class="label">Icon background<select id="symbolBackdrop"><option value="none">None</option><option value="circle">Circle</option></select></label>
         <label class="label">Ink<select id="symbolInkMode"><option value="auto">Use card text color</option><option value="custom">Custom</option></select></label>
         <label class="label" id="symbolColorRow" hidden>Custom ink<input id="symbolColor" type="color" value="#000000"></label>
-      </div>
-      <div class="buttonbar"><label class="file-label secondary">Upload PNG<input id="symbolUpload" type="file" accept="image/png,.png"></label><button id="symbolFindDrawing" type="button">Find matching drawing</button></div>
-      <p id="symbolStatus" class="status-line" role="status"></p>
-      <label class="label">Saved design for this standard<select id="symbolPreset"></select></label>
-      <div class="buttonbar"><button id="symbolSaveDesign" type="button">Save selected card as standard</button><button id="symbolApplyDesign" type="button">Apply standard to selected card</button></div>
-      <p id="symbolDesignStatus" class="status-line" role="status"></p>
+        <div class="symbol-large"><canvas id="symbolLarge" width="512" height="512" aria-label="Selected glyph on its own"></canvas></div>
+      </details>
+      <details class="panel-section">
+        <summary>Layout and chart tools</summary>
+        <label class="label">Saved layout for this type<select id="symbolPreset"></select></label>
+        <div class="buttonbar"><button id="symbolSaveDesign" type="button">Save selected card as standard</button><button id="symbolApplyDesign" type="button">Apply standard to selected card</button></div>
+        <p id="symbolDesignStatus" class="status-line" role="status"></p>
+        <div class="buttonbar"><button id="symbolRefresh" type="button">Refresh glyph folder</button><button id="symbolExportChart" type="button">Export chart PNG</button></div>
+      </details>
     </div>
   </div>
 </section>
@@ -247,19 +268,38 @@
     <div id="assetGrid" class="asset-grid"></div>
   </div>
 </section>
-<section class="page active" id="studio"><div class="sectionhead"><div><h2>Card Designer</h2></div><div class="buttonbar"><select id="newRole" aria-label="New card role"><option>Character</option><option>Critic</option><option>Item</option><option>Movie</option><option>Archive</option></select><button id="addCard">New card</button><button id="cloneCard">Duplicate</button><button id="saveCardPNG" class="accent-btn">Export PNG</button></div></div>
-<div class="workspace tool-workspace">
-<aside class="panel leftPane"><label class="label">Find card<input id="cardSearch" placeholder="Name, ID, family..."></label><label class="label">Show<select id="cardScope"><option value="game">Catalog &amp; game cards</option><option value="all">All designs</option><option value="archive">Legacy layouts</option></select></label><div id="cardList" class="card-list"></div></aside>
-<div class="preview-pane panel"><div class="previewheading"><span id="activeCardTitle">Card preview</span><div class="buttonbar"><button type="button" data-tab="layoutDesigner">Edit layout</button><button id="openCardView">Open Card View</button></div></div><div class="canvas-frame"><canvas id="cardPreview" width="750" height="1050" aria-label="Rendered trading card preview"></canvas></div><div class="preset-tools">
-  <div class="buttonbar"><select id="layoutPresets" aria-label="Saved design presets"></select><button id="applyTemplate" disabled>Apply</button><button id="saveTemplate">Save preset</button></div>
-  <p id="presetStatus" class="muted tiny" role="status"></p>
+<section class="page" id="studio" aria-labelledby="cardDesignerTitle">
+<div class="sectionhead card-designer-heading">
+  <h2 id="cardDesignerTitle">Card Designer</h2>
+  <div class="card-actions">
+    <p id="cardSaveStatus" role="status">Edits save in this browser.</p>
+    <div class="buttonbar">
+      <button id="addCard" class="accent-btn" type="button">New card</button>
+      <button id="cloneCard" type="button">Duplicate card</button>
+      <button id="saveCardPNG" type="button">Export PNG</button>
+    </div>
+  </div>
 </div>
-<div class="buttonbar center"><button id="resetTextPositions">Reset text positions</button><button id="useArt">Artwork library</button><button data-tab="backs">Edit card back</button><button id="pngBack">Export back PNG</button></div><p class="muted tiny">2.5 × 3.5 in · 750 × 1050 px</p>
-<details class="design-comparison" id="legacyVariants"><summary>Legacy layout comparisons</summary>
- <div class="previewheading"><h3>Explore three card treatments</h3><button id="refreshVariants">Refresh variants</button></div>
- <div id="variantsGrid" class="variants-grid"></div>
-
-</details></div>
+<div class="workspace tool-workspace">
+<aside class="panel leftPane" aria-labelledby="savedCardsTitle">
+  <h3 id="savedCardsTitle">Saved cards</h3>
+  <label class="label">Find card<input id="cardSearch" placeholder="Name, ID, family..."></label>
+  <label class="label">Show<select id="cardScope"><option value="all">All cards</option><option value="game">Catalog &amp; game cards</option><option value="archive">Legacy layouts</option></select></label>
+  <div id="cardList" class="card-list"></div>
+</aside>
+<div class="preview-pane panel">
+  <div class="canvas-frame">
+    <canvas id="cardPreview" width="750" height="1050" aria-label="Rendered trading card preview"></canvas>
+    <p id="cardPreviewEmpty" class="muted" hidden>Choose a saved card or start a new one.</p>
+  </div>
+  <div class="card-preview-bar">
+    <span id="activeCardTitle">Card preview</span>
+    <div class="buttonbar">
+      <button id="cardEditLayout" type="button" data-tab="layoutDesigner">Edit layout</button>
+      <button id="openCardView" type="button">Front &amp; back</button>
+    </div>
+  </div>
+</div>
 <aside id="rightPane" class="panel rightPane"><label class="label">Title<input id="c_title"></label><div class="pair"><label class="label">Role / family<select id="c_family"><option>Character</option><option>Movie</option><option>Member</option><option>Critic</option><option>Meme</option><option>Item</option><option>Archive</option><option>Moment</option><option>Location</option><option>Byline</option><option>Award</option><option>Reaction</option><option>Artifact</option></select></label><label class="label">Rarity<select id="c_rarity"><option>Unassigned</option><option>Common</option><option>Uncommon</option><option>Rare</option><option>Ultra Rare</option><option>Special</option></select></label></div>
 <p id="catalogCardStatus" class="muted tiny catalog-card-status" hidden></p>
 <div id="cardItemSetControls" hidden>
@@ -269,7 +309,6 @@
   </div>
   <p id="cardItemSetStatus" class="status-line" role="status"></p>
 </div>
-<div class="standard-strip"><span id="cardStandardName"></span><button id="cardApplyStandard" type="button">Use standard</button><button id="cardEditStandard" type="button">Edit standard</button></div>
 <div class="inspector-tabs" role="group" aria-label="Card controls"><button type="button" data-edit-section="content">Content</button><button type="button" data-edit-section="attributes">Attributes</button><button type="button" data-edit-section="art">Art &amp; look</button><button type="button" data-edit-section="symbols">Symbols</button><button type="button" data-edit-section="footer">Footer</button></div>
 <div class="buttonbar inspector-shortcuts">
   <button id="jumpRules" type="button">Rules</button><button id="jumpHeader" type="button">Type icon</button>
@@ -325,11 +364,27 @@
   </div>
   <label class="label" id="roleSubtypeControl">Card subtype<input id="roleSubtype" maxlength="36" placeholder="Weapon, Shield, Meme"></label>
   <div id="customTypeIcon" hidden></div>
-  <div class="buttonbar"><button id="cardSymbolToChart" type="button">Open visual language chart</button><label class="file-label secondary">Upload glyph<input id="cardSymbolUpload" type="file" accept="image/png,.png"></label></div>
+  <div class="buttonbar"><button id="cardSymbolToChart" type="button">Edit shared symbols</button><label class="file-label secondary">Upload glyph<input id="cardSymbolUpload" type="file" accept="image/png,.png"></label></div>
+</details>
+<details id="cardLayoutPresets" class="panel-section">
+  <summary>Layout presets</summary>
+  <p class="muted">Reuse a card’s colors, formatting, and layout layers.</p>
+  <label class="label">Saved layout<select id="layoutPresets"></select></label>
+  <div class="buttonbar">
+    <button id="applyTemplate" type="button" disabled>Apply layout to this card</button>
+    <button id="saveTemplate" type="button">Save as layout preset</button>
+  </div>
+  <p id="presetStatus" class="status-line" role="status"></p>
+  <div class="standard-strip">
+    <span id="cardStandardName"></span>
+    <button id="cardApplyStandard" type="button">Apply type standard</button>
+    <button id="cardEditStandard" type="button">Edit type standard</button>
+  </div>
 </details>
 <details id="cardLook" class="panel-section">
   <summary>Look &amp; colors</summary>
-  <label class="label">Layout<select id="c_template"><option>Game Frame</option><option>Game Full Art</option><option>Standard</option><option>Full Art</option><option>Archive</option><option>Minimal</option><option>Glitch</option></select></label>
+  <label class="label">Base layout<select id="c_template"><option>Game Frame</option><option>Game Full Art</option><option>Standard</option><option>Full Art</option><option>Archive</option><option>Minimal</option><option>Glitch</option></select></label>
+  <div class="buttonbar"><button id="useArt" type="button">Browse artwork</button><button id="resetTextPositions" type="button">Reset text positions</button></div>
   <div id="cardColors">
     <label class="label" id="surfaceControl">Surface<select id="surface"><option value="ink">Ink</option><option value="slate">Soft slate</option><option value="paper">Paper</option><option value="midnight">Midnight</option></select></label>
     <label class="label" id="filmThemeControl">Cinematic finish<select id="mncFilmTheme"><option value="classic">Legacy Standard</option><option value="projection">Projection Booth — navy / brass</option><option value="contact">Contact Sheet — parchment / olive</option><option value="matinee">Midnight Matinée — petrol / wine</option></select></label>
@@ -344,6 +399,11 @@
     </details>
   </div>
   <label class="label">PNG corner radius <output id="cutRadiusValue">38 px</output><input id="cutRadius" type="range" min="0" max="80" step="1" value="38"></label>
+  <details class="design-comparison" id="legacyVariants">
+    <summary>Legacy layout comparisons</summary>
+    <div class="buttonbar"><button id="refreshVariants" type="button">Refresh variants</button></div>
+    <div id="variantsGrid" class="variants-grid"></div>
+  </details>
 </details>
 <details class="panel-section" id="gameCredit">
   <summary>Footer</summary>
@@ -507,7 +567,13 @@
 <div class="buttonbar"><button id="layerDuplicate">Duplicate</button><button id="layerDelete">Delete</button></div>
 </div></div>
 <div class="disclosure"><details><summary>Advanced data · optional and not displayed by default</summary><div class="three"><label class="label">Presence<input id="c_presence" type="number" min="0"></label><label class="label">Influence<input id="c_influence" type="number" min="0"></label><label class="label">Chaos<input id="c_chaos" type="number" min="0"></label><label class="label">HP<input id="c_hp" type="number" min="0"></label><label class="label">Attack<input id="c_attack" type="number" min="0"></label><label class="label">Defense<input id="c_defense" type="number" min="0"></label></div><label class="toggle"><input id="c_showStats" type="checkbox"> Show coded stats on front</label></details></div></details>
-<details id="cardTools" class="panel-section" hidden><summary>Print &amp; manage</summary><div id="gameReadiness"><label class="toggle"><input type="checkbox" id="releaseReady"> Include in promo pool</label><p class="muted tiny" id="cardReadiness" role="status"></p></div><div class="buttonbar"><button id="queueCurrentCard" type="button">Add to print queue</button><button id="deleteDraftCard" type="button">Delete this design</button></div><p class="muted tiny" id="cardToolStatus" role="status"></p></details></aside></div></section>
+<details id="cardTools" class="panel-section" hidden>
+  <summary>Print &amp; manage</summary>
+  <div id="gameReadiness"><label class="toggle"><input type="checkbox" id="releaseReady"> Include in promo pool</label><p class="muted tiny" id="cardReadiness" role="status"></p></div>
+  <div class="buttonbar"><button id="queueCurrentCard" type="button">Add to print queue</button><button id="deleteDraftCard" type="button">Delete this design</button></div>
+  <div class="buttonbar"><button type="button" data-tab="backs">Edit card back</button><button id="pngBack" type="button">Export back PNG</button></div>
+  <p class="muted tiny" id="cardToolStatus" role="status"></p>
+</details></aside></div></section>
 <section class="page" id="fractalLite"><div class="sectionhead"><div><p class="eyebrow">03 / PROCEDURAL ART LAB</p><h2>Fractal Lab · image-aware textures</h2><p>Build kaleidoscopic, recursive, and living-color variants from MNC artwork. Save a still to your library or apply it as a card texture.</p></div><div class="buttonbar"><button id="fractPNG">Export PNG</button><button id="fractRecipe">Export recipe</button><button id="fractRecord">Record loop WebM</button><button id="fractToCard" class="accent-btn">Send texture to card</button></div></div>
 <div class="fractal-workspace tool-workspace"><div class="panel fract-controls">
 <h3>01 — Source & formula</h3><label class="label">Artwork source<select id="fractSource"></select></label><label class="label">Formula family<select id="fractMode"><option value="kaleido">Kaleidoscope folds</option><option value="recursive">Recursive warp</option><option value="orbit">Orbit trap</option><option value="living">Living color layers</option><option value="mirror">Mirror tunnels</option></select></label>
