@@ -5,7 +5,7 @@ globalThis.MNC_TYPE_DESIGN = (() => {
   const idFor=card=>MNC_SET_PLAN.profileFor(card);
   const copy=value=>JSON.parse(JSON.stringify(value));
   const matchKeys=['matchLayout','matchOrder','matchLabels','matchIcons','matchNames','matchStyle','matchColor','matchOpacity','matchGap','matchIcon','matchIconX','matchIconY','winLabel','lossLabel'];
-  const footerKeys=['footerPosition','numberFormat','numberBadge','creditMode','creditAlign','creditLabel','creditWidth','setIcon','setIconX','setIconY','printCollectionCode','printEdition','footerRule'];
+  const footerKeys=['footerPosition','independentFooter','numberFormat','numberBadge','creditMode','creditAlign','creditLabel','creditWidth','setIcon','setIconX','setIconY','printCollectionCode','printEdition','footerRule'];
   const footerText=['artist','concept','actor','film','episode','edition','number','artLabel'];
   const footerOffsets=['artist','footer','number','episodeBadge'];
   const typeText=['typeRule','rule','ruleTitle','timing','quote','matchLabel','matchValue','headerSubtype'];

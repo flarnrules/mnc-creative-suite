@@ -1,22 +1,21 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MNC Creative Suite · 0.9.16</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css?v=0.9.16"><link rel="stylesheet" href="layout-designer.css?v=0.9.16"><link rel="stylesheet" href="workspace.css?v=0.9.16"></head>
+<title>MNC Creative Suite · 0.9.17</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css?v=0.9.17"><link rel="stylesheet" href="layout-designer.css?v=0.9.17"><link rel="stylesheet" href="workspace.css?v=0.9.17"></head>
 <body>
-<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.16</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
-<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="library">Artwork</button>
-<button type="button" data-tab="visualLanguage">Current Designs</button>
+<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.17</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
+<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="visualLanguage">Current Designs</button>
+<button type="button" data-tab="library">Artwork</button>
 <button type="button" data-tab="studio">Card Designer</button>
 <button type="button" data-tab="layoutDesigner">Layout Designer</button>
+<button type="button" data-tab="prism">Foil Lab</button>
 <button type="button" data-tab="setDesigner">Set Designer</button>
 <button type="button" data-tab="typeDesigner">Type Designer</button>
-<button type="button" data-tab="shapes">Shape Designer</button>
 <button type="button" data-tab="mirror">Mirror Finish</button>
 <button type="button" data-tab="backs">Back Designer</button>
 <button type="button" data-tab="rules">Game &amp; Set</button>
 <button type="button" data-tab="viewer">Card View</button>
 <button type="button" data-tab="production">Print Sheets</button>
 <button type="button" data-tab="fractal">Fractal Lab</button>
-<button type="button" data-tab="prism">Foil Lab</button>
 <button type="button" data-tab="glyph">Glyph Kit</button>
 <button type="button" data-tab="data">Project &amp; Backup</button></nav></div>
 <main>
@@ -34,10 +33,11 @@
             <label class="label">Layout<select id="ldPreset"></select></label>
             <button id="ldApply" type="button">Load layout</button>
           </div>
-          <button id="ldSave" type="button">Save a named layout</button>
         </div>
       </details>
       <div class="ld-toolbar-actions">
+        <button id="ldNewDesign" type="button">New design</button>
+        <button id="ldSave" type="button">Save design</button>
         <button id="ldTypeDefault" type="button">Use for this card type</button>
         <button id="ldExport" class="accent-btn" type="button">Export PNG</button>
       </div>
@@ -50,7 +50,7 @@
     <button id="ldBorderQuick" type="button">Outer border</button>
     <button id="ldGradientQuick" type="button">Gradients</button>
   </div>
-  <p id="ldEmpty" class="ld-empty" hidden>Choose <button type="button" data-tab="studio">Card Designer</button> to create your first card.</p>
+  <p id="ldEmpty" class="ld-empty" hidden>Start a reusable design with <strong>New design</strong> or choose a card in <button type="button" data-tab="visualLanguage">Current Designs</button>.</p>
   <div class="ld-mobile-panes" id="ldMobilePanes" role="group" aria-label="Layout views">
     <button id="ldCanvasView" type="button" aria-controls="ldStagePanel" aria-pressed="true">Canvas</button>
     <button id="ldLayersView" type="button" aria-controls="ldLayerRail" aria-pressed="false">Layers</button>
@@ -129,8 +129,11 @@
   </dialog>
   <dialog id="ldSaveDialog" class="ld-dialog" aria-labelledby="ldSaveTitle">
     <form id="ldSaveForm">
-      <h3 id="ldSaveTitle">Save layout</h3>
-      <label class="label">Layout name<input id="ldSaveName" maxlength="96" required></label>
+      <h3 id="ldSaveTitle">Save design</h3>
+      <label class="label">Design name<input id="ldSaveName" maxlength="96" required></label>
+      <label class="label">Save to<select id="ldAssignment"><option id="ldOtherAssignment" value="other">Other designs</option><option value="variant">Card type variant</option><option value="default">Card type default</option></select></label>
+      <label class="label" id="ldAssignmentTypeRow" hidden>Card type<select id="ldAssignmentType"></select></label>
+      <p id="ldAssignmentStatus" class="status-line" role="status"></p>
       <div class="buttonbar"><button id="ldSaveCancel" type="button">Cancel</button><button type="submit" class="accent-btn">Save</button></div>
     </form>
   </dialog>
@@ -144,7 +147,23 @@
 <textarea id="typeDesignRule" rows="5" maxlength="4000" aria-label="Shared printed type rule"></textarea>
 <p class="status-line">Edits update matching cards that follow the type rule. For Sidekicks, {partner} inserts the card's partner name.</p>
 <button id="typeRestoreRule" type="button">Restore original wording</button>
-<details class="panel-section" open><summary>Matchup attributes</summary><div class="pair"><label class="label">Layout<select id="typeAttrLayout"><option value="columns">Side by side</option><option value="stacked">Stacked rows</option></select></label><label class="label">Order<select id="typeAttrOrder"><option value="wins-first">Beats first</option><option value="losses-first">Beaten by first</option></select></label></div><div class="pair"><label class="label">Background<select id="typeAttrStyle"><option value="tint">Type colors</option><option value="none">No background</option><option value="outline">Outline</option><option value="solid">Solid</option></select></label><label class="label">Space between groups (px)<input id="typeAttrGap" type="number" min="4" max="100" step="1"></label></div><div class="pair"><label class="label">Type names (px)<input id="typeAttrValueSize" type="number" min="10" max="48" step="1"></label><label class="label">Headings (px)<input id="typeAttrLabelSize" type="number" min="8" max="32" step="1"></label><label class="label">Type symbols (px)<input id="typeAttrIconSize" type="number" min="0" max="60" step="1"></label></div><div class="pair"><label class="toggle"><input id="typeAttrLabels" type="checkbox"> Print headings</label><label class="toggle"><input id="typeAttrIcons" type="checkbox"> Print symbols</label><label class="toggle"><input id="typeAttrNames" type="checkbox"> Print type names</label></div><div class="pair"><label class="label">Beats heading<input id="typeAttrWinLabel" maxlength="48" placeholder="Auto"></label><label class="label">Beaten by heading<input id="typeAttrLossLabel" maxlength="48" placeholder="Auto"></label></div></details>
+<details id="villainSubtypeSettings" class="panel-section" open hidden>
+  <summary>Villain subtypes</summary>
+  <p id="villainSubtypeNames" class="muted"></p>
+  <div class="buttonbar">
+    <label class="label">New Villain subtype<input id="newVillainSubtype" maxlength="40"></label>
+    <button id="addVillainSubtype" type="button">Add subtype</button>
+  </div>
+</details>
+<details class="panel-section" open><summary>Matchup attributes</summary><div class="pair"><label class="label">Layout<select id="typeAttrLayout"><option value="columns">Side by side</option><option value="stacked">Stacked rows</option></select></label><label class="label">Order<select id="typeAttrOrder"><option value="wins-first">Beats first</option><option value="losses-first">Beaten by first</option></select></label></div><div class="pair"><label class="label">Background<select id="typeAttrStyle"><option value="tint">Type colors</option><option value="none">No background</option><option value="outline">Outline</option><option value="solid">Solid</option></select></label><label class="label">Space between groups (px)<input id="typeAttrGap" type="number" min="4" max="100" step="1"></label></div><div class="pair"><label class="label">Type names (px)<input id="typeAttrValueSize" type="number" min="10" max="48" step="1"></label><label class="label">Type symbols (px)<input id="typeAttrIconSize" type="number" min="0" max="60" step="1"></label></div><div class="pair"><label class="toggle"><input id="typeAttrLabels" type="checkbox"> Print headings</label><label class="toggle"><input id="typeAttrIcons" type="checkbox"> Print symbols</label><label class="toggle"><input id="typeAttrNames" type="checkbox"> Print type names</label></div><div class="pair"><label class="label">Beats heading<input id="typeAttrWinLabel" maxlength="48" placeholder="Auto"></label><label class="label">Beaten by heading<input id="typeAttrLossLabel" maxlength="48" placeholder="Auto"></label></div></details>
+<details class="panel-section" id="typeMatchHeading" open>
+  <summary>Beats and Beaten by heading style</summary>
+  <div class="pair">
+    <label class="label">Heading font<select id="typeMatchHeadingFont"><option value="">Default</option><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option><option value="system">System UI</option></select></label>
+    <label class="label">Heading weight and style<select id="typeMatchHeadingStyle"><option value="">Default</option><option value="normal">Regular</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="bold-italic">Bold italic</option></select></label>
+  </div>
+  <div class="three"><label class="label">Headings (px)<input id="typeAttrLabelSize" type="number" min="8" max="32" step="1"></label><label class="label">Heading color<input id="typeMatchHeadingColor" type="color"></label><button id="typeMatchHeadingAuto" type="button">Use palette color</button></div>
+</details>
 <details class="panel-section" open><summary>Type rule, power &amp; quote formatting</summary><div class="three"><label class="label">Type rule (px)<input id="typeCopyTypeSize" type="number" min="12" max="48" step="1"></label><label class="label">Power (px)<input id="typeCopyPowerSize" type="number" min="12" max="48" step="1"></label><label class="label">Quote (px)<input id="typeCopyQuoteSize" type="number" min="10" max="40" step="1"></label></div><div class="pair"><label class="label">Rule font<select id="typeCopyFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label><label class="label">Quote font<select id="typeCopyQuoteFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label></div><div class="pair"><label class="toggle"><input id="typeCopyItalic" type="checkbox"> Italic quote</label><label class="label">Quote alignment<select id="typeCopyAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div></details>
 <button id="typeApplyFormatting" type="button">Use this formatting on matching cards</button><p id="typeDesignStatus" class="status-line" role="status"></p>
 </aside><div class="panel type-preview-panel"><label class="label">Preview<select id="typePreviewCard"></select></label><canvas id="typeDesignPreview" width="750" height="1050" aria-label="Live type design preview"></canvas><p id="typePreviewStatus" class="status-line" role="status"></p></div></div></section>
@@ -181,11 +200,12 @@
   </div>
 </section>
 
-<section class="page" id="visualLanguage" aria-labelledby="currentDesignsTitle">
+<section class="page active" id="visualLanguage" aria-labelledby="currentDesignsTitle">
   <div class="sectionhead">
-    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Choose a card type or edit its starting design.</p></div>
+    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Choose a design, then pick artwork for your card.</p></div>
     <div class="buttonbar">
       <span id="designSaveStatus" class="status-line" role="status"></span>
+      <button id="openDesignComponents" type="button" aria-controls="designComponentsPanel" aria-expanded="false">Shapes &amp; components</button>
       <button id="openSavedCards" type="button" data-tab="studio">Open saved cards</button>
       <button id="openSharedFooter" type="button" aria-controls="sharedFooterPanel" aria-expanded="false">Shared footer</button>
       <button id="toggleDesignStandards" type="button" aria-controls="designStandards" aria-expanded="false">Edit type standards</button>
@@ -194,6 +214,14 @@
   <div id="designGallery" class="tool-scroll">
     <p id="designArtworkNote" class="status-line" hidden></p>
     <div id="designChoices"></div>
+    <details id="otherDesigns" class="other-card-types">
+      <summary>Other designs</summary>
+      <div class="buttonbar design-management">
+        <label class="label">Preview type<select id="designNewType"></select></label>
+        <button id="designNewLayout" type="button">New design</button>
+      </div>
+      <div id="designOtherList" class="design-list"></div>
+    </details>
     <details class="other-card-types">
       <summary>Other card types</summary>
       <div class="buttonbar">
@@ -300,7 +328,12 @@
       <section id="standardLayout" hidden>
         <h3>Starting design for new cards</h3>
         <p id="startingDesignSource" class="muted"></p>
-        <button id="standardEditLayout" class="accent-btn" type="button">Edit starting design</button>
+        <div class="buttonbar"><button id="standardEditLayout" class="accent-btn" type="button">Edit default</button><button id="standardNewVariant" type="button">New variant</button><button id="standardTypeRules" type="button">Type rules &amp; matchups</button></div>
+        <div id="typeAssignSection" class="design-management" hidden>
+          <label class="label">Assign saved design<select id="typeAssignDesign"></select></label>
+          <div class="buttonbar"><button id="typeSetDesignDefault" type="button">Set as default</button><button id="typeAddDesignVariant" type="button">Add variant</button></div>
+        </div>
+        <div class="design-management"><h3>Variants</h3><div id="typeDesignVariants" class="design-list"></div></div>
         <details class="panel-section">
           <summary>Use a saved card as the starting design</summary>
           <label class="label">Source card<select id="standardSource"></select></label>
@@ -359,34 +392,51 @@
       </section>
     </div>
   </div>
+  <div id="designComponentsPanel" class="tool-scroll" hidden>
+    <div class="previewheading"><h3>Shapes &amp; components</h3><button id="drawDesignShape" type="button">Draw a shape</button></div>
+    <section class="design-group"><h3>Artwork outlines</h3><div id="designArtShapes" class="design-shape-grid"></div></section>
+    <section class="design-group"><h3>Nameplates</h3><div id="designPlateShapes" class="design-shape-grid"></div></section>
+    <section class="design-group"><h3>Saved shapes</h3><div id="designSavedShapes" class="design-shape-grid"></div></section>
+  </div>
   <div id="sharedFooterPanel" class="symbols-workspace tool-workspace" hidden>
     <div class="panel type-standard-preview">
       <label class="label">Preview card type<select id="sharedFooterPreviewType"></select></label>
       <canvas id="sharedFooterPreview" width="375" height="525" aria-label="Preview of the shared footer on a card"></canvas>
     </div>
     <section class="panel symbol-editor" aria-labelledby="sharedFooterTitle">
-      <h3 id="sharedFooterTitle">Shared collection footer</h3>
-      <p class="muted">The number, collection code, and set mark share one layout. Each card supplies its own number and colors.</p>
-      <label class="label">Card number position<select id="sharedFooterPosition"><option value="center">Centered at bottom</option><option value="right">Below the code at bottom right</option></select></label>
+      <h3 id="sharedFooterTitle">Shared footer</h3>
+      <p class="muted">These settings apply to designs and cards that use the shared footer.</p>
+      <label class="label">Card number position<select id="sharedFooterPosition"><option value="center">Centered at bottom</option><option value="right">Below Set Abbrev at bottom right</option></select></label>
       <div class="three">
-        <label class="label">Code size (px)<input type="number" id="sharedFooterCodeSize" min="11" max="26" step="1"></label>
+        <label class="label">Set Abbrev size (px)<input type="number" id="sharedFooterCodeSize" min="11" max="26" step="1"></label>
         <label class="label">Number size (px)<input type="number" id="sharedFooterNumberSize" min="14" max="36" step="1"></label>
-        <label class="label">Mark size (px)<input type="number" id="sharedFooterMarkSize" min="12" max="56" step="1"></label>
+        <label class="label">Set Symbol size (px)<input type="number" id="sharedFooterMarkSize" min="12" max="56" step="1"></label>
       </div>
       <div class="buttonbar">
         <button id="sharedFooterEditMark" type="button">Edit the LX26 mark</button>
         <button id="sharedFooterApplyAll" type="button">Use shared footer on saved cards</button>
         <button id="sharedFooterUndo" type="button" disabled>Undo applying to cards</button>
       </div>
+      <div class="design-management">
+        <h3>Footer connection</h3>
+        <label class="label">Edit footer for<select id="sharedFooterScope"><option value="type">Preview type’s default</option><option value="card">Saved card</option></select></label>
+        <label class="label" id="sharedFooterCardRow" hidden>Saved card<select id="sharedFooterCard"></select></label>
+        <label class="toggle"><input id="sharedFooterLink" type="checkbox"> Use shared footer</label>
+        <button id="sharedFooterOpenLayout" type="button">Open footer in Layout Designer</button>
+      </div>
       <p id="sharedFooterStatus" class="status-line" role="status"></p>
     </section>
   </div>
 </section>
 
-<section class="page active" id="library" aria-labelledby="artworkTitle">
+<section class="page" id="library" aria-labelledby="artworkTitle">
   <div class="sectionhead">
     <div><h2 id="artworkTitle">Artwork</h2></div>
     <label class="file-label">＋ Import images / GIFs<input id="newArtwork" type="file" accept="image/*,.gif" multiple></label>
+  </div>
+  <div id="artworkForDesign" class="artwork-for-design panel" hidden>
+    <strong id="artworkDesignName"></strong>
+    <div class="buttonbar"><button id="artworkBackToDesigns" type="button" data-tab="visualLanguage">Back to Current Designs</button><button id="artworkWithoutImage" type="button">Continue without artwork</button></div>
   </div>
   <div class="panel toolbar">
     <input id="assetSearch" placeholder="Find art by title or filename..." aria-label="Search artwork">
@@ -427,6 +477,7 @@
     <span id="activeCardTitle">Card preview</span>
     <div class="buttonbar">
       <button id="cardEditLayout" type="button" data-tab="layoutDesigner">Edit layout</button>
+      <button id="cardOpenFoil" type="button" data-tab="prism" aria-label="Preview in Foil Lab">Foil Lab</button>
       <button id="openCardView" type="button">Front &amp; back</button>
     </div>
   </div>
@@ -440,8 +491,8 @@
   </div>
   <p id="cardItemSetStatus" class="status-line" role="status"></p>
 </div>
-<div class="inspector-tabs" role="group" aria-label="Card controls"><button type="button" data-edit-section="content">Content</button><button type="button" data-edit-section="attributes">Attributes</button><button type="button" data-edit-section="art">Art &amp; look</button><button type="button" data-edit-section="symbols">Symbols</button><button type="button" data-edit-section="footer">Footer</button></div>
-<div class="buttonbar inspector-shortcuts">
+<div class="inspector-tabs" role="group" aria-label="Card controls"><button type="button" data-edit-section="content">Content</button><button type="button" data-edit-section="attributes">Matchups</button><button type="button" data-edit-section="footer">Credits &amp; set</button><button type="button" data-edit-section="art">Appearance</button><button type="button" data-edit-section="symbols">Symbols</button></div>
+<div class="buttonbar inspector-shortcuts card-appearance-tools">
   <button id="jumpRules" type="button">Rules</button><button id="jumpHeader" type="button">Type icon</button>
   <button id="jumpArt" type="button">Artwork</button><button id="jumpLook" type="button">Colors</button><button id="jumpFooter" type="button">Footer</button><button id="openMirrorFinish" type="button">Mirror finish</button>
 </div>
@@ -454,7 +505,7 @@
         <label class="label">Character category<select id="gameCategory"></select></label>
         <label class="label" id="creatureTypeControl">Creature type<input id="gameCharacterType" list="gameCharacterTypeOptions" maxlength="40"><datalist id="gameCharacterTypeOptions"></datalist></label>
       </div>
-      <label class="label">Subtype<input id="gameCharacterSubtype" maxlength="40"></label>
+      <label class="label"><span id="gameSubtypeLabel">Subtype</span><input id="gameCharacterSubtype" maxlength="40"></label><datalist id="gameVillainSubtypes"></datalist>
       <label class="label" id="sidekickPartnerRow" hidden>Sidekick partner<input id="sidekickPartner" list="sidekickPartners" maxlength="80" placeholder="Character name or Card ID" aria-describedby="sidekickPartnerName"><datalist id="sidekickPartners"></datalist><small id="sidekickPartnerName" class="muted"></small></label>
 
     </div>
@@ -540,7 +591,7 @@
   <summary>Footer</summary>
   <label class="label">Collection footer<select id="cardFooterMode"><option value="shared">Shared footer</option><option value="custom">This card’s footer</option></select></label>
   <button id="cardEditSharedFooter" type="button">Open shared footer settings</button>
-<h4 class="footer-heading">Footer formatting</h4><div class="buttonbar"><button id="footerCenterPreset" type="button">Try a big centered number</button><button id="footerRightPreset" type="button">Collection at right</button></div><div class="pair"><label class="label">Card number position<select id="footerPosition"><option value="right">With collection at right</option><option value="center">Centered at bottom</option></select></label><label class="label">Number text<select id="footerNumberFormat"><option value="fraction">019/100</option><option value="number">019</option><option value="label">CARD 019/100</option></select></label></div><div class="three"><label class="label">Number size (px)<input id="footerNumberSize" type="number" min="12" max="64" step="1"></label><label class="label">Number font<select id="footerNumberFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label><label class="label">Number background<select id="footerNumberBadge"><option value="none">None</option><option value="outline">Outline</option><option value="pill">Soft pill</option></select></label></div><div class="pair"><label class="label">Credit format<select id="footerCreditMode"><option value="byline">Separate credit lines</option><option value="line">Credits on one line</option><option value="stacked">Split illustrator name</option><option value="hidden">Hide creator credits</option></select></label><label class="label">Credit alignment<select id="footerCreditAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div><div class="three"><label class="label">Credit size (px)<input id="footerCreditSize" type="number" min="8" max="32" step="1"></label><label class="label">Credit width (px)<input id="footerCreditWidth" type="number" min="120" max="640" step="1"></label><label class="label">Collection size (px)<input id="footerCollectionSize" type="number" min="8" max="32" step="1"></label></div><div class="pair"><label class="label">Set mark size (px)<input id="footerMarkSize" type="number" min="0" max="64" step="1"></label><label class="label">Metadata font<select id="footerCreditFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label></div><div class="three"><label class="toggle"><input id="footerPrintCode" type="checkbox"> Collection code</label><label class="toggle"><input id="footerPrintEdition" type="checkbox"> Edition</label><label class="toggle"><input id="footerSeparator" type="checkbox"> Divider line</label></div><div class="buttonbar"><button id="footerUseType" type="button">Use footer for this type</button><button id="footerUseAll" type="button">Use footer on all cards</button><button id="footerUndo" type="button" disabled>Undo footer apply</button></div><p id="footerFormatStatus" class="status-line" role="status"></p>
+<h4 class="footer-heading">Footer formatting</h4><div class="buttonbar"><button id="footerCenterPreset" type="button">Try a big centered number</button><button id="footerRightPreset" type="button">Collection at right</button></div><div class="pair"><label class="label">Card number position<select id="footerPosition"><option value="right">With Set Abbrev at right</option><option value="center">Centered at bottom</option></select></label><label class="label">Number text<select id="footerNumberFormat"><option value="fraction">019/100</option><option value="number">019</option><option value="label">CARD 019/100</option></select></label></div><div class="three"><label class="label">Number size (px)<input id="footerNumberSize" type="number" min="12" max="64" step="1"></label><label class="label">Number font<select id="footerNumberFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label><label class="label">Number background<select id="footerNumberBadge"><option value="none">None</option><option value="outline">Outline</option><option value="pill">Soft pill</option></select></label></div><div class="pair"><label class="label">Credit format<select id="footerCreditMode"><option value="byline">Separate credit lines</option><option value="line">Credits on one line</option><option value="stacked">Split illustrator name</option><option value="hidden">Hide creator credits</option></select></label><label class="label">Credit alignment<select id="footerCreditAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div><div class="three"><label class="label">Credit size (px)<input id="footerCreditSize" type="number" min="8" max="32" step="1"></label><label class="label">Credit width (px)<input id="footerCreditWidth" type="number" min="120" max="640" step="1"></label><label class="label">Set Abbrev size (px)<input id="footerCollectionSize" type="number" min="8" max="32" step="1"></label></div><div class="pair"><label class="label">Set Symbol size (px)<input id="footerMarkSize" type="number" min="0" max="64" step="1"></label><label class="label">Metadata font<select id="footerCreditFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label></div><div class="three"><label class="toggle"><input id="footerPrintCode" type="checkbox"> Set Abbrev</label><label class="toggle"><input id="footerPrintEdition" type="checkbox"> Edition</label><label class="toggle"><input id="footerSeparator" type="checkbox"> Divider line</label></div><div class="buttonbar"><button id="footerUseType" type="button">Use footer for this type</button><button id="footerUseAll" type="button">Use footer on all cards</button><button id="footerUndo" type="button" disabled>Undo footer apply</button></div><p id="footerFormatStatus" class="status-line" role="status"></p>
 <h4 class="footer-heading">Credits &amp; source</h4>
   <label class="label">Illustration credit<input id="c_artist" maxlength="96"></label>
   <div class="pair">
@@ -561,7 +612,7 @@
   </div>
   <h4 class="footer-heading">Collection details</h4>
   <div class="pair">
-    <label class="label">Collection code<input id="cardCollectionCode" maxlength="12" placeholder="From collection" aria-describedby="collectionCodeStatus"></label>
+    <label class="label">Set Abbrev<input id="cardCollectionCode" maxlength="12" placeholder="From collection" aria-describedby="collectionCodeStatus"></label>
     <label class="label">Card number<input id="collectorNumber" maxlength="12" aria-describedby="cardNumberStatus"></label>
   </div>
   <p id="collectionCodeStatus" class="muted tiny" role="status"></p>
@@ -644,7 +695,7 @@
     <label class="label">Icon size (px)<input id="frontTypeIcon" type="number" min="0" max="250"></label>
   </div>
   <div id="frontFooterStyle" class="panel-section" hidden>
-    <label class="label">Set glyph size (px)<input id="frontSetIcon" type="number" min="0" max="80"></label>
+    <label class="label">Set Symbol size (px)<input id="frontSetIcon" type="number" min="0" max="80"></label>
   </div>
   <div id="frontEpisodeStyle" class="panel-section" hidden>
     <label class="label">Episode badge<select id="frontEpisodeBadge"><option value="Auto">Auto by episode</option><option value="Cassette">Cassette · club copies</option><option value="None">None</option></select></label>
@@ -1057,4 +1108,4 @@
 <div class="data-layout"><div class="panel"><h3>Back up / restore</h3><div class="buttonbar"><button class="accent-btn" id="exportProject">Export project JSON</button><label class="file-label secondary">Import project JSON<input id="importProject" type="file" accept=".json,application/json"></label></div><p class="muted">Keep your project JSON, workbook, and assets folder together. Images imported in browser-only mode are embedded in the JSON.</p><hr><div class="buttonbar"><button id="exportCardsCSV">Export cards CSV</button><button id="exportAssetsCSV">Export assets CSV</button></div></div><div class="panel"><h3>Project status</h3><div id="projectSummary" class="summary-stats"></div><hr><h3>Earlier tools</h3><div class="buttonbar"><button data-tab="fractalLite">Fractal Lite</button><button data-tab="prismLegacy">Prism v0.8</button><button data-tab="foil">Foil Lite</button></div></div></div></div>
 </section>
 </main>
-<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js?v=0.9.16"></script><script src="artwork-profiles.js"></script><script src="front-layout.js?v=0.9.16"></script><script src="front-effects.js"></script><script src="outer-border.js?v=0.9.16"></script><script src="layout-design.js?v=0.9.16"></script><script src="art-cutout.js"></script><script src="type-design.js?v=0.9.16"></script><script src="mirror-mask.js"></script><script src="app.js?v=0.9.16"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js?v=0.9.16"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js?v=0.9.16"></script><script src="design-system-ui.js?v=0.9.16"></script><script src="type-design-ui.js?v=0.9.16"></script><script src="glyph-context-ui.js?v=0.9.16"></script><script src="cutout-editor.js?v=0.9.16"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js?v=0.9.16"></script><script src="lab-links.js?v=0.9.16"></script></body></html>
+<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js?v=0.9.17"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js?v=0.9.17"></script><script src="artwork-profiles.js"></script><script src="front-layout.js?v=0.9.17"></script><script src="front-effects.js"></script><script src="outer-border.js?v=0.9.17"></script><script src="layout-design.js?v=0.9.17"></script><script src="art-cutout.js"></script><script src="type-design.js?v=0.9.17"></script><script src="mirror-mask.js"></script><script src="app.js?v=0.9.17"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js?v=0.9.17"></script><script src="game-studio.js?v=0.9.17"></script><script src="shape-studio.js?v=0.9.17"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js?v=0.9.17"></script><script src="design-system-ui.js?v=0.9.17"></script><script src="type-design-ui.js?v=0.9.17"></script><script src="glyph-context-ui.js?v=0.9.17"></script><script src="cutout-editor.js?v=0.9.17"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js?v=0.9.17"></script><script src="lab-links.js?v=0.9.17"></script></body></html>

@@ -8,7 +8,7 @@ globalThis.MNC_LAYOUT = (() => {
     shade:'Text shading', plate:'Nameplate', title:'Card title', match:'Matchups',
     typeRule:'Shared type rule', ruleTitle:'Power name', timing:'Power timing', rule:'Power text',
     quote:'Quote', copyRule:'Content divider', footerPanel:'Footer panel', footerLine:'Footer divider',
-    artist:'Credits & source', footer:'Collection text', setIcon:'Set symbol', number:'Card number',
+    artist:'Credits & source', footer:'Set Abbrev', setIcon:'Set Symbol', number:'Card number',
     foilImprint:'Foil pattern imprint',
     episodeBadge:'Cassette badge', symbols:'Legacy symbols', stats:'Legacy stats'
   };

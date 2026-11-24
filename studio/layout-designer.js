@@ -447,8 +447,11 @@
         host.append(node('p',details.value,'status-line'));
         break;
       case 'footer':
-      case 'number':
-        input(host,'Card number',card.collectorNumber||'',(c,value,control)=>{
+      case 'number': {
+        const footer=front.values(card),combined=footer.footerPosition==='right'&&!footer.independentFooter;
+        if(layer.id==='footer'&&!typeDraft)input(host,'Set Abbrev',MNC_CARD_METADATA.collectionCode(card,collectionFor(card)),
+          (c,value)=>editCardFields(c,{collectionCode:MNC_CARD_METADATA.normalizeCode(value)}),{primary:true});
+        if(!typeDraft&&(layer.id==='number'||combined))input(host,'Card number',card.collectorNumber||'',(c,value,control)=>{
           const metadata=MNC_CARD_METADATA, promo=metadata.isPromo(c,collectionFor(c))&&c.classification!=='Secret';
           const input=value.trim(), number=metadata.promoNumber(input,state.setPlan.target);
           if(promo&&input&&!number){
@@ -456,11 +459,14 @@
             message('Enter a card number from 001 to '+state.setPlan.target+'.');
           }else editCardFields(c,{collectorNumber:promo&&input?metadata.printNumber(number):input});
         },{primary:true});
-        if(MNC_CARD_METADATA.isPromo(card,collectionFor(card)))action(host,'Edit set edition',()=>tab('setDesigner'));
-        else input(host,'Edition',card.edition||'',(c,value)=>editCardFields(c,{edition:value}),{live:true});
-        input(host,'Number location',front.values(card).footerPosition,(c,value)=>{front.editable(c).footerPosition=value;},
-          {choices:[['right','Collection line'],['center','Centered below']],refresh:true});
+        if(!typeDraft&&layer.id==='footer'){
+          if(MNC_CARD_METADATA.isPromo(card,collectionFor(card)))action(host,'Edit set edition',()=>tab('setDesigner'));
+          else input(host,'Edition',card.edition||'',(c,value)=>editCardFields(c,{edition:value}),{live:true});
+        }
+        if(layer.id==='number'||combined)input(host,'Number location',footer.footerPosition,(c,value)=>{front.editable(c).footerPosition=value;},
+          {choices:[['right',footer.independentFooter?'Bottom right':'On Set Abbrev line'],['center','Centered below']],refresh:true});
         break;
+      }
     }
     const style=fields('Typography');
     typography(style,card,details,['title','typeRule','rule','quote'].includes(layer.id));
@@ -498,7 +504,9 @@
         {choices:[['rounded','Rounded'],['square','Square'],['cut','Cut corners'],['ellipse','Ellipse'],...(game.isGameCard(card)?[['marquee','Marquee']]:[])]});
       input(host,'Window border',card.artBorder||'solid',(c,value)=>{c.artBorder=value;},
         {choices:[['none','None'],['solid','Single line'],['double','Double line'],['dashed','Dashed']]});
-      action(host,'Edit custom art shape',()=>window.MNC_openShapeDesigner('art',card));
+      if(state.cardShapes.length)input(host,'Saved artwork outline',card.artShapeId||'',(c,value)=>{c.artShapeId=value;},
+        {choices:[['','Use preset'],...state.cardShapes.map(shape=>[shape.id,shape.name])],refresh:true});
+      if(!typeDraft)action(host,'Edit custom art shape',()=>window.MNC_openShapeDesigner('art',card));
     }
   }
 
@@ -529,10 +537,12 @@
         if(value&&c.nameplate==='none')c.nameplate='solid';
       },{choices:[['','Use preset'],...state.cardShapes.map(shape=>[shape.id,shape.name])],refresh:true});
     }
-    const buttons=node('div',null,'buttonbar');
-    action(buttons,'Draw a shape',()=>window.MNC_openShapeDesigner('plate',card,{blank:true}));
-    action(buttons,'Edit shape',()=>window.MNC_openShapeDesigner('plate',card));
-    shapeHost.append(buttons);
+    if(!typeDraft){
+      const buttons=node('div',null,'buttonbar');
+      action(buttons,'Draw a shape',()=>window.MNC_openShapeDesigner('plate',card,{blank:true}));
+      action(buttons,'Edit shape',()=>window.MNC_openShapeDesigner('plate',card));
+      shapeHost.append(buttons);
+    }
 
     const host=fields('Nameplate style');
     input(host,'Style',card.nameplate||'solid',(c,value)=>{c.nameplate=value;},
@@ -782,9 +792,9 @@
       const host=fields('Shared footer');
       const description=node('p','This layer follows the shared layout in Current Designs.','ld-muted');
       host.append(description);
-      action(host,'Edit shared footer',()=>window.MNC_openSharedFooter());
-      action(host,typeDraft?'Use a custom footer for this type':'Use a custom footer on this card',()=>{
-        change(c=>{c.collectionFooterMode='custom';},{sync:true});
+      if(!typeDraft)action(host,'Edit shared footer',()=>window.MNC_openSharedFooter({footerScope:'card'}));
+      action(host,'Customize footer here',()=>{
+        change(c=>front.setFooterMode(c,'custom'),{sync:true});
       });
       return;
     }
@@ -812,9 +822,9 @@
       return;
     }
     if(['footer','number','setIcon'].includes(layer.id)){
-      action(fields('Collection layout'),'Use shared footer',()=>{
-        change(c=>{c.collectionFooterMode='shared';},{sync:true});
-      });
+      const host=fields('Footer connection');
+      action(host,'Use shared footer',()=>change(c=>front.setFooterMode(c,'shared'),{sync:true}));
+      if(!front.effective(card).independentFooter)action(host,'Edit footer pieces separately',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
     }
     if(layer.id==='art')artSizeFields(layer,card);
     if(layer.text)copyFields(layer,card);
@@ -952,8 +962,12 @@
     cards.disabled=!card||!!typeDraft;
     $('ldCardChoice').hidden=!!typeDraft;
     $('ldTypeActions').hidden=!typeDraft;
-    $('ldTitle').textContent=typeDraft?'Edit starting design':'Layout Designer';
-    $('ldEditScope').textContent=typeDraft?typeDraft.name+' · Save to use on new cards.':'Edits autosave to this card.';
+    const reusable=typeDraft?.kind==='design';
+    $('ldTitle').textContent=reusable?'Edit reusable design':typeDraft?'Edit type default':'Layout Designer';
+    $('ldEditScope').textContent=reusable?typeDraft.name+' · Choose where to use it when you save.':
+      typeDraft?typeDraft.name+' · Save to use on new cards.':card?'Edits autosave to this card.':'Create a reusable design.';
+    $('ldCommitType').textContent=reusable?'Save design':'Save default';
+    $('ldNewDesign').hidden=!!typeDraft;
     $('ldSave').hidden=$('ldTypeDefault').hidden=$('ldExport').hidden=$('ldStatusLinks').hidden=!!typeDraft;
     setup.textContent=typeDraft?'Layouts':'Card & layout';
     $('ldEmpty').hidden=!!card;
@@ -1006,30 +1020,62 @@
   };
   window.MNC_closeLayoutTrace=()=>{
     if(drag)finishDrag({pointerId:drag.id},true);
-    if(typeDraft&&typeDraft.initial!==json(typeDraft.card)&&!confirm('Discard unsaved edits to the '+typeDraft.name+' starting design?'))return false;
+    if(typeDraft&&typeDraft.initial!==json(typeDraft.card)&&!confirm('Discard unsaved edits to “'+typeDraft.name+'”?'))return false;
     if(typeDraft)histories.delete(typeDraft.card.id);
     typeDraft=null;
     maskEditor.cancel();
     showPane('canvas');
     setPan(false);
   };
-  window.MNC_editTypeStarter=id=>{
+  window.MNC_editTypeStarter=(id,{layer,footerMode,fromSharedFooter=false}={})=>{
     const profile=MNC_SET_PLAN.profile(id);
     if(!profile||!state.typeDesigns.profiles[id])return;
     const card=window.MNC_typePreviewCard(id);
     histories.delete(card.id);
-    typeDraft={id,name:profile.name,card,initial:json(card)};
+    typeDraft={kind:'type',id,name:profile.name+' default',card,fromSharedFooter,initial:json(card)};
+    tab('layoutDesigner');
+    if(footerMode)change(c=>front.setFooterMode(c,footerMode),{sync:true});
+    if(layer)editLayer(layer,{scroll:true});
+  };
+  window.MNC_editCardFooter=(card,footerMode)=>{
+    if(!card)return;
+    currentId=card.id;
+    tab('layoutDesigner');
+    if(footerMode)change(c=>front.setFooterMode(c,footerMode),{sync:true});
+    editLayer('footer',{scroll:true});
+  };
+  window.MNC_editReusableDesign=(designId='',previewType,assignment='other')=>{
+    const saved=state.templates.find(design=>design.id===designId);
+    if(designId&&!saved)return;
+    if(typeDraft&&window.MNC_closeLayoutTrace()===false)return;
+    const {profile,family}=designPreviewContext(saved,previewType);
+    const card=profile?window.MNC_typePreviewCard(profile.id):cardDraft(null,family);
+    card.id='DESIGN-PREVIEW';
+    if(saved&&!applyDesignPreset(card,saved,{refresh:false}))return;
+    histories.delete(card.id);
+    const name=saved?.name||'New design';
+    typeDraft={kind:'design',id:profile?.id,designId,name,assignment,card,initial:json(card)};
+    activeId='';
     tab('layoutDesigner');
   };
   $('ldCommitType').onclick=()=>{
     if(!typeDraft)return;
-    const {card,id}=typeDraft;
+    if(typeDraft.kind==='design'){openSaveDialog();return;}
+    const {card,id,fromSharedFooter}=typeDraft;
     if(!captureTypeDesign(card,id))return;
     histories.delete(card.id);
     typeDraft=null;
-    window.MNC_finishTypeStarter(id);
+    if(fromSharedFooter){
+      window.MNC_openSharedFooter({footerScope:'type'});
+      $('sharedFooterStatus').textContent='Saved footer for '+MNC_SET_PLAN.profile(id).name+' default.';
+    }else window.MNC_finishTypeStarter(id);
   };
-  $('ldCancelType').onclick=()=>{if(typeDraft)window.MNC_openTypeStandard(typeDraft.id,'layout');};
+  $('ldCancelType').onclick=()=>{
+    if(typeDraft?.kind==='design')tab('visualLanguage',{otherDesigns:true});
+    else if(typeDraft?.fromSharedFooter)window.MNC_openSharedFooter({footerScope:'type'});
+    else if(typeDraft)window.MNC_openTypeStandard(typeDraft.id,'layout');
+  };
+  $('ldNewDesign').onclick=()=>window.MNC_editReusableDesign('',MNC_TYPE_DESIGN.idFor(current())||'hero');
   $('ldGuideHelp').onclick=()=>$('ldGuideDialog').showModal();
   function editLayer(id,options){
     showPane('edit');
@@ -1103,13 +1149,29 @@
   };
 
   const dialog=$('ldSaveDialog');
-  $('ldSave').onclick=()=>{
+  function syncAssignment(){
+    const assignment=$('ldAssignment').value;
+    $('ldAssignmentTypeRow').hidden=assignment==='other';
+    $('ldAssignmentStatus').textContent=assignment==='default'?'New cards of this type start with this design.':
+      assignment==='variant'?'This design appears in the card type’s Design menu.':'';
+  }
+  function openSaveDialog(){
     const card=current();
     if(!card)return;
-    $('ldSaveName').value=state.templates.find(item=>item.id===preset.value)?.name||'';
+    const existing=state.templates.find(item=>item.id===typeDraft?.designId);
+    $('ldSaveName').value=existing?.name||'';
+    $('ldOtherAssignment').textContent=existing?'Keep current placements':'Other designs';
+    $('ldAssignment').value=typeDraft?.assignment||'other';
+    const options=MNC_TYPE_DESIGN.profiles().map(({id})=>playableDesignType(id))
+      .filter(profile=>designFitsFamily(card,profile.family));
+    const preferred=typeDraft?.id||MNC_TYPE_DESIGN.idFor(card);
+    dropDownOptions($('ldAssignmentType'),options.map(({id,name})=>[id,name]),options.some(({id})=>id===preferred)?preferred:options[0]?.id);
+    syncAssignment();
     dialog.showModal();
     $('ldSaveName').focus();
-  };
+  }
+  $('ldAssignment').onchange=syncAssignment;
+  $('ldSave').onclick=openSaveDialog;
   $('ldTypeDefault').onclick=()=>{
     const card=current(),id=card&&MNC_TYPE_DESIGN.idFor(card);
     if(id&&!typeDraft)window.MNC_useCardAsTypeStarter(card,id);
@@ -1119,13 +1181,42 @@
     event.preventDefault();
     const card=current();
     if(!card)return;
-    const saved=saveDesignPreset(card,{name:$('ldSaveName').value});
-    if(!saved)return;
+    const assignment=$('ldAssignment').value||'other',typeId=$('ldAssignmentType').value;
+    const profile=assignment==='other'?null:playableDesignType(typeId);
+    if(assignment!=='other'&&(!state.typeDesigns.profiles[typeId]||!designFitsFamily(card,profile?.family))){
+      $('ldAssignmentStatus').textContent='Select a compatible card type.';
+      return;
+    }
+    const name=$('ldSaveName').value.trim();
+    const existing=state.templates.find(item=>item.id===typeDraft?.designId||!item.typeDefaultFor&&item.name.toLowerCase()===name.toLowerCase());
+    if(existing&&MNC_TYPE_DESIGN.profiles().some(({id})=>{
+      const setting=state.visualLanguage.profiles[id];
+      return (setting.presetId===existing.id||setting.variantIds?.includes(existing.id))&&!designFitsFamily(card,playableDesignType(id).family);
+    })){
+      $('ldAssignmentStatus').textContent='Choose a new name. This design is used by a card type that needs its current frame.';
+      return;
+    }
+    const saved=saveDesignPreset(card,{name,id:typeDraft?.designId});
+    if(!saved){$('ldAssignmentStatus').textContent='Enter a unique design name to continue.';return;}
+    if(profile)assignDesign(saved,typeId,assignment);
     dialog.close();
+    const savedMessage=profile?'Saved '+saved.name+' as '+profile.name+' '+assignment+'.':'Saved '+saved.name+'.';
+    if(typeDraft){
+      histories.delete(card.id);
+      typeDraft=null;
+      const returnType=profile?.id||MNC_TYPE_DESIGN.profiles().find(({id})=>{
+        const setting=state.visualLanguage.profiles[id];
+        return setting.presetId===saved.id||setting.variantIds?.includes(saved.id);
+      })?.id;
+      if(returnType)window.MNC_openTypeStandard(returnType,'layout');
+      else tab('visualLanguage',{otherDesigns:true});
+      $(returnType?'symbolDesignStatus':'designSaveStatus').textContent=savedMessage;
+      return;
+    }
     presetOptions(card);
     preset.value=saved.id;
     $('ldApply').disabled=false;
-    message('Saved '+saved.name+'.');
+    message(savedMessage);
   };
 
   board.addEventListener('pointerdown',beginDrag);

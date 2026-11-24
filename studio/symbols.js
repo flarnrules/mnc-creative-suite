@@ -36,6 +36,7 @@ globalThis.MNC_SYMBOLS = (() => {
           symbol.glyph=defaults(id).glyph;
         }
         return [id,{symbol,presetId:String(value?.presetId||''),
+          variantIds:[...new Set(Array.isArray(value?.variantIds)?value.variantIds.filter(key=>typeof key==='string'):[])],
           setMark:value?.setMark?normalize(value.setMark,'collection'):null,
           palette:globalThis.MNC_TYPE_DESIGN?.normalizePalette(value?.palette)||{},
           border:globalThis.MNC_OUTER_BORDER?.normalizeStandard(value?.border)||null,

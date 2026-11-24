@@ -21,6 +21,7 @@
       sourceAssetId:matches[0]?.sourceAssetId||state.assets.find(asset=>asset.id===game.ashArt.id)?.id||state.assets[0]?.id||'',
       set:game.release,collectionCode:'LX26',collectorNumber:'',typeSymbolMode:'standard',collectionSymbolMode:'standard',
       ruleTitle:'Preview power',ruleText:'Card-specific powers appear here.',quote:'Your quote appears here.'};
+    if(id==='villain')card.characterSubtype=game.villainSubtypeOptions(state)[0];
     applyStartingDesign(card,id);
     return card;
   }
@@ -99,6 +100,10 @@
 
   async function paintType() {
     const token=++previewVersion,id=$('typeDesignProfile').value,c=previewCard(id,$('typePreviewCard').value);
+    if(!$('typePreviewCard').value&&c.frontLayout?.text?.matchLabel){
+      const {x,y}=c.frontLayout.text.matchLabel;
+      c.frontLayout.text.matchLabel={x,y};
+    }
     const canvas=document.createElement('canvas');canvas.width=750;canvas.height=1050;
     await drawCard(c,canvas,{rounded:true});if(token!==previewVersion)return;
     $('typeDesignPreview').getContext('2d').drawImage(canvas,0,0);
@@ -125,8 +130,41 @@
     $('typeHeaderSubtype').value=String(selected().frontLayout.showCharacterSubtype??'');
     const c=previewCard(id,$('typePreviewCard').value);
     delete c.frontLayout;
+    $('villainSubtypeSettings').hidden=id!=='villain';
+    $('typeMatchHeading').hidden=c.family!=='Character';
+    $('villainSubtypeNames').textContent=game.villainSubtypeOptions(state).join(' · ');
+    syncMatchHeading(c);
     syncAttributes('typeAttr',c);syncCopy('typeCopy',c);paintType();
   }
+
+  function syncMatchHeading(card){
+    const heading=front.effective(card).text.matchLabel||{};
+    const ink=game.isGameCard(card)?window.MNC_gamePalette(card).quiet:model.palette(card).ink;
+    $('typeMatchHeadingFont').value=heading.font||'';
+    $('typeMatchHeadingStyle').value=heading.style||'';
+    $('typeMatchHeadingColor').value=heading.color||ink;
+    $('typeMatchHeadingAuto').disabled=!selected().frontLayout.text.matchLabel?.color;
+  }
+
+  for(const [id,key] of [['typeMatchHeadingFont','font'],['typeMatchHeadingStyle','style'],['typeMatchHeadingColor','color']]){
+    $(id).onchange=()=>{
+      const style=text(selected().frontLayout,'matchLabel'),value=$(id).value;
+      if(value)style[key]=value;
+      else delete style[key];
+      $('typeMatchHeadingAuto').disabled=!style.color;
+      changed();
+    };
+  }
+  $('typeMatchHeadingAuto').onclick=()=>{
+    delete text(selected().frontLayout,'matchLabel').color;
+    changed();renderType();
+  };
+  $('addVillainSubtype').onclick=()=>{
+    const field=$('newVillainSubtype'),name=field.value.trim();
+    if(!name)return;
+    state.villainSubtypes=game.villainSubtypeOptions({...state,villainSubtypes:[...state.villainSubtypes,name]});
+    field.value='';changed();renderType();
+  };
   window.MNC_refreshTypeDesigner=renderType;
   window.MNC_openTypeDesigner=id=>{
     $('typeDesignProfile').value=model.profiles().some(profile=>profile.id===id)?id:'other';
@@ -158,7 +196,7 @@
     const id=$('typeDesignProfile').value;
     const card=cardById($('typePreviewCard').value)||state.cards.find(card=>!card.catalogUnlisted&&model.matching(card,id));
     if(card){currentId=card.id;tab('layoutDesigner');}
-    else $('typeDesignStatus').textContent='Create a card of this type in Set Designer to edit its layout.';
+    else window.MNC_editTypeStarter(id);
   };
   $('typeApplyFormatting').onclick=()=>{
     const cards=state.cards.filter(card=>model.matching(card,$('typeDesignProfile').value));
@@ -243,10 +281,10 @@
   }
   $('cardFooterMode').onchange=()=>{
     const card=current();if(!card)return;
-    card.collectionFooterMode=$('cardFooterMode').value;
+    front.setFooterMode(card,$('cardFooterMode').value);
     changed();syncFooter(card);
   };
-  $('cardEditSharedFooter').onclick=()=>window.MNC_openSharedFooter();
+  $('cardEditSharedFooter').onclick=()=>window.MNC_openSharedFooter({footerScope:'card'});
   for(const [id,key] of [['footerPosition','footerPosition'],['footerNumberFormat','numberFormat'],['footerNumberBadge','numberBadge'],
     ['footerCreditMode','creditMode'],['footerCreditAlign','creditAlign'],['footerCreditWidth','creditWidth'],['footerMarkSize','setIcon'],
     ['footerPrintCode','printCollectionCode'],['footerPrintEdition','printEdition'],['footerSeparator','footerRule']]){

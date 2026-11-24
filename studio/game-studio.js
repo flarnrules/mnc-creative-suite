@@ -195,6 +195,10 @@
     $('gameCategory').value=c.characterCategory||'';
     $('creatureTypeControl').hidden=c.characterCategory!=='Creature';
     $('gameCharacterTypeOptions').replaceChildren(...(groups[c.characterCategory]||[]).map(label=>new Option(label,label)));
+    const villain=game.categoryFor(c.characterCategory)?.id==='villain';
+    $('gameSubtypeLabel').textContent=villain?'Villain subtype':'Subtype';
+    $('gameCharacterSubtype').setAttribute('list',villain?'gameVillainSubtypes':'');
+    $('gameVillainSubtypes').replaceChildren(...game.villainSubtypeOptions(state).map(label=>new Option(label,label)));
     const isSidekick=c.characterCategory==='Sidekick';
     $('sidekickPartnerRow').hidden=!isSidekick;
     if(isSidekick){

@@ -1,6 +1,8 @@
 # MNC Creative Suite for GitHub Pages
 
-The v0.9.16 browser edition opens to **Artwork** with demo images ready to use. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+The v0.9.17 browser edition opens to **Current Designs**. Pick a type and design, click **New card**, and pick an image in **Artwork**. Write the card in **Card Designer** and open **Foil Lab** from its preview. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+
+In **Layout Designer**, choose **New design** or open a saved card. **Save design** can add a design to **Other designs** or assign it as a card type default or variant. **Current Designs** also opens **Shapes & components** and **Shared footer**. Under **Footer connection**, clear **Use shared footer** to move, size, and style Card number, Set Abbrev, and Set Symbol in Layout Designer.
 
 ## Publish from your GitHub account
 
@@ -31,7 +33,7 @@ Use the same direct local release ZIP for both editions. Put the ZIP in the loca
 From this web checkout, pass the tested ZIP to the release script.
 
 ```bash
-mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_16_Release.zip"
+mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_17_Release.zip"
 python3 tools/stage_web_release.py "$mnc_release"
 python3 tools/stage_web_release.py "$mnc_release" --check
 git diff --stat

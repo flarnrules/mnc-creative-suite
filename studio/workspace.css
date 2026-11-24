@@ -190,9 +190,10 @@ main .leftPane > .card-list {
   min-width: 0;
 }
 #library.active {
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  display: flex;
 }
+.artwork-for-design {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+.card-preview-bar .buttonbar {flex-wrap:wrap;justify-content:flex-end;flex:0 1 auto;}
 #assetScroll {
   margin-top: 8px;
   overflow-x: hidden;
