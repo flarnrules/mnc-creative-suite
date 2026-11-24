@@ -122,6 +122,7 @@ globalThis.MNC_FRONT = (() => {
     const independent=value?.independentFooter;
     if(Number.isFinite(independent?.markSpace)&&Number.isFinite(independent?.numberSpace)){
       next.independentFooter={markSpace:clampNumber(independent.markSpace,0,209),numberSpace:clampNumber(independent.numberSpace,0,149)};
+      if(independent.copiedShared===true)next.independentFooter.copiedShared=true;
     }
     if (['number','fraction','label'].includes(value?.numberFormat)) next.numberFormat=value.numberFormat;
     if (['none','outline','pill'].includes(value?.numberBadge)) next.numberBadge=value.numberBadge;
@@ -151,24 +152,30 @@ globalThis.MNC_FRONT = (() => {
     return card.frontLayout ??= settings();
   }
 
-  function setFooterMode(card,mode){
+  function collectionMark(card){
+    const {symbol,id}=MNC_SYMBOLS.cardSymbol(state,card,'collection');
+    return {symbol:usesSharedFooter(card)?{...symbol,color:''}:symbol,id};
+  }
+
+  function copySharedFooter(card,layout,from){
+    const {symbol}=collectionMark(card);
+    Object.assign(layout,{footerPosition:from.footerPosition,numberFormat:from.numberFormat,numberBadge:from.numberBadge,
+      printCollectionCode:from.printCollectionCode,printEdition:from.printEdition,setIcon:from.setIcon,setIconX:0,setIconY:0,
+      independentFooter:{markSpace:from.setIcon+9,numberSpace:from.text.number.size+5,copiedShared:true}});
+    const offsets=layout.offsets??={},text=layout.text??={};
+    offsets.number={x:0,y:0};
+    text.edition={...from.text.edition};
+    text.number={...from.text.number};
+    for(const id of sharedFooterLayers)delete card.layoutDesign?.layers?.[id];
+    editCardFields(card,{collectionSymbol:symbol,collectionSymbolMode:symbol.source==='hidden'?'hidden':'custom'});
+  }
+
+  function setFooterMode(card,mode,{copyShared=false}={}){
     if(mode==='custom'){
-      const layout=editable(card);
-      if(!layout.independentFooter){
-        const from=values(card);
-        const text=layout.text??={};
-        if(usesSharedFooter(card)){
-          const shared={footerPosition:from.footerPosition,numberFormat:'fraction',numberBadge:'none',
-            printCollectionCode:true,printEdition:false,setIcon:from.setIcon,setIconX:0,setIconY:0};
-          for(const [key,value] of Object.entries(shared))layout[key]??=value;
-          const offsets=layout.offsets??={};
-          offsets.footer??={x:0,y:0};offsets.number??={x:0,y:0};
-          text.edition={...from.text.edition,...text.edition};
-          text.number={...from.text.number,...text.number};
-        }
-        layout.independentFooter={markSpace:(layout.setIcon??from.setIcon??29)+9,
-          numberSpace:(text.number?.size??from.text?.number?.size??36)+5};
-      }
+      const layout=editable(card),from=values(card);
+      if(usesSharedFooter(card)&&(copyShared||!layout.independentFooter))copySharedFooter(card,layout,from);
+      else if(!layout.independentFooter)layout.independentFooter={markSpace:(from.setIcon??29)+9,
+        numberSpace:(from.text?.number?.size??36)+5};
     }
     card.collectionFooterMode=mode;
   }
@@ -370,24 +377,24 @@ globalThis.MNC_FRONT = (() => {
   }
 
   function addCollection(scene,ctx,c,{x=699,y=1007,ink,glyphColor=ink,outline=false}) {
-    const collection=collectionFor(c), delta=offset(c,'footer');
+    const collection=collectionFor(c);
     const promo=MNC_CARD_METADATA.isPromo(c,collection);
     const total=promo?state.setPlan.target:Number(state.setTotals?.[c.set])||collection?.regularTarget||
       (game.isGameCard(c)?Math.max(0,...state.cards.filter(card=>card.set===c.set)
         .map(card=>Number(card.collectorNumber)||0)):0);
     const layout=values(c), parts=MNC_CARD_METADATA.collectionParts(promo?{...c,edition:state.setPlan.edition}:c,collection,total);
+    const delta=layout.independentFooter?.copiedShared?{x:0,y:0}:offset(c,'footer');
     const shared=usesSharedFooter(c),centered=layout.footerPosition==='center';
     const independent=shared||!!layout.independentFooter,separateNumber=centered||independent;
     const label=[layout.printCollectionCode===false?'':parts.code,separateNumber?'':parts.number,layout.printEdition===false?'':parts.edition].filter(Boolean).join(' · ');
     const size=layout.setIcon??29, right=shared?708:independent?708+delta.x:x+delta.x;
     const numberSpace=shared?state.sharedFooter.numberSize+5:layout.independentFooter?.numberSpace;
     const baseline=independent?1002-(centered?0:numberSpace)+(shared?0:delta.y):y+delta.y-footerReserve(c);
-    const mark=MNC_SYMBOLS.cardSymbol(state,c,'collection'),active=mark.symbol.source!=='hidden';
+    const mark=collectionMark(c),active=mark.symbol.source!=='hidden';
     const symbol=collectionIconBox(c,{x,y});
     scene.add('setIcon',symbol,ctx=>{
       const mx=symbol.x+size/2,my=symbol.y+size/2;
-      if(!shared)return MNC_SYMBOLS.drawCard(ctx,c,mx,my,size,glyphColor,'collection');
-      return MNC_SYMBOLS.drawBadge(ctx,{...mark.symbol,color:''},mx,my,size,glyphColor,mark.id);
+      return MNC_SYMBOLS.drawBadge(ctx,mark.symbol,mx,my,size,glyphColor,mark.id);
     },
       {empty:!size||!active});
     const gap=size>0&&active?(shared?size+9:layout.independentFooter?.markSpace??size+9):0;
@@ -434,7 +441,8 @@ globalThis.MNC_FRONT = (() => {
   }
 
   function collectionIconBox(c,{x=699,y=1007}={}) {
-    const layout=values(c),delta=offset(c,'footer'),size=layout.setIcon??29;
+    const layout=values(c),size=layout.setIcon??29;
+    const delta=layout.independentFooter?.copiedShared?{x:0,y:0}:offset(c,'footer');
     if(usesSharedFooter(c))return {x:708-size,y:1009-size,w:size,h:size};
     if(layout.independentFooter)return {x:708-size+delta.x+(layout.setIconX||0),
       y:1009-size+delta.y+(layout.setIconY||0),w:size,h:size};

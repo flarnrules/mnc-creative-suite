@@ -281,7 +281,7 @@
   }
   $('cardFooterMode').onchange=()=>{
     const card=current();if(!card)return;
-    front.setFooterMode(card,$('cardFooterMode').value);
+    front.setFooterMode(card,$('cardFooterMode').value,{copyShared:true});
     changed();syncFooter(card);
   };
   $('cardEditSharedFooter').onclick=()=>window.MNC_openSharedFooter({footerScope:'card'});

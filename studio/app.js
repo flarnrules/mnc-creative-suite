@@ -196,6 +196,11 @@ function designPreset(c,id,name,{typeDefaultFor}={}) {
   appearance.setGlyphAsset=c.setGlyphAsset||'';
   appearance.typeIconGlyph=MNC_CARD_METADATA.customIcon(c)||null;
   appearance.collectionFooterMode=front.usesSharedFooter(c)?'shared':'custom';
+  for(const [place,key] of [['type','typeSymbol'],['collection','collectionSymbol']]){
+    const mode=MNC_SYMBOLS.cardMode(c,place);
+    appearance[key+'Mode']=mode;
+    appearance[key]=mode==='custom'?MNC_SYMBOLS.cardSymbol(state,c,place).symbol:null;
+  }
   const frontLayout=typeDefaultFor?front.settings(front.values({...c,collectionFooterMode:'custom'})):c.frontLayout||null;
   if(typeDefaultFor&&frontLayout.text.matchLabel){
     const heading=frontLayout.text.matchLabel;
@@ -205,7 +210,7 @@ function designPreset(c,id,name,{typeDefaultFor}={}) {
     if(!Object.keys(heading).length)delete frontLayout.text.matchLabel;
   }
   return deep({
-    id,name,template:c.template,typeDefaultFor,designFamily:c.family,designType:MNC_SET_PLAN.profileFor(c),
+    id,name,template:c.template,typeDefaultFor,symbolSnapshot:true,designFamily:c.family,designType:MNC_SET_PLAN.profileFor(c),
     titlePosition:c.titlePosition||[.075,.075],creditPosition:c.creditPosition||[.07,.958],
     microPosition:c.microPosition||[.93,.958],layers:c.layers||[],useHandGlyphs:!!c.useHandGlyphs,
     artWindow:c.artWindow||{x:.07,y:.14,w:.86,h:.52},artShape:c.artShape||'rounded',
@@ -258,7 +263,7 @@ function applyDesignPreset(c,t,{refresh=true}={}) {
       if(!Object.hasOwn(t.appearance,key))continue;
       const value=t.appearance[key];
       if(['typeIconGlyph','typeIconAsset','typeSymbol','collectionSymbol','typeSymbolMode','collectionSymbolMode'].includes(key)){
-        if(value!==null)editCardFields(c,{[key]:value});
+        if(value!==null||t.symbolSnapshot&&['typeSymbol','collectionSymbol'].includes(key))editCardFields(c,{[key]:value});
       }
       else if(['setGlyph','setGlyphAsset','episodeBadge'].includes(key))editCardFields(c,{[key]:value??''});
       else if(value===null)delete c[key];
@@ -348,7 +353,9 @@ function applyTypeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card),{followSymb
   if(border)MNC_OUTER_BORDER.applyStandard(card,border);
   const palette=Object.assign({},...profiles.map(profile=>profile?.palette));
   MNC_TYPE_DESIGN.applyPalette(card,palette);
-  if(compatible||followSymbols)editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
+  if(followSymbols||compatible&&!preset.symbolSnapshot){
+    editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
+  }
   return !!compatible||!!border||Object.keys(palette).length>0;
 }
 
@@ -358,15 +365,54 @@ function applyStartingDesign(card,id,designId){
   applyTypeDesignPreset(card,id,{designId});
 }
 
+const cardTypeDefaultLayout=['template','titlePosition','creditPosition','microPosition','layers','useHandGlyphs',
+  'artWindow','artShape','artBorder','artRadius','nameplate','artShapeId','nameplateShapeId','frontLayout','layoutDesign'];
+const cardTypeDefaultAppearance=presetAppearanceFields.filter(key=>!['fit','zoom','panX','panY',
+  'showTiming','showPower','showQuote','episodeBadge','overlayAssetId','overlayOpacity','foilRecipe','prismRecipe'].includes(key));
+
+function cardTypeDefault(card){
+  const profile=playableDesignType(MNC_SET_PLAN.profileFor(card));
+  return profile&&profile.family===card?.family?profile:null;
+}
+
+function typeDefaultEdits(card){
+  const profile=cardTypeDefault(card);
+  if(!profile)return [];
+  const draft=cardDraft(card.sourceAssetId,card.family,profile);
+  const preset=designPreset(draft,'','');
+  const edits=[];
+  const catalogEdits=card.catalogEdits&&{...card.catalogEdits};
+  function record(key,value){
+    const previous=card[key];
+    if(JSON.stringify(previous)!==JSON.stringify(value))edits.push({key,before:previous===undefined?undefined:deep(previous),after:value});
+  }
+  for(const [fields,source] of [[cardTypeDefaultLayout,preset],[cardTypeDefaultAppearance,preset.appearance]]){
+    for(const key of fields){
+      const value=source[key]??undefined;
+      record(key,value);
+      if(catalogEdits&&Object.hasOwn(catalogEdits,key)){
+        if(value===undefined)delete catalogEdits[key];
+        else catalogEdits[key]=value;
+      }
+    }
+  }
+  if(catalogEdits)record('catalogEdits',catalogEdits);
+  return edits;
+}
+
+function writeTypeDefaultEdits(card,edits,direction){
+  for(const edit of edits){
+    const value=edit[direction];
+    if(value===undefined)delete card[edit.key];
+    else card[edit.key]=deep(value);
+  }
+}
+
 function captureTypeDesign(card,id){
   const setting=state.visualLanguage.profiles[id],type=MNC_SET_PLAN.profile(id);
   if(!setting||!type||!MNC_TYPE_DESIGN.matching(card,id))return null;
   const previous=state.templates.find(item=>item.id===setting.presetId&&item.typeDefaultFor===id);
   const template=designPreset(card,previous?.id||uniqueId('LAY-',state.templates),type.name+' · starting layout',{typeDefaultFor:id});
-  const {symbol}=MNC_SYMBOLS.cardSymbol(state,card);
-  const {symbol:mark}=MNC_SYMBOLS.cardSymbol(state,card,'collection');
-  if(MNC_SYMBOLS.cardMode(card,'type')!=='standard')setting.symbol=deep(symbol);
-  if(MNC_SYMBOLS.cardMode(card,'collection')!=='standard')setting.setMark=deep(mark);
   setting.palette={};
   setting.border=null;
   if(setting.presetId&&setting.presetId!==template.id&&state.templates.some(item=>item.id===setting.presetId)){

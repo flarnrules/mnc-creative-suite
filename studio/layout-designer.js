@@ -643,7 +643,7 @@
     const collection=layer.id==='setIcon',place=collection?'collection':'type',size=collection?'setIcon':'typeIcon';
     const {symbol,id}=symbols.cardSymbol(state,card,place), using=symbols.cardMode(card,place);
     const modeSelect=input(host,'Glyph mode',using,(c,value)=>symbols.setCardMode(c,place,value),
-      {choices:[['standard','Follow shared glyph'],['custom','This card only'],['hidden','Hidden']],refresh:true});
+      {choices:[['standard','Follow shared glyph'],['custom',typeDraft?'This design':'This card only'],['hidden','Hidden']],refresh:true});
     if(using!=='hidden'){
       const set=(c,patch)=>{
         symbols.setCardSymbol(c,place,patch);
@@ -670,7 +670,9 @@
         input(format,'Presentation',symbol.presentation,(c,value)=>set(c,{presentation:value,source:'text'}),
           {choices:[['text','Monochrome'],['emoji','Color emoji']]});
       }
-      input(host,'Symbol ink',symbol.color||palette(card).ink,(c,value)=>set(c,{color:value}),{type:'color',live:true});
+      const theme=palette(card),ink=collection&&game.isGameCard(card)?theme.trim:theme.ink;
+      input(host,'Symbol ink',symbol.color||ink,(c,value)=>set(c,{color:value}),{type:'color',live:true});
+      if(collection&&symbol.color)action(host,'Use card palette',()=>change(c=>symbols.setCardSymbol(c,place,{color:''}),{sync:true}));
     }
     input(host,'Symbol size (px)',front.values(card)[size]??29,(c,value)=>{front.editable(c)[size]=value||0;},
       {type:'number',min:0,max:200});
@@ -790,12 +792,14 @@
       $('ldPropertiesTab').hidden=false;
       $('ldPropertiesTab').setAttribute('aria-pressed','true');
       const host=fields('Shared footer');
-      const description=node('p','This layer follows the shared layout in Current Designs.','ld-muted');
+      const description=node('p','Copy the visible footer to edit its three layers '+(typeDraft?'for this design.':'on this card.'),'ld-muted');
       host.append(description);
-      if(!typeDraft)action(host,'Edit shared footer',()=>window.MNC_openSharedFooter({footerScope:'card'}));
       action(host,'Customize footer here',()=>{
-        change(c=>front.setFooterMode(c,'custom'),{sync:true});
+        change(c=>front.setFooterMode(c,'custom',{copyShared:true}),{sync:true});
+        message('Footer copied. Edits apply to '+(typeDraft?'this design.':'this card.'));
       });
+      if(card.frontLayout?.independentFooter)action(host,'Resume custom footer',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
+      if(!typeDraft)action(host,'Edit shared footer settings',()=>window.MNC_openSharedFooter({footerScope:'card'}));
       return;
     }
     const fill=fillInspector.allows(layer,card), artMask=['art','cutout'].includes(layer.id);
@@ -822,7 +826,7 @@
       return;
     }
     if(['footer','number','setIcon'].includes(layer.id)){
-      const host=fields('Footer connection');
+      const host=fields(typeDraft?'Footer for this design':'Footer for this card');
       action(host,'Use shared footer',()=>change(c=>front.setFooterMode(c,'shared'),{sync:true}));
       if(!front.effective(card).independentFooter)action(host,'Edit footer pieces separately',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
     }
@@ -1034,14 +1038,14 @@
     histories.delete(card.id);
     typeDraft={kind:'type',id,name:profile.name+' default',card,fromSharedFooter,initial:json(card)};
     tab('layoutDesigner');
-    if(footerMode)change(c=>front.setFooterMode(c,footerMode),{sync:true});
+    if(footerMode)change(c=>front.setFooterMode(c,footerMode,{copyShared:true}),{sync:true});
     if(layer)editLayer(layer,{scroll:true});
   };
   window.MNC_editCardFooter=(card,footerMode)=>{
     if(!card)return;
     currentId=card.id;
     tab('layoutDesigner');
-    if(footerMode)change(c=>front.setFooterMode(c,footerMode),{sync:true});
+    if(footerMode)change(c=>front.setFooterMode(c,footerMode,{copyShared:true}),{sync:true});
     editLayer('footer',{scroll:true});
   };
   window.MNC_editReusableDesign=(designId='',previewType,assignment='other')=>{
