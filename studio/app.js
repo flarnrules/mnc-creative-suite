@@ -82,6 +82,7 @@ try {
 let currentId=state.cards.find(c=>c.id===savedCardId)?.id||state.cards.find(c=>c.id===game.ashman.id)?.id||state.cards.find(inWorkingCatalog)?.id||state.cards[0]?.id||null;
 let activeTab='visualLanguage';
 let pendingCardDesign=null;
+const compactWorkspace=window.matchMedia?.('(max-width:700px), (max-width:1000px) and (max-height:600px) and (orientation:landscape)');
 const fallbackImageData=window.MNC_IMAGE_DATA||{};
 const imageCache=new Map();
 const imageSizes=new Map();
@@ -141,7 +142,11 @@ function tab(name,options){
     if(item.right>area.right)track.scrollLeft+=item.right-area.right;
     else if(item.left<area.left)track.scrollLeft+=item.left-area.left;
   }
-  if(name==='studio')refreshStudio();
+  if(compactWorkspace?.matches)syncSuiteTool();
+  if(name==='studio'){
+    if(compactWorkspace?.matches)showStudioCards(options?.chooseCard===true||!cardById(currentId));
+    refreshStudio();
+  }
   if(name==='library'){refreshAssetsFilter();renderLibrary();}
   if(name==='layoutDesigner')window.MNC_refreshLayoutDesigner?.();
   if(name==='foil'){refreshFoilCardOptions();renderFoil();}
@@ -155,7 +160,42 @@ function tab(name,options){
   if(name==='data')renderSummary();
   window.MNC_tabChanged?.(name);
 }
-document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>tab(btn.dataset.tab)));
+document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>tab(btn.dataset.tab,btn.id==='openSavedCards'?{chooseCard:true}:undefined)));
+function syncSuiteTool(){
+  const items=Array.from($('suiteTabs').querySelectorAll('button[data-tab]'),button=>[button.dataset.tab,button.textContent.trim()]);
+  if(!items.some(([id])=>id===activeTab)){
+    const heading=$(activeTab)?.querySelector('h2');
+    items.push([activeTab,heading?.textContent||activeTab]);
+  }
+  dropDownOptions($('suiteTool'),items,activeTab);
+}
+function showStudioCards(open){
+  $('studio').dataset.choosingCard=String(open);
+  $('studioToggleCards').setAttribute('aria-expanded',String(open));
+  $('studioToggleCards').textContent=open?'Edit card':'Saved cards';
+}
+if(compactWorkspace){
+  const syncCompactWorkspace=()=>{if(compactWorkspace.matches)syncSuiteTool();};
+  compactWorkspace.addEventListener('change',syncCompactWorkspace);
+  syncCompactWorkspace();
+  $('suiteTool').onchange=event=>{
+    const next=event.target.value;
+    if(next!==activeTab)tab(next);
+    event.target.value=activeTab;
+  };
+  $('studioToggleCards').onclick=()=>showStudioCards($('studio').dataset.choosingCard!=='true');
+  const viewport=window.visualViewport;
+  if(viewport){
+    const fitVisualViewport=()=>{
+      const keyboard=compactWorkspace.matches&&viewport.scale===1&&viewport.height+16<document.documentElement.clientHeight;
+      if(keyboard)document.body.style.setProperty('--mobile-height',`${Math.floor(viewport.height)}px`);
+      else document.body.style.removeProperty('--mobile-height');
+    };
+    viewport.addEventListener('resize',fitVisualViewport);
+    compactWorkspace.addEventListener('change',fitVisualViewport);
+    fitVisualViewport();
+  }
+}
 {
  const tray=$('suiteTray'), button=$('suiteTrayToggle'), key='mnc-suite-header-open';
  function show(open){
@@ -715,7 +755,11 @@ function renderCardList() {
     const variant=c.characterCategory==='Creature'?c.characterType:!c.characterCategory?type:'';
     labels.innerHTML=`<b>${safe(c.title)}</b><span>${safe([c.family,c.characterCategory,variant,c.catalogStatus].filter(Boolean).join(' · '))}</span>`;
     row.append(thumb,labels);
-    row.onclick=()=>{currentId=c.id;$('rightPane')?.scrollTo(0,0);refreshStudio();};
+    row.onclick=()=>{
+      currentId=c.id;
+      if(compactWorkspace?.matches)showStudioCards(false);
+      $('rightPane')?.scrollTo(0,0);refreshStudio();
+    };
     list.append(row);
   }
   if(!list.childElementCount)list.textContent='No cards match.';

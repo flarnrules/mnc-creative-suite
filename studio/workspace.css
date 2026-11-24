@@ -229,6 +229,8 @@ main .leftPane > .card-list {
   font-size: 11px;
 }
 
+.compact-only {display: none;}
+
 @media (max-width: 900px) {
   .tool-workspace {
     align-items: start;
@@ -273,6 +275,104 @@ main .leftPane > .card-list {
 }
 
 @media (max-width: 700px), (max-width: 1000px) and (max-height: 600px) {
+  body {height: var(--mobile-height, 100dvh);}
+  main {padding: 6px 8px;}
+  .suite-nav {gap: 5px;padding: 4px 8px;}
+  .suite-nav > #suiteTrayToggle {margin: 0;min-height: 38px;padding-inline: 8px;}
+  .suite-nav > .tabs {display: none;}
+  .suite-tool-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    font-size: .875rem;
+    color: var(--muted);
+  }
+  .suite-tool-picker select {flex: 1;min-width: 0;min-height: 38px;font-size: 1rem;}
+  .page.active > .sectionhead {gap: 5px 10px;margin-bottom: 6px;}
+  .page.active > .sectionhead h2 {font-size: 1.32rem;margin-bottom: 1px;}
+  .page.active > .sectionhead p {font-size: .8125rem;line-height: 1.35;margin-block: 2px;}
+  .page.active > .sectionhead .buttonbar {gap: 5px;}
+  .page.active > .sectionhead button, .page.active > .sectionhead .file-label {min-height: 38px;padding: 5px 8px;font-size: .8125rem;}
+  main :is(input[type="text"], input[type="number"], input:not([type]), select, textarea) {font-size: 1rem;}
+  .tool-workspace {
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+    align-content: start;
+  }
+  #visualLanguage > .sectionhead > .buttonbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 24rem);
+  }
+  #designSaveStatus {grid-column: 1 / -1;order: 1;margin: 1px 0 0;}
+  #visualLanguage .design-choice button {min-height: 37px;}
+  #library > .toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 8px;
+    padding: 7px;
+    margin-bottom: 3px;
+  }
+  #assetSearch {grid-column: 1 / -1;}
+  #assetScroll {margin-top: 4px;}
+  #library > .artwork-for-design {padding: 7px 8px;margin-bottom: 5px;gap: 5px;}
+  .artwork-for-design strong {font-size: .875rem;}
+  .artwork-for-design .buttonbar {gap: 5px;}
+  .artwork-for-design button {font-size: .8125rem;padding: 6px 9px;min-height: 38px;}
+  #setDesigner .set-stats {
+    grid-template-columns: repeat(5, minmax(72px, 1fr));
+    flex: none;
+    gap: 4px;
+    margin-bottom: 7px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  #setDesigner .set-stat {padding: 4px 6px;}
+  #setDesigner .set-stat:last-child {grid-column: auto;}
+  #setDesigner .set-stat strong {font-size: 1.25rem;line-height: 1.2;}
+  #setDesigner .set-stat span {font-size: .6875rem;}
+  #viewer .view-stage {max-height: 46dvh;padding: 6px;}
+  #viewer .view-stage canvas {width: calc(min(65vw, 30dvh) * var(--view-zoom, 1));}
+  #viewer .view-stage.show-both canvas {width: calc(min(38vw, 30dvh) * var(--view-zoom, 1));}
+  #prism .sectionhead, #fractal .sectionhead {align-items: center;}
+  #prism .inline-label, #fractal .inline-label {min-width: 0;max-width: 100%;}
+  #prism .inline-label select, #fractal .inline-label select {width: auto;max-width: min(100%, 13rem);}
+  #prism .sectionhead button, #fractal .sectionhead button {min-height: 36px;}
+
+  #studio .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "preview" "edit";
+    grid-template-rows: minmax(0, 47fr) minmax(0, 53fr);
+    align-items: stretch;
+    overflow: hidden;
+    padding: 0;
+    gap: 5px;
+  }
+  #studio .preview-pane {height: auto;}
+  #studio .canvas-frame {padding: 4px;}
+  #studio :is(.rightPane, .leftPane) {max-height: none;}
+  #studio .rightPane {padding: 8px;overflow: auto;scroll-padding-block: 8px;}
+  #studio:not([data-choosing-card="true"]) .leftPane,
+  #studio[data-choosing-card="true"] .rightPane {display: none;}
+  #studio[data-choosing-card="true"] .leftPane {grid-area: edit;min-height: 0;padding: 8px;overflow: auto;}
+  #studio .leftPane > .card-list {overflow: visible;}
+  #studio .card-preview-bar {flex-wrap: wrap;gap: 2px 7px;padding: 4px 6px;}
+  #studio #activeCardTitle {max-width: 100%;font-size: .8125rem;}
+  #studio .card-preview-bar .buttonbar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+  #studio .card-preview-bar button {min-height: 38px;padding: 4px;font-size: .75rem;line-height: 1.2;}
+  #studioToggleCards {display: block;}
+  #studio .inspector-tabs {display: flex;flex-wrap: wrap;gap: 4px;}
+  #studio .inspector-tabs button {flex: 1 1 auto;min-height: 37px;padding: 5px 7px;}
+  #studio .card-actions {gap: 4px;}
+  #studio #cardSaveStatus {order: 1;}
+
   #layoutDesigner .ld-toolbar {
     position: relative;
     z-index: 4;
@@ -302,10 +402,11 @@ main .leftPane > .card-list {
     flex-wrap: nowrap;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scrollbar-width: thin;
+    scrollbar-width: none;
     padding: 4px 6px;
   }
   #layoutDesigner .ld-quick-tools button {flex: none;white-space: nowrap;}
+  #ldFooterQuick {display: inline-block;}
   #layoutDesigner .ld-mobile-panes {
     display: flex;
     flex: none;
@@ -321,19 +422,30 @@ main .leftPane > .card-list {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
-  #layoutDesigner .ld-workspace > * {grid-area: 1 / 1;border-inline: 0;}
-  .ld-workspace:not([data-pane="canvas"]) .ld-stage-panel,
+  #layoutDesigner > .ld-workspace:is([data-pane="layers"], [data-pane="edit"]) {
+    grid-template-rows: minmax(0, 46fr) minmax(0, 54fr);
+  }
+  #layoutDesigner .ld-stage-panel {grid-area: 1 / 1;}
+  #layoutDesigner .ld-rail {grid-area: 2 / 1;border-inline: 0;}
   .ld-workspace:not([data-pane="layers"]) .ld-layer-rail,
   .ld-workspace:not([data-pane="edit"]) .ld-inspector-rail {display: none;}
+  #layoutDesigner .ld-panel-heading {padding: 5px 9px;}
+  #ldInspectorRail:has(#ldFooterPart:not([hidden])) #ldLayerTitle {display: none;}
+  #ldFooterPart {display: block;width: 100%;min-height: 37px;font-size: .875rem;}
+  #layoutDesigner .ld-inspector-tabs {flex: none;padding: 4px 7px;}
+  #layoutDesigner .ld-inspector {flex: 1 1 0;padding-inline: 9px;overscroll-behavior: contain;scroll-padding-block: 8px;}
+  #layoutDesigner .ld-inspector button {min-height: 38px;white-space: normal;}
   .ld-artboard[data-pan="true"] :is(canvas, .ld-handle) {pointer-events: none;}
   .ld-stage {overscroll-behavior: contain;}
+  .ld-mat {padding: 6px 10px;}
   .ld-inspector .label :is(input:not([type="color"]), select, textarea), .ld-setup .label select {
     font-size: 1rem;
   }
   .ld-layers button {min-height: 40px;}
   .ld-layers .ld-eye {width: 40px;}
   #layoutDesigner .ld-statusbar {padding: 4px 6px;}
-  .ld-status-tools {flex-wrap: wrap;gap: 4px;}
+  .ld-status-tools {min-width: 0;max-width: 100%;overflow-x: auto;scrollbar-width: none;overscroll-behavior-x: contain;gap: 4px;}
+  .ld-status-tools > * {flex: none;}
   .ld-statusbar .ld-status-links, .ld-statusbar .ld-hint {display: none;}
   .ld-statusbar #ldStatus {width: 100%;margin: 0;}
   .ld-zoom, .ld-guides {margin-left: 2px;}
@@ -349,9 +461,48 @@ main .leftPane > .card-list {
     border-bottom: 1px solid var(--ld-edge);
   }
   .ld-trace-tools button {flex: 1;padding: 5px;min-height: 38px;}
+
+  #ldWorkspace[data-pane="edit"] #ldInspectorRail:has(#ldFooterPart:not([hidden])) {
+    display: grid;
+    grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  #ldInspectorRail:has(#ldFooterPart:not([hidden])) .ld-inspector {grid-column: 1 / -1;}
 }
 
-@media (max-width: 1000px) and (max-height: 600px) and (orientation: landscape) {
+@media (max-width: 700px) and (max-height: 500px) {
+  #layoutDesigner:has(#ldWorkspace[data-pane="edit"]) .ld-quick-tools {display: none;}
+  #layoutDesigner > .ld-workspace[data-pane="edit"] {grid-template-rows: minmax(0, 40fr) minmax(0, 60fr);}
+}
+
+@media (max-width: 700px) and (min-height: 500px) {
+  #typeDesigner .type-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 44fr) minmax(0, 56fr);
+    align-items: stretch;
+    overflow: hidden;
+    gap: 5px;
+    padding: 0;
+  }
+  #typeDesigner .type-workspace > .panel {padding: 8px;overflow: auto;}
+  #typeDesigner .type-preview-panel {
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 4px 10px;
+    text-align: left;
+    container-type: size;
+  }
+  #typeDesigner #typeDesignPreview {
+    grid-area: 1 / 2 / 3 / 3;
+    place-self: center;
+    width: min(100%, calc(100cqh * 5 / 7));
+    margin: 0;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1000px) and (max-height: 600px) and (orientation: landscape) {
   #layoutDesigner.active {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(14rem, 40%);
@@ -373,5 +524,14 @@ main .leftPane > .card-list {
     border-left: 0;
     border-radius: 0 0 12px 0;
   }
-  #layoutDesigner .ld-panel-heading {padding-block: 7px;}
+  #layoutDesigner > .ld-workspace:is([data-pane="layers"], [data-pane="edit"]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  #layoutDesigner .ld-rail {grid-area: 1 / 2;border-top: 0;border-left: 1px solid var(--ld-edge);}
+  #studio .workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    grid-template-areas: "preview edit";
+    grid-template-rows: minmax(0, 1fr);
+  }
 }
