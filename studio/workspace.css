@@ -296,6 +296,11 @@ main .leftPane > .card-list {
   .page.active > .sectionhead .buttonbar {gap: 5px;}
   .page.active > .sectionhead button, .page.active > .sectionhead .file-label {min-height: 38px;padding: 5px 8px;font-size: .8125rem;}
   main :is(input[type="text"], input[type="number"], input:not([type]), select, textarea) {font-size: 1rem;}
+  .tool-workspace {
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+    align-content: start;
+  }
   #visualLanguage > .sectionhead > .buttonbar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
