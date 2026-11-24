@@ -5,6 +5,7 @@
   const inspector=$('ldInspector'), selection=$('ldSelection'), cards=$('ldCard'), status=$('ldStatus');
   const workspace=$('ldWorkspace'),setup=$('ldSetupToggle'),pan=$('ldPan'),zoom=$('ldZoom');
   const views=[['canvas',$('ldCanvasView')],['layers',$('ldLayersView')],['edit',$('ldEditView')]];
+  const footerParts=['footer','number','setIcon'];
   const histories=new Map();
   const current=()=>typeDraft?.card||cardById(currentId);
   const json=value=>JSON.stringify(value);
@@ -35,7 +36,8 @@
     workspace.dataset.pane=pane;
     for(const [id,button] of views)button.setAttribute('aria-pressed',String(pane===id));
     setup.setAttribute('aria-expanded','false');
-    if(pane==='canvas')fit();
+    if(pane==='canvas'||compactWorkspace?.matches)fit();
+    if(compactWorkspace?.matches)syncFooterShortcuts(currentLayer());
   }
 
   function setPan(enabled) {
@@ -133,6 +135,19 @@
     const measure=inspector.querySelector('[data-art-height]');
     if(measure&&layer?.id==='art')measure.textContent=Math.round(layer.rect.h)+' px';
     $('ldPlatesQuick').disabled=!layers.some(item=>item.id==='plate');
+    if(compactWorkspace?.matches)syncFooterShortcuts(layer);
+  }
+
+  function syncFooterShortcuts(layer){
+    const menu=$('ldFooterPart'),button=$('ldFooterQuick');
+    const isFooter=footerParts.includes(layer?.id);
+    menu.hidden=!isFooter;
+    button.disabled=!layers.some(item=>footerParts.includes(item.id));
+    button.setAttribute('aria-pressed',String(isFooter&&workspace.dataset.pane==='edit'));
+    if(isFooter){
+      for(const option of menu.options)option.disabled=!layers.some(item=>item.id===option.value);
+      menu.value=layer.id;
+    }
   }
 
   function layerList(){
@@ -201,9 +216,17 @@
 
   function fit(){
     if(!stage.clientWidth||!stage.clientHeight)return;
-    const scale=zoom.value;
-    const width=scale==='fit'?Math.min(stage.clientWidth-40,(stage.clientHeight-32)*CW/CH,900):Number(scale)*CW;
-    board.style.setProperty('--ld-card-width',Math.max(80,Math.floor(width))+'px');
+    const scale=zoom.value,compact=compactWorkspace?.matches;
+    const width=scale==='fit'?Math.min(stage.clientWidth-(compact?20:40),(stage.clientHeight-(compact?12:32))*CW/CH,900):Number(scale)*CW;
+    board.style.setProperty('--ld-card-width',Math.max(compact?32:80,Math.floor(width))+'px');
+  }
+
+  function revealZoomedLayer(){
+    if(!compactWorkspace?.matches||zoom.value==='fit'||selection.hidden)return;
+    const viewport=stage.getBoundingClientRect(),layer=selection.getBoundingClientRect();
+    if(!viewport.width||!viewport.height)return;
+    stage.scrollLeft+=layer.left+layer.width/2-viewport.left-viewport.width/2;
+    stage.scrollTop+=layer.top+layer.height/2-viewport.top-viewport.height/2;
   }
 
   function fields(title){
@@ -1084,6 +1107,7 @@
   function editLayer(id,options){
     showPane('edit');
     select(id,options);
+    revealZoomedLayer();
   }
   for(const [id,button] of views)button.onclick=()=>showPane(id);
   setup.onclick=()=>setup.setAttribute('aria-expanded',String(setup.getAttribute('aria-expanded')!=='true'));
@@ -1091,6 +1115,11 @@
     $(id).onclick=()=>select(selected,{view});
   }
   $('ldArtQuick').onclick=()=>editLayer('art',{scroll:true});
+  $('ldFooterQuick').onclick=()=>{
+    const id=footerParts.includes(selected)?selected:footerParts.find(key=>layers.some(layer=>layer.id===key));
+    if(id)editLayer(id,{scroll:true});
+  };
+  $('ldFooterPart').onchange=event=>editLayer(event.target.value,{scroll:true});
   $('ldMaskQuick').onclick=()=>editLayer('art',{view:'mask',scroll:true});
   $('ldBorderQuick').onclick=()=>editLayer('border',{scroll:true});
   $('ldPlatesQuick').onclick=()=>editLayer('plate',{scroll:true});
@@ -1099,15 +1128,23 @@
   zoom.onchange=()=>{
     pan.hidden=zoom.value==='fit';
     setPan(false);
-    showPane('canvas');
+    showPane(compactWorkspace?.matches?workspace.dataset.pane:'canvas');
     if(pan.hidden){stage.scrollLeft=0;stage.scrollTop=0;}
+    else revealZoomedLayer();
   };
   pan.onclick=()=>{
     setPan(board.dataset.pan!=='true');
-    showPane('canvas');
+    showPane(compactWorkspace?.matches?workspace.dataset.pane:'canvas');
   };
   $('ldGuides').onchange=()=>{$('ldSafeArea').hidden=!$('ldGuides').checked;};
-  new ResizeObserver(()=>{if(activeTab==='layoutDesigner')fit();}).observe(stage);
+  new ResizeObserver(()=>{
+    if(activeTab!=='layoutDesigner')return;
+    fit();
+    if(!drag&&workspace.dataset.pane==='edit')revealZoomedLayer();
+  }).observe(stage);
+  compactWorkspace?.addEventListener('change',()=>{
+    if(activeTab==='layoutDesigner'&&compactWorkspace.matches)syncFooterShortcuts(currentLayer());
+  });
   $('ldUndo').onclick=()=>restoreEdit('undo');
   $('ldRedo').onclick=()=>restoreEdit('redo');
   $('ldForward').onclick=()=>moveLayer(1);

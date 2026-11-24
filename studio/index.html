@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MNC Creative Suite · 0.9.18</title><link rel="stylesheet" href="style.css?v=0.9.18"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css?v=0.9.18"><link rel="stylesheet" href="layout-designer.css?v=0.9.18"><link rel="stylesheet" href="workspace.css?v=0.9.18"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>MNC Creative Suite · 0.9.19</title><link rel="stylesheet" href="style.css?v=0.9.19"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css?v=0.9.19"><link rel="stylesheet" href="layout-designer.css?v=0.9.19"><link rel="stylesheet" href="workspace.css?v=0.9.19"></head>
 <body>
-<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.18</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
+<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.19</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
 <div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="visualLanguage">Current Designs</button>
 <button type="button" data-tab="library">Artwork</button>
 <button type="button" data-tab="studio">Card Designer</button>
@@ -17,7 +17,8 @@
 <button type="button" data-tab="production">Print Sheets</button>
 <button type="button" data-tab="fractal">Fractal Lab</button>
 <button type="button" data-tab="glyph">Glyph Kit</button>
-<button type="button" data-tab="data">Project &amp; Backup</button></nav></div>
+<button type="button" data-tab="data">Project &amp; Backup</button></nav>
+<label class="compact-only suite-tool-picker"><span>Tool</span><select id="suiteTool" aria-label="Workspace tool"></select></label></div>
 <main>
 <section class="page" id="layoutDesigner" aria-labelledby="ldTitle">
   <header class="ld-toolbar">
@@ -44,6 +45,7 @@
     </div>
   </header>
   <div class="ld-quick-tools" id="ldQuickTools" aria-label="Layout tools">
+    <button id="ldFooterQuick" class="compact-only" type="button" disabled>Footer</button>
     <button id="ldArtQuick" type="button">Art window</button>
     <button id="ldMaskQuick" type="button">Cutout mask</button>
     <button id="ldPlatesQuick" type="button">Nameplates</button>
@@ -93,7 +95,7 @@
       </div>
     </div>
     <aside class="ld-rail ld-inspector-rail" id="ldInspectorRail" aria-labelledby="ldLayerTitle">
-      <div class="ld-panel-heading"><h3 id="ldLayerTitle">Properties</h3></div>
+      <div class="ld-panel-heading"><h3 id="ldLayerTitle">Properties</h3><select id="ldFooterPart" class="compact-only" aria-label="Footer layer" hidden><option value="footer">Set Abbrev</option><option value="number">Card number</option><option value="setIcon">Set Symbol</option></select></div>
       <div class="ld-inspector-tabs" aria-label="Layer settings">
         <button id="ldPropertiesTab" type="button" aria-pressed="true">Properties</button>
         <button id="ldFillTab" type="button" aria-pressed="false" hidden>Fill</button>
@@ -462,7 +464,7 @@
   </div>
 </div>
 <div class="workspace tool-workspace">
-<aside class="panel leftPane" aria-labelledby="savedCardsTitle">
+<aside class="panel leftPane" id="studioCards" aria-labelledby="savedCardsTitle">
   <h3 id="savedCardsTitle">Saved cards</h3>
   <label class="label">Find card<input id="cardSearch" placeholder="Name, ID, family..."></label>
   <label class="label">Show<select id="cardScope"><option value="all">All cards</option><option value="game">Catalog &amp; game cards</option><option value="archive">Legacy layouts</option></select></label>
@@ -476,6 +478,7 @@
   <div class="card-preview-bar">
     <span id="activeCardTitle">Card preview</span>
     <div class="buttonbar">
+      <button id="studioToggleCards" class="compact-only" type="button" aria-expanded="false" aria-controls="studioCards">Saved cards</button>
       <button id="cardEditLayout" type="button" data-tab="layoutDesigner">Edit layout</button>
       <button id="cardOpenFoil" type="button" data-tab="prism" aria-label="Preview in Foil Lab">Foil Lab</button>
       <button id="openCardView" type="button">Front &amp; back</button>
@@ -1124,4 +1127,4 @@
 <div class="data-layout"><div class="panel"><h3>Back up / restore</h3><div class="buttonbar"><button class="accent-btn" id="exportProject">Export project JSON</button><label class="file-label secondary">Import project JSON<input id="importProject" type="file" accept=".json,application/json"></label></div><p class="muted">Keep your project JSON, workbook, and assets folder together. Images imported in browser-only mode are embedded in the JSON.</p><hr><div class="buttonbar"><button id="exportCardsCSV">Export cards CSV</button><button id="exportAssetsCSV">Export assets CSV</button></div></div><div class="panel"><h3>Project status</h3><div id="projectSummary" class="summary-stats"></div><hr><h3>Earlier tools</h3><div class="buttonbar"><button data-tab="fractalLite">Fractal Lite</button><button data-tab="prismLegacy">Prism v0.8</button><button data-tab="foil">Foil Lite</button></div></div></div></div>
 </section>
 </main>
-<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js?v=0.9.18"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js?v=0.9.18"></script><script src="artwork-profiles.js"></script><script src="front-layout.js?v=0.9.18"></script><script src="front-effects.js"></script><script src="outer-border.js?v=0.9.18"></script><script src="layout-design.js?v=0.9.18"></script><script src="art-cutout.js"></script><script src="type-design.js?v=0.9.18"></script><script src="mirror-mask.js"></script><script src="app.js?v=0.9.18"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js?v=0.9.18"></script><script src="game-studio.js?v=0.9.18"></script><script src="shape-studio.js?v=0.9.18"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js?v=0.9.18"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js?v=0.9.18"></script><script src="design-system-ui.js?v=0.9.18"></script><script src="type-design-ui.js?v=0.9.18"></script><script src="glyph-context-ui.js?v=0.9.18"></script><script src="cutout-editor.js?v=0.9.18"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js?v=0.9.18"></script><script src="lab-links.js?v=0.9.18"></script></body></html>
+<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js?v=0.9.19"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js?v=0.9.19"></script><script src="artwork-profiles.js"></script><script src="front-layout.js?v=0.9.19"></script><script src="front-effects.js"></script><script src="outer-border.js?v=0.9.19"></script><script src="layout-design.js?v=0.9.19"></script><script src="art-cutout.js"></script><script src="type-design.js?v=0.9.19"></script><script src="mirror-mask.js"></script><script src="app.js?v=0.9.19"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js?v=0.9.19"></script><script src="game-studio.js?v=0.9.19"></script><script src="shape-studio.js?v=0.9.19"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js?v=0.9.19"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js?v=0.9.19"></script><script src="design-system-ui.js?v=0.9.19"></script><script src="type-design-ui.js?v=0.9.19"></script><script src="glyph-context-ui.js?v=0.9.19"></script><script src="cutout-editor.js?v=0.9.19"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js?v=0.9.19"></script><script src="lab-links.js?v=0.9.19"></script></body></html>
