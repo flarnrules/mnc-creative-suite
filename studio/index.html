@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MNC Creative Suite · 0.9.14</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="layout-designer.css"><link rel="stylesheet" href="workspace.css"></head>
+<title>MNC Creative Suite · 0.9.15</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css?v=0.9.15"><link rel="stylesheet" href="layout-designer.css?v=0.9.15"><link rel="stylesheet" href="workspace.css?v=0.9.15"></head>
 <body>
-<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.14</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
-<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="visualLanguage">Current Designs</button>
+<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.15</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
+<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="library">Artwork</button>
+<button type="button" data-tab="visualLanguage">Current Designs</button>
 <button type="button" data-tab="studio">Card Designer</button>
 <button type="button" data-tab="layoutDesigner">Layout Designer</button>
 <button type="button" data-tab="setDesigner">Set Designer</button>
@@ -11,7 +12,6 @@
 <button type="button" data-tab="shapes">Shape Designer</button>
 <button type="button" data-tab="mirror">Mirror Finish</button>
 <button type="button" data-tab="backs">Back Designer</button>
-<button type="button" data-tab="library">Artwork</button>
 <button type="button" data-tab="rules">Game &amp; Set</button>
 <button type="button" data-tab="viewer">Card View</button>
 <button type="button" data-tab="production">Print Sheets</button>
@@ -23,15 +23,18 @@
 <section class="page" id="layoutDesigner" aria-labelledby="ldTitle">
   <header class="ld-toolbar">
     <h2 id="ldTitle">Layout Designer</h2>
-    <label class="label ld-card-choice">Card<select id="ldCard"></select></label>
-    <div class="ld-preset-choice">
-      <label class="label">Layout<select id="ldPreset"></select></label>
-      <button id="ldApply" type="button">Apply</button>
-    </div>
-    <div class="ld-toolbar-actions">
-      <button id="ldSave" type="button">Save layout preset</button>
-      <button id="ldTypeDefault" type="button">Set type default</button>
-      <button id="ldExport" class="accent-btn" type="button">Export PNG</button>
+    <button id="ldSetupToggle" class="ld-mobile-control" type="button" aria-controls="ldSetup" aria-expanded="false">Card &amp; layout</button>
+    <div class="ld-setup" id="ldSetup">
+      <label class="label ld-card-choice">Card<select id="ldCard"></select></label>
+      <div class="ld-preset-choice">
+        <label class="label">Layout<select id="ldPreset"></select></label>
+        <button id="ldApply" type="button">Apply</button>
+      </div>
+      <div class="ld-toolbar-actions">
+        <button id="ldSave" type="button">Save layout preset</button>
+        <button id="ldTypeDefault" type="button">Set type default</button>
+        <button id="ldExport" class="accent-btn" type="button">Export PNG</button>
+      </div>
     </div>
   </header>
   <div class="ld-quick-tools" id="ldQuickTools" aria-label="Layout tools">
@@ -42,8 +45,13 @@
     <button id="ldGradientQuick" type="button">Gradients</button>
   </div>
   <p id="ldEmpty" class="ld-empty" hidden>Choose <button type="button" data-tab="studio">Card Designer</button> to create your first card.</p>
-  <div class="ld-workspace" id="ldWorkspace">
-    <aside class="ld-rail ld-layer-rail" aria-labelledby="ldLayersTitle">
+  <div class="ld-mobile-panes" id="ldMobilePanes" role="group" aria-label="Layout views">
+    <button id="ldCanvasView" type="button" aria-controls="ldStagePanel" aria-pressed="true">Canvas</button>
+    <button id="ldLayersView" type="button" aria-controls="ldLayerRail" aria-pressed="false">Layers</button>
+    <button id="ldEditView" type="button" aria-controls="ldInspectorRail" aria-pressed="false">Edit layer</button>
+  </div>
+  <div class="ld-workspace" id="ldWorkspace" data-pane="canvas">
+    <aside class="ld-rail ld-layer-rail" id="ldLayerRail" aria-labelledby="ldLayersTitle">
       <div class="ld-panel-heading"><h3 id="ldLayersTitle">Layers</h3></div>
       <div class="ld-layer-tools">
         <label class="sr-only" for="ldNewLayer">Layer to add</label>
@@ -56,22 +64,29 @@
         <button id="ldBackward" type="button" title="Move toward the back">Lower</button>
       </div>
     </aside>
-    <div class="ld-stage" id="ldStage">
-      <div class="ld-mat" id="ldMat">
-        <div class="ld-artboard" id="ldArtboard">
-          <canvas id="ldCanvas" width="750" height="1050" tabindex="0" aria-label="Card front artboard. Select a layer, then use arrow keys to move it."></canvas>
-          <canvas id="ldMaskGuide" class="ld-mask-guide" width="750" height="1050" tabindex="0" aria-label="Trace a cutout around the artwork" hidden></canvas>
-          <div class="ld-safe-area" id="ldSafeArea" aria-hidden="true"></div>
-          <div class="ld-selection" id="ldSelection" hidden>
-            <div class="ld-handle" data-handle="nw"></div><div class="ld-handle" data-handle="ne"></div>
-            <div class="ld-handle" data-handle="sw"></div><div class="ld-handle" data-handle="se"></div>
-            <div class="ld-handle ld-handle-edge" data-handle="n"></div><div class="ld-handle ld-handle-edge" data-handle="s"></div>
-            <div class="ld-handle ld-handle-edge" data-handle="w"></div><div class="ld-handle ld-handle-edge" data-handle="e"></div>
+    <div class="ld-stage-panel" id="ldStagePanel">
+      <div class="ld-trace-tools" id="ldTraceTools" role="group" aria-label="Trace cutout" hidden>
+        <button id="ldTraceUndo" type="button">Remove point</button>
+        <button id="ldTraceCancel" type="button">Cancel trace</button>
+        <button id="ldTraceFinish" class="accent-btn" type="button">Finish outline</button>
+      </div>
+      <div class="ld-stage" id="ldStage">
+        <div class="ld-mat" id="ldMat">
+          <div class="ld-artboard" id="ldArtboard">
+            <canvas id="ldCanvas" width="750" height="1050" tabindex="0" aria-label="Card front artboard. Select a layer, then use arrow keys to move it."></canvas>
+            <canvas id="ldMaskGuide" class="ld-mask-guide" width="750" height="1050" tabindex="0" aria-label="Trace a cutout around the artwork" hidden></canvas>
+            <div class="ld-safe-area" id="ldSafeArea" aria-hidden="true"></div>
+            <div class="ld-selection" id="ldSelection" hidden>
+              <div class="ld-handle" data-handle="nw"></div><div class="ld-handle" data-handle="ne"></div>
+              <div class="ld-handle" data-handle="sw"></div><div class="ld-handle" data-handle="se"></div>
+              <div class="ld-handle ld-handle-edge" data-handle="n"></div><div class="ld-handle ld-handle-edge" data-handle="s"></div>
+              <div class="ld-handle ld-handle-edge" data-handle="w"></div><div class="ld-handle ld-handle-edge" data-handle="e"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <aside class="ld-rail ld-inspector-rail" aria-labelledby="ldLayerTitle">
+    <aside class="ld-rail ld-inspector-rail" id="ldInspectorRail" aria-labelledby="ldLayerTitle">
       <div class="ld-panel-heading"><h3 id="ldLayerTitle">Properties</h3></div>
       <div class="ld-inspector-tabs" aria-label="Layer settings">
         <button id="ldPropertiesTab" type="button" aria-pressed="true">Properties</button>
@@ -89,9 +104,10 @@
       <label class="ld-zoom">Zoom
         <select id="ldZoom"><option value="fit">Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
       </label>
+      <button id="ldPan" class="ld-mobile-control" type="button" aria-pressed="false" title="Pan the zoomed canvas" hidden>Pan</button>
       <label class="ld-guides" title="Guide ⅛ inch inside the trim edge"><input id="ldGuides" type="checkbox" checked> Safe area guide</label>
     </div>
-    <p id="ldStatus" role="status">Drag to move. Double-click text to edit.</p>
+    <p id="ldStatus" class="ld-hint" role="status">Drag to move. Double-click text to edit.</p>
     <div class="ld-status-links">
       <button id="ldStudio" type="button">Card Designer</button>
       <button id="ldView" type="button">Card View</button>
@@ -151,9 +167,9 @@
   </div>
 </section>
 
-<section class="page active" id="visualLanguage" aria-labelledby="currentDesignsTitle">
+<section class="page" id="visualLanguage" aria-labelledby="currentDesignsTitle">
   <div class="sectionhead">
-    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Start a card from a type, or click its glyph or palette to edit the default.</p></div>
+    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Choose a card type or edit its starting design.</p></div>
     <div class="buttonbar">
       <span id="designSaveStatus" class="status-line" role="status"></span>
       <button id="openSavedCards" type="button" data-tab="studio">Open saved cards</button>
@@ -230,6 +246,7 @@
       <label class="label">Type or mark<select id="symbolProfile"></select></label>
       <div class="standard-tabs" role="group" aria-label="Type design settings">
         <button type="button" data-standard-tab="colors">Colors</button>
+        <button type="button" data-standard-tab="border">Border</button>
         <button type="button" data-standard-tab="glyphs">Glyphs</button>
         <button type="button" data-standard-tab="layout">Starting layout</button>
       </div>
@@ -239,6 +256,31 @@
         <div id="typeColorFields" class="type-color-fields"></div>
         <div class="buttonbar"><button id="resetTypeColors" type="button">Use layout colors</button><button id="editSourceColors" type="button">Edit card colors</button></div>
         <p id="typeColorStatus" role="status" class="status-line"></p>
+      </section>
+      <section id="standardBorder" hidden>
+        <h3>Starting border</h3>
+        <p class="muted">New cards of this type start with this border.</p>
+        <div class="pair">
+          <label class="label">Border profile<select id="typeBorderProfile"></select></label>
+          <label class="label"><span id="typeBorderColorLabel">Border color</span><input id="typeBorderColor" type="color"></label>
+        </div>
+        <label class="label" id="typeBorderClassicRow">Classic style<select id="typeBorderClassic"></select></label>
+        <div class="pair">
+          <label class="label" id="typeBorderWidthRow"><span id="typeBorderWidthLabel">Band width (px)</span><input id="typeBorderWidth" type="number" min="2" max="160" step="1"></label>
+          <label class="label" id="typeBorderInsetRow">Inset (px)<input id="typeBorderInset" type="number" min="0" max="90" step="1"></label>
+        </div>
+        <div class="pair">
+          <label class="label" id="typeBorderContourRow">Contour<select id="typeBorderContour"></select></label>
+          <label class="label">Opacity (%)<input id="typeBorderOpacity" type="number" min="0" max="100" step="1"></label>
+        </div>
+        <label class="toggle"><input id="typeBorderVisible" type="checkbox"> Show outer border</label>
+        <button id="resetTypeBorder" type="button">Use layout border</button>
+        <details class="panel-section">
+          <summary>Copy a border between cards and this type</summary>
+          <label class="label">Saved card<select id="typeBorderSource"></select></label>
+          <div class="buttonbar"><button id="captureTypeBorder" type="button">Use this card’s border</button><button id="applyTypeBorder" type="button">Apply border to this card</button></div>
+        </details>
+        <p id="typeBorderStatus" role="status" class="status-line"></p>
       </section>
       <section id="standardLayout" hidden>
         <h3>Starting layout</h3>
@@ -303,9 +345,9 @@
   </div>
 </section>
 
-<section class="page" id="library">
+<section class="page active" id="library" aria-labelledby="artworkTitle">
   <div class="sectionhead">
-    <div><h2>Artwork</h2></div>
+    <div><h2 id="artworkTitle">Artwork</h2></div>
     <label class="file-label">＋ Import images / GIFs<input id="newArtwork" type="file" accept="image/*,.gif" multiple></label>
   </div>
   <div class="panel toolbar">
@@ -975,4 +1017,4 @@
 <div class="data-layout"><div class="panel"><h3>Back up / restore</h3><div class="buttonbar"><button class="accent-btn" id="exportProject">Export project JSON</button><label class="file-label secondary">Import project JSON<input id="importProject" type="file" accept=".json,application/json"></label></div><p class="muted">Keep your project JSON, workbook, and assets folder together. Images imported in browser-only mode are embedded in the JSON.</p><hr><div class="buttonbar"><button id="exportCardsCSV">Export cards CSV</button><button id="exportAssetsCSV">Export assets CSV</button></div></div><div class="panel"><h3>Project status</h3><div id="projectSummary" class="summary-stats"></div><hr><h3>Earlier tools</h3><div class="buttonbar"><button data-tab="fractalLite">Fractal Lite</button><button data-tab="prismLegacy">Prism v0.8</button><button data-tab="foil">Foil Lite</button></div></div></div></div>
 </section>
 </main>
-<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js"></script><script src="artwork-profiles.js"></script><script src="front-layout.js"></script><script src="front-effects.js"></script><script src="outer-border.js"></script><script src="layout-design.js"></script><script src="art-cutout.js"></script><script src="type-design.js"></script><script src="mirror-mask.js"></script><script src="app.js"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js"></script><script src="design-system-ui.js"></script><script src="type-design-ui.js"></script><script src="glyph-context-ui.js"></script><script src="cutout-editor.js"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js"></script><script src="lab-links.js"></script></body></html>
+<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js?v=0.9.15"></script><script src="artwork-profiles.js"></script><script src="front-layout.js"></script><script src="front-effects.js"></script><script src="outer-border.js?v=0.9.15"></script><script src="layout-design.js"></script><script src="art-cutout.js"></script><script src="type-design.js"></script><script src="mirror-mask.js"></script><script src="app.js?v=0.9.15"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js?v=0.9.15"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js"></script><script src="design-system-ui.js?v=0.9.15"></script><script src="type-design-ui.js"></script><script src="glyph-context-ui.js"></script><script src="cutout-editor.js?v=0.9.15"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js?v=0.9.15"></script><script src="lab-links.js"></script></body></html>

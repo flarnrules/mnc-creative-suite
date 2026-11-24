@@ -3,6 +3,8 @@
 (() => {
   const model=MNC_LAYOUT, effects=MNC_FRONT_EFFECTS, canvas=$('ldCanvas'), stage=$('ldStage'), board=$('ldArtboard');
   const inspector=$('ldInspector'), selection=$('ldSelection'), cards=$('ldCard'), status=$('ldStatus');
+  const workspace=$('ldWorkspace'),setup=$('ldSetupToggle'),pan=$('ldPan'),zoom=$('ldZoom');
+  const views=[['canvas',$('ldCanvasView')],['layers',$('ldLayersView')],['edit',$('ldEditView')]];
   const histories=new Map();
   const current=()=>cardById(currentId);
   const json=value=>JSON.stringify(value);
@@ -21,6 +23,19 @@
 
   function message(value=defaultHint) {
     status.textContent=value;
+    status.classList.toggle('ld-hint',value===defaultHint);
+  }
+
+  function showPane(pane) {
+    workspace.dataset.pane=pane;
+    for(const [id,button] of views)button.setAttribute('aria-pressed',String(pane===id));
+    setup.setAttribute('aria-expanded','false');
+    if(pane==='canvas')fit();
+  }
+
+  function setPan(enabled) {
+    board.dataset.pan=String(enabled);
+    pan.setAttribute('aria-pressed',String(enabled));
   }
 
   function history(card) {
@@ -127,7 +142,7 @@
       const open=node('button',layer.label||'Layer');
       open.type='button';
       open.title=layer.label||'Layer';
-      open.onclick=()=>select(layer.id);
+      open.onclick=()=>editLayer(layer.id);
       item.append(open);
       if(layer.id!=='background'){
         const toggle=node('button',layer.hidden?'○':'●','ld-eye');
@@ -178,7 +193,8 @@
   }
 
   function fit(){
-    const scale=$('ldZoom').value;
+    if(!stage.clientWidth||!stage.clientHeight)return;
+    const scale=zoom.value;
     const width=scale==='fit'?Math.min(stage.clientWidth-40,(stage.clientHeight-32)*CW/CH,900):Number(scale)*CW;
     board.style.setProperty('--ld-card-width',Math.max(80,Math.floor(width))+'px');
   }
@@ -216,13 +232,13 @@
       control.maxLength=4000;
     }else{
       control.type=type;
-      if(type==='checkbox')control.checked=!!value;
-      else control.value=value??'';
       if(numeric){
         control.min=min??'';
         control.max=max??'';
         control.step=step??1;
       }else if(type==='text')control.maxLength=500;
+      if(type==='checkbox')control.checked=!!value;
+      else control.value=value??'';
     }
     control.placeholder=placeholder;
     if(primary)control.dataset.editCopy='true';
@@ -646,15 +662,7 @@
 
   function borderFields(card){
     const host=fields('Frame'),spec=MNC_OUTER_BORDER.settings(card),classic=spec.style==='classic';
-    const set=(c,patch)=>{
-      const layer=model.layerEdit(c,'border');
-      const prior=MNC_OUTER_BORDER.settings(c);
-      const next={...prior,...patch};
-      if((prior.style==='classic')!==(next.style==='classic')){
-        for(const key of ['x','y','w','h'])delete layer[key];
-      }
-      layer.frame=next;
-    };
+    const set=MNC_OUTER_BORDER.setFrame;
     input(host,'Border profile',spec.style,(c,value)=>set(c,{style:value}),
       {choices:MNC_OUTER_BORDER.styles,refresh:true});
     if(classic&&game.isGameCard(card)){
@@ -751,7 +759,8 @@
   }
 
   const fillInspector=MNC_LAYOUT_FILL_INSPECTOR({fields,input,action,change,palette,additionalLayer,openType});
-  const maskEditor=MNC_CUTOUT_EDITOR({current,change,choose:select,selectionChanged:showSelected,message,addForeground});
+  const maskEditor=MNC_CUTOUT_EDITOR({current,change,choose:select,selectionChanged:showSelected,message,addForeground,
+    showCanvas:()=>{setPan(false);showPane('canvas');}});
 
   function renderInspector(){
     const layer=currentLayer(),card=current();
@@ -833,13 +842,14 @@
 
   function beginDrag(event){
     const card=current(), handle=event.target.dataset.handle;
-    if(!card||drag||maskEditor.active()||event.button!==0||event.target!==canvas&&!handle)return;
+    if(!card||drag||maskEditor.active()||event.isPrimary===false||event.button!==0||event.target!==canvas&&!handle)return;
     const start=point(event),layer=handle?currentLayer():hit(start);
     if(!layer){select('background');return;}
     if(selected!==layer.id)select(layer.id,{scroll:true});
-    canvas.focus({preventScroll:true});
+    if(event.pointerType==='touch')event.preventDefault();
+    else canvas.focus({preventScroll:true});
     board.setPointerCapture(event.pointerId);
-    drag={id:event.pointerId,card,layer,handle,start,before:deep(card),changed:false};
+    drag={id:event.pointerId,card,layer,handle,start,clientX:event.clientX,clientY:event.clientY,before:deep(card),changed:false};
   }
 
   function resize({rect},handle,dx,dy,locked){
@@ -859,7 +869,9 @@
   function moveDrag(event){
     if(drag?.id!==event.pointerId)return;
     const p=point(event), dx=p.x-drag.start.x,dy=p.y-drag.start.y;
-    if(!drag.changed&&Math.hypot(dx,dy)<3)return;
+    const nearStart=event.pointerType==='touch'?Math.hypot(event.clientX-drag.clientX,event.clientY-drag.clientY)<5:
+      Math.hypot(dx,dy)<3;
+    if(!drag.changed&&nearStart)return;
     const {layer,handle,card}=drag;
     const ratio=layer.id==='art'?lockArtRatio:lockRatio;
     const delta=handle?resize(layer,handle,dx,dy,ratio!==!!event.shiftKey):
@@ -913,13 +925,14 @@
     dropDownOptions(cards,state.cards.map(c=>[c.id,c.title+' · '+c.family+' · '+(c.catalogId||c.id)]),activeId);
     cards.disabled=!card;
     $('ldEmpty').hidden=!!card;
-    $('ldWorkspace').hidden=$('ldStatusbar').hidden=$('ldQuickTools').hidden=!card;
+    workspace.hidden=$('ldStatusbar').hidden=$('ldQuickTools').hidden=$('ldMobilePanes').hidden=!card;
     $('ldSave').disabled=$('ldExport').disabled=!card;
     $('ldTypeDefault').disabled=!card||!MNC_TYPE_DESIGN.idFor(card);
     presetOptions(card);
     $('ldApply').disabled=true;
     if(!same){
       maskEditor.cancel();
+      showPane('canvas');
       selected='art';
       mode='properties';
       layers=[];
@@ -954,19 +967,40 @@
   window.MNC_openLayoutSymbol=(place='type')=>{
     if(!current())return;
     tab('layoutDesigner');
+    showPane('canvas');
     select(place==='collection'?'setIcon':'cornerIcon',{scroll:true});
   };
-  window.MNC_closeLayoutTrace=maskEditor.cancel;
+  window.MNC_closeLayoutTrace=()=>{
+    if(drag)finishDrag({pointerId:drag.id},true);
+    maskEditor.cancel();
+    showPane('canvas');
+    setPan(false);
+  };
+  function editLayer(id,options){
+    showPane('edit');
+    select(id,options);
+  }
+  for(const [id,button] of views)button.onclick=()=>showPane(id);
+  setup.onclick=()=>setup.setAttribute('aria-expanded',String(setup.getAttribute('aria-expanded')!=='true'));
   for(const [id,view] of [['ldPropertiesTab','properties'],['ldFillTab','fill'],['ldEffectsTab','effects'],['ldMaskTab','mask']]){
     $(id).onclick=()=>select(selected,{view});
   }
-  $('ldArtQuick').onclick=()=>select('art',{scroll:true});
-  $('ldMaskQuick').onclick=()=>select('art',{view:'mask',scroll:true});
-  $('ldBorderQuick').onclick=()=>select('border',{scroll:true});
-  $('ldPlatesQuick').onclick=()=>select('plate',{scroll:true});
-  $('ldGradientQuick').onclick=()=>select(fillInspector.allows(currentLayer(),current())?selected:'background',{view:'fill',scroll:true});
+  $('ldArtQuick').onclick=()=>editLayer('art',{scroll:true});
+  $('ldMaskQuick').onclick=()=>editLayer('art',{view:'mask',scroll:true});
+  $('ldBorderQuick').onclick=()=>editLayer('border',{scroll:true});
+  $('ldPlatesQuick').onclick=()=>editLayer('plate',{scroll:true});
+  $('ldGradientQuick').onclick=()=>editLayer(fillInspector.allows(currentLayer(),current())?selected:'background',{view:'fill',scroll:true});
   cards.onchange=()=>{currentId=cards.value;refresh();};
-  $('ldZoom').onchange=fit;
+  zoom.onchange=()=>{
+    pan.hidden=zoom.value==='fit';
+    setPan(false);
+    showPane('canvas');
+    if(pan.hidden){stage.scrollLeft=0;stage.scrollTop=0;}
+  };
+  pan.onclick=()=>{
+    setPan(board.dataset.pan!=='true');
+    showPane('canvas');
+  };
   $('ldGuides').onchange=()=>{$('ldSafeArea').hidden=!$('ldGuides').checked;};
   new ResizeObserver(()=>{if(activeTab==='layoutDesigner')fit();}).observe(stage);
   $('ldUndo').onclick=()=>restoreEdit('undo');
@@ -1009,6 +1043,7 @@
         if(saved)applyDesignPreset(c,saved,{refresh:false});
       }
     },{sync:true});
+    showPane('canvas');
     message('Applied '+name+'.');
   };
 
@@ -1047,11 +1082,16 @@
     if(maskEditor.active())return;
     const layer=hit(point(event));
     if(!layer)return;
-    select(layer.id,{scroll:true});
+    editLayer(layer.id,{scroll:true});
     inspector.querySelector('[data-edit-copy]')?.focus();
   });
 
   $('layoutDesigner').addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&setup.getAttribute('aria-expanded')==='true'){
+      setup.setAttribute('aria-expanded','false');
+      setup.focus();
+      return;
+    }
     if(dialog.open||maskEditor.active()||event.target.matches('input,textarea,select'))return;
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){
       event.preventDefault();
@@ -1068,6 +1108,7 @@
       change(c=>setGeometry(c,layer,{[axis]:layer.rect[axis]+amount}));
     }else if(event.key==='Enter'){
       event.preventDefault();
+      showPane('edit');
       inspector.querySelector('[data-edit-copy]')?.focus();
     }
   });

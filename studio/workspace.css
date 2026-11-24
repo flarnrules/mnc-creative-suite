@@ -269,6 +269,107 @@ main .leftPane > .card-list {
   .suite-nav > button {margin-inline: 4px;padding-inline: 5px;}
   .suite-nav .tabs button {font-size: 11px;padding-inline: 6px;}
   .page.active > .sectionhead h2 {font-size: 21px;}
-  #layoutDesigner .ld-toolbar h2 {font-size: 18px;}
-  #layoutDesigner .ld-statusbar p {display: none;}
+}
+
+@media (max-width: 700px), (max-width: 1000px) and (max-height: 600px) {
+  #layoutDesigner .ld-toolbar {
+    position: relative;
+    z-index: 4;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+  }
+  #layoutDesigner .ld-toolbar h2 {flex-basis: auto;font-size: 1.0625rem;}
+  #layoutDesigner .ld-mobile-control {display: inline-block;}
+  #layoutDesigner .ld-setup {
+    display: none;
+    position: absolute;
+    inset: calc(100% + 2px) 0 auto;
+    max-height: min(340px, calc(100dvh - 128px));
+    padding: 12px;
+    overflow: auto;
+    border: 1px solid var(--ld-edge);
+    border-radius: 7px;
+    background: var(--ld-shell);
+    box-shadow: 0 10px 28px #000a;
+  }
+  #layoutDesigner #ldSetupToggle[aria-expanded="true"] + .ld-setup {display: grid;gap: 10px;}
+  #layoutDesigner .ld-setup .ld-card-choice, #layoutDesigner .ld-setup .ld-preset-choice {max-width: none;}
+  #layoutDesigner .ld-toolbar-actions {flex-wrap: wrap;margin-left: 0;}
+  #layoutDesigner .ld-quick-tools {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    padding: 4px 6px;
+  }
+  #layoutDesigner .ld-quick-tools button {flex: none;white-space: nowrap;}
+  #layoutDesigner .ld-mobile-panes {
+    display: flex;
+    flex: none;
+    gap: 4px;
+    padding: 4px 6px;
+    border: 1px solid var(--ld-edge);
+    border-top: 0;
+    background: var(--ld-shell);
+  }
+  .ld-mobile-panes button {flex: 1;padding: 4px 8px;}
+  .ld-mobile-panes button[aria-pressed="true"], #ldPan[aria-pressed="true"] {background: #403849;}
+  #layoutDesigner > .ld-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  #layoutDesigner .ld-workspace > * {grid-area: 1 / 1;border-inline: 0;}
+  .ld-workspace:not([data-pane="canvas"]) .ld-stage-panel,
+  .ld-workspace:not([data-pane="layers"]) .ld-layer-rail,
+  .ld-workspace:not([data-pane="edit"]) .ld-inspector-rail {display: none;}
+  .ld-artboard[data-pan="true"] :is(canvas, .ld-handle) {pointer-events: none;}
+  .ld-stage {overscroll-behavior: contain;}
+  .ld-inspector .label :is(input:not([type="color"]), select, textarea), .ld-setup .label select {
+    font-size: 1rem;
+  }
+  .ld-layers button {min-height: 40px;}
+  .ld-layers .ld-eye {width: 40px;}
+  #layoutDesigner .ld-statusbar {padding: 4px 6px;}
+  .ld-status-tools {flex-wrap: wrap;gap: 4px;}
+  .ld-statusbar .ld-status-links, .ld-statusbar .ld-hint {display: none;}
+  .ld-statusbar #ldStatus {width: 100%;margin: 0;}
+  .ld-zoom, .ld-guides {margin-left: 2px;}
+  .ld-mobile-panes button, .ld-toolbar button, .ld-quick-tools button,
+  .ld-status-tools button, .ld-zoom select, .ld-inspector-tabs button {min-height: 38px;}
+  .ld-trace-tools {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px;
+    background: var(--ld-shell);
+    border-bottom: 1px solid var(--ld-edge);
+  }
+  .ld-trace-tools button {flex: 1;padding: 5px;min-height: 38px;}
+}
+
+@media (max-width: 1000px) and (max-height: 600px) and (orientation: landscape) {
+  #layoutDesigner.active {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 40%);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  #layoutDesigner .ld-toolbar {grid-area: 1 / 1;border-radius: 12px 0 0 0;}
+  #layoutDesigner .ld-quick-tools {
+    grid-area: 1 / 2;
+    min-width: 0;
+    border-top: 1px solid var(--ld-edge);
+    border-left: 0;
+    border-radius: 0 12px 0 0;
+  }
+  #layoutDesigner > :is(.ld-workspace, .ld-empty) {grid-area: 2 / 1 / 3 / -1;}
+  #layoutDesigner .ld-statusbar {grid-area: 3 / 1;border-radius: 0 0 0 12px;}
+  #layoutDesigner .ld-mobile-panes {
+    grid-area: 3 / 2;
+    border-top: 1px solid var(--ld-edge);
+    border-left: 0;
+    border-radius: 0 0 12px 0;
+  }
+  #layoutDesigner .ld-panel-heading {padding-block: 7px;}
 }

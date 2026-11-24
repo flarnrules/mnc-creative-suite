@@ -79,7 +79,7 @@ try {
   savedCardId=localStorage.getItem(cardSelectionKey)||'';
 } catch(error) {console.warn('Could not read autosave',error);}
 let currentId=state.cards.find(c=>c.id===savedCardId)?.id||state.cards.find(c=>c.id===game.ashman.id)?.id||state.cards.find(inWorkingCatalog)?.id||state.cards[0]?.id||null;
-let activeTab='visualLanguage';
+let activeTab='library';
 const fallbackImageData=window.MNC_IMAGE_DATA||{};
 const imageCache=new Map();
 const imageSizes=new Map();
@@ -284,10 +284,13 @@ function applyTypeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card),{followSymb
   const preset=typeDesignPreset(card,id);
   const compatible=preset&&(!['Game Frame','Game Full Art'].includes(preset.template)||game.role(card));
   if(compatible)applyDesignPreset(card,preset,{refresh:false});
-  const palette=Object.assign({},...designProfileIds(card,id).map(key=>state.visualLanguage.profiles[key]?.palette));
+  const profiles=designProfileIds(card,id).map(key=>state.visualLanguage.profiles[key]);
+  const border=profiles.map(profile=>profile?.border).filter(Boolean).at(-1);
+  if(border)MNC_OUTER_BORDER.applyStandard(card,border);
+  const palette=Object.assign({},...profiles.map(profile=>profile?.palette));
   MNC_TYPE_DESIGN.applyPalette(card,palette);
   if(compatible||followSymbols)editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
-  return !!compatible||Object.keys(palette).length>0;
+  return !!compatible||!!border||Object.keys(palette).length>0;
 }
 
 function captureTypeDesign(card,id){
@@ -300,6 +303,7 @@ function captureTypeDesign(card,id){
   setting.symbol=deep(symbol);
   setting.setMark=deep(mark);
   setting.palette={};
+  setting.border=null;
   setting.presetId=template.id;
   writeDesignPreset(template);
   return template;
@@ -481,9 +485,10 @@ function renderLibrary() {
       persist();tab('studio');
     };
     const create=document.createElement('button');
+    create.className='accent-btn';
     create.textContent='New card with this art';
     create.onclick=()=>openCardDesigns(asset.id);
-    actions.append(use,create);info.append(actions);tile.append(thumb,info);grid.append(tile);
+    actions.append(create,use);info.append(actions);tile.append(thumb,info);grid.append(tile);
   }
 }
 function openCardDesigns(assetId='') {

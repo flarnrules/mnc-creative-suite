@@ -26,6 +26,8 @@ main:has(#layoutDesigner.active) {
 }
 
 .ld-toolbar h2 {margin: 0; font-size: 22px; white-space: nowrap;}
+.ld-setup {display: contents;}
+.ld-mobile-control, .ld-mobile-panes, .ld-trace-tools {display: none;}
 .ld-toolbar .label {margin: 0;}
 .ld-toolbar .label select {padding-block: 7px;}
 .ld-card-choice {flex: 1 1 190px; min-width: 145px; max-width: 390px;}
@@ -37,6 +39,7 @@ main:has(#layoutDesigner.active) {
 .ld-workspace {
   display: grid;
   grid-template-columns: clamp(166px, 15vw, 220px) minmax(0, 1fr) clamp(235px, 20vw, 306px);
+  grid-template-rows: minmax(0, 1fr);
   height: max(540px, calc(100dvh - 287px));
   border: 1px solid var(--ld-edge);
   border-block: 0;
@@ -110,8 +113,16 @@ main:has(#layoutDesigner.active) {
 .ld-geometry-foot .toggle {margin: 4px 0 0;}
 .ld-inspector .status-line {font-size: 11px;}
 
-.ld-stage {
+.ld-stage-panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+.ld-stage {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
   background-color: var(--ld-mat);
@@ -196,8 +207,8 @@ main:has(#layoutDesigner.active) {
     grid-template-columns: minmax(108px, .75fr) minmax(0, 1.25fr);
     height: auto;
   }
-  .ld-stage {height: min(620px, 74dvh); min-height: 370px; grid-column: 1 / -1; grid-row: 1;}
-  .ld-rail {height: 390px; border-top: 1px solid var(--ld-edge);}
+  .ld-stage-panel {grid-column: 1 / -1; grid-row: 1;}
+  .ld-rail {border-top: 1px solid var(--ld-edge);}
   .ld-inspector-rail {border-left: 0;}
   .ld-toolbar {gap: 8px;}
   .ld-toolbar h2 {flex-basis: 100%;}
@@ -307,10 +318,6 @@ main:has(#layoutDesigner.active) {
 .ld-mask-actionbar {margin: 8px 0;}
 .ld-inspector .ld-muted {font-size: 11px; color: #b7c1cc;}
 .ld-inspector .ld-detail-status {margin-top: 7px; color: var(--ld-ink); font-size: 11px;}
-@media (max-width: 420px) {
-  .ld-inspector-tabs {flex-wrap: wrap;}
-  .ld-inspector-tabs button {flex: 0 0 calc(50% - 3px);}
-}
 @media (pointer: coarse) {
   .ld-handle[data-handle="n"], .ld-handle[data-handle="s"] {height: 16px;}
   .ld-handle[data-handle="n"] {top: -8px;}

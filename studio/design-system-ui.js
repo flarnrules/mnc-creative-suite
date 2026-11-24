@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const planModel=MNC_SET_PLAN,symbols=MNC_SYMBOLS,types=MNC_TYPE_DESIGN;
+  const planModel=MNC_SET_PLAN,symbols=MNC_SYMBOLS,types=MNC_TYPE_DESIGN,borders=MNC_OUTER_BORDER;
   const itemGroups=planModel.definitions.filter(group=>group.family==='Item');
   const current=()=>cardById(currentId);
   const plan=()=>state.setPlan;
@@ -257,9 +257,13 @@
     create.type='button';
     create.setAttribute('aria-label','New '+label+' card');
     create.onclick=()=>createCard(designArtwork,profile.family,profile);
+    const border=element('button','Border','design-border');
+    border.type='button';
+    border.setAttribute('aria-label','Edit '+label+' border');
+    border.onclick=()=>openProfile(profile.id,'border');
     const heading=element('div',undefined,'design-choice-heading');
     heading.append(glyph,element('strong',label),create);
-    tile.append(heading,colors);
+    tile.append(heading,colors,border);
     const {symbol}=symbols.cardSymbol(state,card);
     paintSymbol(canvas,symbol,profile.id,62,palette.ink).catch(console.error);
     return tile;
@@ -422,9 +426,17 @@
   function sourceOptions() {
     const id=$('symbolProfile').value;
     const cards=state.cards.filter(card=>!card.catalogUnlisted&&types.matching(card,id));
-    const selected=cards.find(card=>card.id===$('standardSource').value)||cards.find(card=>card.id===currentId)||cards[0];
-    dropDownOptions($('standardSource'),cards.length?cards.map(card=>[card.id,card.title||'Untitled']):[['','Create or open a card of this type']],selected?.id||'');
-    for(const key of ['symbolSaveDesign','symbolApplyDesign','standardEditLayout','editSourceColors'])$(key).disabled=!selected;
+    const options=cards.length?cards.map(card=>[card.id,card.title||'Untitled']):[['','Create or open a card of this type']];
+    for(const [select,buttons] of [
+      ['standardSource',['symbolSaveDesign','symbolApplyDesign','standardEditLayout','editSourceColors']],
+      ['typeBorderSource',['captureTypeBorder','applyTypeBorder']]
+    ]){
+      const selected=cards.find(card=>card.id===$(select).value)||cards.find(card=>card.id===currentId)||cards[0];
+      dropDownOptions($(select),options,selected?.id||'');
+      $(select).disabled=!selected;
+      for(const button of buttons)$(button).disabled=!selected;
+    }
+    const selected=sourceCard();
     $('editSourceColors').textContent=selected?'Edit card colors · '+(selected.title||'Untitled'):'Edit card colors';
   }
 
@@ -495,6 +507,34 @@
     dropDownOptions($('symbolPreset'),[['',defaultLabel],...entries.map(template=>[template.id,template.name])],setting.presetId||'');
   }
 
+  function editBorder() {
+    const card=draftFor($('symbolProfile').value),frame=borders.settings(card),setting=selectedProfile();
+    const classic=frame.style==='classic',gameFrame=game.isGameCard(card);
+    dropDownOptions($('typeBorderProfile'),borders.styles,frame.style);
+    dropDownOptions($('typeBorderClassic'),Object.entries(borders.classicStyles),card.frameStyle||'double');
+    dropDownOptions($('typeBorderContour'),borders.contours,frame.shape);
+    $('typeBorderClassicRow').hidden=!classic||!gameFrame;
+    $('typeBorderWidthRow').hidden=classic&&!gameFrame;
+    $('typeBorderWidthLabel').textContent=classic?'Stroke width (px)':'Band width (px)';
+    $('typeBorderWidth').max=classic?24:160;
+    $('typeBorderWidth').value=classic?card.frameWidth??13:frame.width;
+    $('typeBorderInsetRow').hidden=$('typeBorderContourRow').hidden=classic;
+    $('typeBorderInset').value=frame.inset;
+    $('typeBorderOpacity').value=Math.round(frame.opacity*100);
+    $('typeBorderVisible').checked=!MNC_LAYOUT.hidden(card,'border');
+    $('typeBorderColorLabel').textContent=MNC_LAYOUT.get(card,'border')?.gradient?'First gradient color':'Border color';
+    $('typeBorderColor').value=types.palette(card).borderColor;
+    $('resetTypeBorder').disabled=!setting.border&&!setting.palette.borderColor;
+  }
+
+  function saveBorder(update) {
+    const card=draftFor($('symbolProfile').value);
+    update(card);
+    selectedProfile().border=borders.standard(card);
+    persist();editBorder();previewStartingCard();
+    setStatus('typeBorderStatus','Starting border updated.');
+  }
+
   function showPane(requested) {
     const isType=!!state.typeDesigns.profiles[$('symbolProfile').value];
     standardsPane=isType?requested:'glyphs';
@@ -503,6 +543,7 @@
       button.setAttribute('aria-pressed',String(button.dataset.standardTab===standardsPane));
     }
     $('standardColors').hidden=standardsPane!=='colors';
+    $('standardBorder').hidden=standardsPane!=='border';
     $('standardLayout').hidden=standardsPane!=='layout';
     $('standardGlyphs').hidden=$('standardGlyphTools').hidden=standardsPane!=='glyphs';
     $('typeStandardPreviewPanel').hidden=standardsPane==='glyphs';
@@ -513,6 +554,7 @@
     }else{
       sourceOptions();
       if(standardsPane==='colors')editPalette();
+      else if(standardsPane==='border')editBorder();
       else editStartingLayout();
       previewStartingCard();window.MNC_refreshSymbolContext?.();
     }
@@ -540,7 +582,7 @@
       standardsPane=pane;
       $('symbolTarget').value='icon';
       $('standardSource').value=currentId||'';
-      setStatus('typeColorStatus','');setStatus('symbolDesignStatus','');
+      setStatus('typeColorStatus','');setStatus('typeBorderStatus','');setStatus('symbolDesignStatus','');
       renderStandards(profileId);
     }else{
       renderGallery();$('designGallery').scrollTop=0;window.MNC_refreshSymbolContext?.();
@@ -557,7 +599,7 @@
   $('createOtherCard').onclick=()=>createCard(designArtwork,$('otherCardType').value);
   $('symbolProfile').onchange=()=>{
     $('symbolTarget').value='icon';
-    setStatus('typeColorStatus','');setStatus('symbolDesignStatus','');
+    setStatus('typeColorStatus','');setStatus('typeBorderStatus','');setStatus('symbolDesignStatus','');
     showPane(standardsPane);
   };
   $('symbolTarget').onchange=()=>{alignmentDrag=null;syncSymbolEditor();window.MNC_refreshSymbolContext?.({sync:true});};
@@ -635,6 +677,58 @@
   $('editSourceColors').onclick=()=>{
     const card=sourceCard();if(!card)return;
     window.MNC_openStudioCard(card);editSection('art');
+  };
+  $('typeBorderProfile').onchange=()=>saveBorder(card=>borders.setFrame(card,{style:$('typeBorderProfile').value}));
+  $('typeBorderClassic').onchange=()=>saveBorder(card=>{card.frameStyle=$('typeBorderClassic').value;});
+  $('typeBorderContour').onchange=()=>saveBorder(card=>borders.setFrame(card,{shape:$('typeBorderContour').value}));
+  $('typeBorderVisible').onchange=()=>saveBorder(card=>{
+    const layer=MNC_LAYOUT.layerEdit(card,'border');
+    if($('typeBorderVisible').checked)delete layer.hidden;
+    else layer.hidden=true;
+    MNC_LAYOUT.cleanLayer(card,'border');
+  });
+  for(const [id,update] of [
+    ['typeBorderWidth',(card,value)=>{
+      if(borders.settings(card).style==='classic')card.frameWidth=clamp(value,2,24);
+      else borders.setFrame(card,{width:value});
+    }],
+    ['typeBorderInset',(card,value)=>borders.setFrame(card,{inset:value})],
+    ['typeBorderOpacity',(card,value)=>borders.setFrame(card,{opacity:value/100})]
+  ]){
+    $(id).onchange=()=>{
+      const value=$(id).valueAsNumber;
+      if(Number.isFinite(value))saveBorder(card=>update(card,value));
+      else editBorder();
+    };
+  }
+  $('typeBorderColor').oninput=()=>{
+    selectedProfile().palette.borderColor=$('typeBorderColor').value;
+    $('resetTypeBorder').disabled=false;
+    persist();previewStartingCard();setStatus('typeBorderStatus','Starting border color updated.');
+  };
+  $('resetTypeBorder').onclick=()=>{
+    const setting=selectedProfile();
+    setting.border=null;
+    delete setting.palette.borderColor;
+    persist();editBorder();previewStartingCard();setStatus('typeBorderStatus','Using the inherited border.');
+  };
+  $('typeBorderSource').onchange=()=>setStatus('typeBorderStatus','');
+  $('captureTypeBorder').onclick=()=>{
+    const card=cardById($('typeBorderSource').value);
+    if(!card)return;
+    const setting=selectedProfile();
+    setting.border=borders.standard(card);
+    setting.palette.borderColor=types.palette(card).borderColor;
+    persist();editBorder();previewStartingCard();
+    setStatus('typeBorderStatus','Copied the border from '+card.title+'.');
+  };
+  $('applyTypeBorder').onclick=()=>{
+    const card=cardById($('typeBorderSource').value);
+    if(!card)return;
+    const example=draftFor($('symbolProfile').value);
+    borders.applyStandard(card,borders.standard(example));
+    card.borderColor=borders.color(example);
+    persist();setStatus('typeBorderStatus','Applied the starting border to '+card.title+'.');
   };
   $('symbolPreset').onchange=()=>{
     selectedProfile().presetId=$('symbolPreset').value;

@@ -1,7 +1,8 @@
 'use strict';
 
-globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,addForeground})=>{
+globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,addForeground,showCanvas})=>{
   const model=MNC_ART_CUTOUT, guide=$('ldMaskGuide'), ctx=guide.getContext('2d');
+  const traceTools=$('ldTraceTools'),traceFinish=$('ldTraceFinish'),traceUndo=$('ldTraceUndo');
   let trace=null, pending=0, controls=null, grabbed=null;
 
   function parts(){
@@ -9,6 +10,9 @@ globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,
   }
 
   function update(){
+    traceTools.hidden=!trace;
+    traceFinish.disabled=!trace||trace.points.length<3;
+    traceUndo.disabled=!trace||!trace.points.length;
     if(!controls)return;
     const {start,apply,undo,cancel,clear,status}=controls;
     start.disabled=!current()?.sourceAssetId||!!trace;
@@ -16,8 +20,8 @@ globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,
     start.textContent=saved?'Edit outline':'Trace outline';
     apply.hidden=undo.hidden=cancel.hidden=!trace;
     clear.hidden=!saved||!!trace;
-    apply.disabled=!trace||trace.points.length<3;
-    undo.disabled=!trace||!trace.points.length;
+    apply.disabled=traceFinish.disabled;
+    undo.disabled=traceUndo.disabled;
     status.textContent=trace?trace.points.length+' of '+model.maxPoints+' points':
       saved?'Cutout follows the source artwork and its crop.':'Trace a subject that crosses the artwork window.';
   }
@@ -95,8 +99,9 @@ globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,
     selectionChanged();
     update();
     paint();
+    showCanvas();
     guide.focus({preventScroll:true});
-    message('Click to place points. Drag a point to adjust it. Enter finishes the outline.');
+    message('Place points around the cutout. Drag a point to adjust it.');
   }
 
   function apply(){
@@ -121,10 +126,15 @@ globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,
     paint();
   }
 
+  function cancelTrace(){cancel();message();}
+  traceFinish.onclick=apply;
+  traceUndo.onclick=undo;
+  $('ldTraceCancel').onclick=cancelTrace;
+
   function render(host){
     const blurb=document.createElement('p');
     blurb.className='ld-muted';
-    blurb.textContent='Click around the part you want in front of the frame. Crop zoom gives you more of the source artwork to work with.';
+    blurb.textContent='Trace around the part you want in front of the frame. Crop zoom gives you more of the source artwork to work with.';
     host.append(blurb);
     const bar=document.createElement('div');
     bar.className='buttonbar ld-mask-actionbar';
@@ -139,7 +149,7 @@ globalThis.MNC_CUTOUT_EDITOR = ({current,change,choose,selectionChanged,message,
     const startButton=button('Trace outline',start);
     const applyButton=button('Finish outline',apply);
     const undoButton=button('Remove last point',undo);
-    const cancelButton=button('Cancel trace',()=>{cancel();message();});
+    const cancelButton=button('Cancel trace',cancelTrace);
     const clearButton=button('Remove cutout',()=>change(card=>{
       delete card.artCutout;
       const layout=card.layoutDesign;
