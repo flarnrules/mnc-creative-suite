@@ -4,6 +4,8 @@
   const getCard=()=>cardById(currentId);
   const buttonModes=['Front','Back','Both'];
   let proofFrame=0,viewFrame=0,viewMode='Front',proofMode='Front',draftBackId='';
+  let selectionProject,selecting=false,defaultUndo=[];
+  const selectedCards=new Set(),viewTiles=new Map();
 
   function showSides(prefix, mode) {
     for(const button of buttonModes){
@@ -98,6 +100,33 @@
     return filter==='game'?state.cards.filter(inWorkingCatalog):state.cards.filter(c=>c.family===filter);
   }
 
+  function syncSelection(){
+    if(selectionProject!==state){
+      selectionProject=state;selecting=false;selectedCards.clear();defaultUndo=[];
+      $('viewBatchStatus').textContent='';
+    }
+    const eligible=state.cards.filter(card=>cardTypeDefault(card));
+    const available=new Set(eligible.map(card=>card.id));
+    for(const id of selectedCards)if(!available.has(id))selectedCards.delete(id);
+    const shown=filteredCards().filter(card=>available.has(card.id));
+    const shownCount=shown.filter(card=>selectedCards.has(card.id)).length;
+    const count=selectedCards.size;
+    $('viewSelect').disabled=!eligible.length;
+    $('viewSelect').textContent=selecting?'Done selecting':'Select cards';
+    $('viewSelect').setAttribute('aria-pressed',String(selecting));
+    $('viewBatch').hidden=!selecting;
+    $('viewSelectShown').disabled=shownCount===shown.length;
+    $('viewClearSelection').disabled=$('viewApplyDefaults').disabled=!count;
+    $('viewUndoDefaults').hidden=!defaultUndo.length;
+    $('viewSelectedCount').textContent=`${count} selected${count===shownCount?'':` · ${shownCount} shown`}`;
+    for(const [id,button] of viewTiles){
+      const canSelect=available.has(id);
+      button.disabled=selecting&&!canSelect;
+      button.classList.toggle('view-tile-selectable',selecting&&canSelect);
+      button.setAttribute('aria-pressed',String(selecting?selectedCards.has(id):id===currentId));
+    }
+  }
+
   async function renderView() {
     const seq=++viewFrame;
     const activeCards=filteredCards();
@@ -107,19 +136,27 @@
     const stage=$('viewStage');
     stage.style.setProperty('--view-zoom',$('viewZoom').value);
     const list=$('viewGallery');
+    viewTiles.clear();
     const choices=activeCards.map(card=>{
       const button=document.createElement('button');
+      button.type='button';
       button.className='view-tile';
-      button.setAttribute('aria-pressed',String(card.id===currentId));
       const thumb=document.createElement('canvas');thumb.width=150;thumb.height=210;thumb.setAttribute('aria-hidden','true');
       const title=document.createElement('span');title.textContent=card.title;
       button.append(thumb,title);
-      button.onclick=()=>{currentId=card.id;renderView();};
+      button.onclick=()=>{
+        if(!selecting){currentId=card.id;updateView();return;}
+        if(selectedCards.has(card.id))selectedCards.delete(card.id);
+        else if(cardTypeDefault(card))selectedCards.add(card.id);
+        syncSelection();
+      };
+      viewTiles.set(card.id,button);
       cardCanvas(card,{w:150,h:210}).then(cv=>{if(seq===viewFrame)thumb.getContext('2d').drawImage(cv,0,0);}).catch(console.error);
       return button;
     });
     list.replaceChildren(...choices);
     if(!choices.length)list.textContent='No cards match.';
+    syncSelection();
     const info=$('viewDetails');
     $('viewTitle').textContent=c?.title||'No card selected';
     $('viewEdit').disabled=$('viewFoil').disabled=!c;
@@ -149,6 +186,48 @@
   }
   const updateView=()=>renderView().catch(console.error);
   window.MNC_renderCardView=updateView;
+
+  $('viewSelect').onclick=()=>{
+    selecting=!selecting;
+    if(!selecting)selectedCards.clear();
+    syncSelection();
+  };
+  $('viewSelectShown').onclick=()=>{
+    for(const card of filteredCards())if(cardTypeDefault(card))selectedCards.add(card.id);
+    syncSelection();
+  };
+  $('viewClearSelection').onclick=()=>{selectedCards.clear();syncSelection();};
+  $('viewApplyDefaults').onclick=()=>{
+    if(selectionProject!==state||!selectedCards.size)return;
+    const cards=state.cards.filter(card=>selectedCards.has(card.id)&&cardTypeDefault(card));
+    let updates;
+    try{
+      updates=cards.map(card=>({card,edits:typeDefaultEdits(card)})).filter(({edits})=>edits.length);
+    }catch(error){
+      $('viewBatchStatus').textContent='Could not prepare the type defaults. '+error.message;
+      return;
+    }
+    if(!updates.length){$('viewBatchStatus').textContent='Selected cards already use their type defaults.';return;}
+    for(const {card,edits} of updates)writeTypeDefaultEdits(card,edits,'after');
+    defaultUndo=updates.map(({card,edits})=>({id:card.id,edits}));
+    $('viewBatchStatus').textContent=`Applied type defaults to ${updates.length} ${updates.length===1?'card':'cards'}.`;
+    selectedCards.clear();selecting=false;
+    persist();updateView();
+  };
+  $('viewUndoDefaults').onclick=()=>{
+    if(selectionProject!==state)return;
+    let restored=0;
+    for(const {id,edits} of defaultUndo){
+      const card=cardById(id);
+      if(!card||edits.some(edit=>JSON.stringify(card[edit.key])!==JSON.stringify(edit.after)))continue;
+      writeTypeDefaultEdits(card,edits,'before');restored++;
+    }
+    $('viewBatchStatus').textContent=restored===defaultUndo.length?`Restored ${restored} ${restored===1?'card':'cards'}.`:
+      `Restored ${restored} of ${defaultUndo.length} cards. Cards edited since the update kept their latest design.`;
+    defaultUndo=[];
+    if(restored)persist();
+    updateView();
+  };
 
   $('openCardView').onclick=()=>{
     if(getCard())$('viewFilter').value=inWorkingCatalog(getCard())?'game':'all';

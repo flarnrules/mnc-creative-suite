@@ -91,6 +91,10 @@ globalThis.MNC_TYPE_DESIGN = (() => {
       delete result.offsets.number;
       result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:'right'};
       result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:shared.position};
+    }else if(card.frontLayout?.independentFooter?.copiedShared){
+      // These layers start from the shown shared footer. Older inherited text styles stay out of the copy.
+      result.text.edition={...card.frontLayout.text?.edition};
+      result.text.number={...card.frontLayout.text?.number};
     }
     return result;
   }
