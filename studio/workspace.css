@@ -1,0 +1,215 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+body > .mast {
+  flex: none;
+  padding: 8px clamp(12px, 2vw, 26px);
+}
+
+.suite-nav {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  min-width: 0;
+  background: #151c25;
+  border-bottom: 1px solid var(--line);
+}
+
+.suite-nav > button {
+  align-self: center;
+  flex: none;
+  margin: 4px 7px;
+  padding: 5px 9px;
+  font-size: 11px;
+  border-radius: 5px;
+  color: #cbd4da;
+  background: #212a36;
+  border-color: #415267;
+}
+
+.suite-nav > button::after {
+  content: "▾";
+  margin-left: 5px;
+}
+
+.suite-nav > button[aria-expanded="true"]::after {content: "▴";}
+
+.suite-nav .tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  position: static;
+  border: 0;
+  padding: 4px 8px 4px 0;
+  gap: 3px;
+  overflow: auto hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+.suite-nav .tabs button {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+main {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  padding: 10px clamp(10px, 1.4vw, 22px);
+  overflow: hidden;
+}
+
+main:has(#layoutDesigner.active) {
+  padding: 7px clamp(8px, 1.15vw, 20px);
+}
+
+.page.active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.page.active > .sectionhead {
+  flex: none;
+  margin-bottom: 9px;
+}
+
+.page.active > .sectionhead h2 {
+  margin-block: 0 3px;
+}
+
+.tool-scroll, .tool-workspace {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.tool-scroll {
+  overflow: auto;
+  padding: 0 4px 6px 0;
+}
+
+.tool-workspace {
+  align-items: stretch;
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.tool-workspace > .panel {
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  position: static;
+  overflow: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+main .leftPane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+main .leftPane > .card-list {
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+}
+
+main .preview-pane {
+  display: flex;
+  flex-direction: column;
+}
+main .preview-pane > .canvas-frame {
+  flex: 1 0 auto;
+  min-height: 154px;
+  container-type: size;
+}
+main #cardPreview {
+  width: min(100%, 400px, 68cqh);
+  min-width: 0;
+  height: auto;
+}
+#library.active {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+#assetScroll {
+  margin-top: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+#assetGrid {grid-template-columns: repeat(auto-fill, minmax(min(100%, 175px), 1fr));}
+#assetGrid .asset-thumb {display: block;}
+.page > .lab-iframe, .page > .prism-iframe {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+}
+#prism > .toggle {margin-block: 0 8px;}
+
+#layoutDesigner > .ld-toolbar, #layoutDesigner > .ld-quick-tools,
+#layoutDesigner > .ld-statusbar {flex: none;}
+#layoutDesigner > .ld-workspace {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+#layoutDesigner .ld-stage, #layoutDesigner .ld-rail {
+  min-height: 0;
+  height: auto;
+}
+.ld-inspector, .ld-layers {min-height: 0;}
+.ld-statusbar {padding-block: 6px;}
+#cardSymbolPosition {
+  margin-top: 4px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .tool-workspace {
+    align-items: start;
+    grid-template-rows: auto;
+    grid-auto-rows: auto;
+    overflow: auto;
+    padding-bottom: 6px;
+  }
+  .tool-workspace > .panel {overflow: visible;}
+  main .leftPane {overflow: hidden;max-height: 205px;}
+  main .preview-pane > .canvas-frame {height: min(52dvh, 420px);}
+}
+
+@media (max-width: 850px) {
+  #layoutDesigner > .ld-workspace {
+    grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  #layoutDesigner .ld-rail {min-height: 0;height: auto;}
+}
+
+@media (max-width: 540px) {
+  .suite-nav > button {margin-inline: 4px;padding-inline: 5px;}
+  .suite-nav .tabs button {font-size: 11px;padding-inline: 6px;}
+  .page.active > .sectionhead h2 {font-size: 21px;}
+  #layoutDesigner .ld-toolbar h2 {font-size: 18px;}
+  #layoutDesigner .ld-statusbar p {display: none;}
+}

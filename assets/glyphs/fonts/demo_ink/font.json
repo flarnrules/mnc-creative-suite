@@ -1,0 +1,6 @@
+{
+  "display_name": "Demo Ink (replace with your drawings)",
+  "background": "transparent",
+  "description": "Demonstration 512px PNGs. Missing characters fall back to the normal font.",
+  "color_mode": "tint"
+}

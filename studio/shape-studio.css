@@ -1,0 +1,42 @@
+.shape-workspace {
+  display:grid;
+  grid-template-columns:minmax(170px,235px) minmax(0,1fr) minmax(240px,340px);
+  align-items:start;
+  gap:14px;
+}
+.shape-workspace h3 {margin:0 0 8px;color:#ece1c5;}
+.shape-workspace .previewheading h3 {margin:0;}
+.shape-editor .buttonbar button,.shape-library .buttonbar button {font-size:12px;padding:6px 9px;}
+.shape-editor #shapeCanvas {
+  display:block;
+  width:100%;
+  height:auto;
+  margin:10px 0;
+  background:radial-gradient(ellipse at 50% 30%,#27332a,#151a16);
+  border:1px solid #475248;
+  border-radius:7px;
+  touch-action:none;
+  cursor:grab;
+}
+.shape-editor #shapeCanvas.shape-add-mode {cursor:crosshair;}
+.shape-editor #shapeCanvas:active {cursor:grabbing;}
+.shape-point-fields {display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:9px;}
+.shape-proof {position:sticky;top:62px;}
+#shapeCardPreview {display:block;width:min(100%,285px);height:auto;margin:12px auto 0;border-radius:5px;box-shadow:0 12px 23px #0007;}
+.shape-import {margin-top:12px;}
+#shapeStatus {margin-top:9px;}
+.front-reset {align-self:end;margin:0 0 9px;}
+.front-reset button {padding:7px 9px;font-size:11px;}
+#frontLayoutPanel .pair {grid-template-columns:repeat(2,minmax(0,1fr));}
+.front-quick {margin:6px 0 3px;}
+@media(max-width:1140px){
+  .shape-workspace {grid-template-columns:minmax(155px,205px) minmax(0,1fr) minmax(180px,265px);}
+}
+@media(max-width:850px){
+  .shape-workspace {grid-template-columns:minmax(0,1fr) minmax(220px,315px);}
+  .shape-library {grid-column:1/-1;}
+}
+@media(max-width:605px){
+  .shape-workspace {grid-template-columns:minmax(0,1fr);}
+  .shape-proof {position:static;}
+}

@@ -1,0 +1,104 @@
+@font-face {
+  font-family:"MNC Symbols";
+  src:url("fonts/NotoSansSymbols2-Regular.ttf") format("truetype");
+  font-weight:400;
+  font-display:block;
+}
+@font-face {
+  font-family:"MNC Symbols One";
+  src:url("fonts/NotoSansSymbols-Regular.ttf") format("truetype");
+  font-weight:400;
+  font-display:block;
+}
+@font-face {
+  font-family:"MNC Emoji Fallback";
+  src:url("fonts/NotoColorEmoji.ttf") format("truetype");
+  font-weight:400;
+  font-display:block;
+}
+.set-workspace {display:grid;grid-template-columns:minmax(280px,360px) minmax(420px,1fr);gap:16px;align-items:start;}
+.set-stats {display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 0 15px;}
+.set-stat {background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+.set-stat strong {display:block;font:400 30px Georgia,serif;color:var(--lime);}
+.set-stat span {font-size:12px;color:var(--muted);}
+.set-counts {width:100%;font-size:13px;border-collapse:collapse;}
+.set-counts td,.set-counts th {padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;}
+.set-counts input {width:62px;background:#121b17;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:7px;font:inherit;}
+.set-counts button {padding:4px 7px;border-color:transparent;background:transparent;text-align:left;}
+.set-counts .selected {background:#364235;}
+.status-line {font-size:12px;margin:9px 0;color:var(--muted);overflow-wrap:anywhere;}
+.set-slot-scroll {max-height:620px;}
+.set-slots {width:100%;}
+.set-slots input,.set-slots select {max-width:100%;min-width:100px;width:100%;font:13px system-ui;padding:8px;border:1px solid var(--line);border-radius:5px;background:#121b17;color:var(--text);}
+.set-slots button {padding:7px 9px;}
+.set-slots td:nth-child(2) {min-width:145px;}
+.set-slots td:nth-child(3) {min-width:125px;max-width:200px;}
+.item-set-actions {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;}
+.item-set-actions .label {margin:0;min-width:0;}
+.item-set-actions button {white-space:nowrap;}
+#cardItemSetStatus {margin:6px 0;}
+.symbols-workspace {display:grid;grid-template-columns:minmax(340px,1fr) minmax(360px,530px);gap:16px;align-items:start;}
+.symbol-chart {display:grid;grid-template-columns:repeat(3,minmax(95px,1fr));gap:10px;}
+.symbol-tile {background:#19201b;border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;justify-items:center;gap:5px;}
+.symbol-tile.active {border-color:var(--lime);background:#303b2e;}
+.symbol-tile canvas {width:72px;height:72px;background:#f8f6ee;border-radius:5px;}
+.symbol-tile span {font-size:12px;}
+.symbol-tile small {font-size:10px;color:var(--muted);}
+.symbol-editor {position:sticky;top:63px;max-height:calc(100vh - 85px);overflow:auto;}
+.symbol-large {display:grid;place-items:center;background:#f8f6ee;border-radius:8px;margin:10px 0;}
+.symbol-large canvas {width:180px;height:180px;max-width:100%;}
+.font-comparison {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+.font-comparison figure {margin:0;text-align:center;}
+.font-comparison canvas {width:100%;height:auto;background:#f8f6ee;border-radius:5px;}
+.font-comparison figcaption {font-size:10px;color:var(--muted);}
+#symbolCandidates button {font-size:25px;min-width:44px;}
+.standard-strip {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:9px 0;padding:9px;border:1px solid var(--line);border-radius:7px;}
+.standard-strip span {font-size:12px;flex:1;}
+.standard-strip button {font-size:11px;padding:6px 9px;}
+.inspector-tabs {display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:12px;}
+.inspector-tabs button {font-size:12px;padding:8px 4px;}
+.rightPane[data-edit-section="content"] :is(#gameArtwork,#gameHeader,#cardLook,#frontLayoutPanel,#gameCredit),
+.rightPane[data-edit-section="content"] #legacyFields[data-mode="game"],
+.rightPane[data-edit-section="art"] :is(#gameplayGroup,#gameHeader,#gameCredit,#frontLayoutPanel),
+.rightPane[data-edit-section="symbols"] :is(#gameplayGroup,#gameArtwork,#cardLook,#gameCredit,#legacyFields,#frontLayoutPanel),
+.rightPane[data-edit-section="type"] :is(#gameplayGroup,#gameArtwork,#gameHeader,#cardLook,#legacyFields),
+.rightPane[data-edit-section="footer"] :is(#gameplayGroup,#gameArtwork,#gameHeader,#cardLook,#legacyFields,#frontLayoutPanel) {display:none;}
+#gameHeader .symbol-mini {display:grid;grid-template-columns:68px 1fr;gap:10px;align-items:center;}
+#cardSymbolPreview {width:64px;height:64px;background:#f8f6ee;border-radius:5px;}
+#cardSymbolOverrides {margin-top:10px;}
+#cardSymbolOverrides .pair {align-items:end;}
+.rightPane:not([data-edit-section="content"]) #cardWriting,
+.rightPane:not([data-edit-section="attributes"]) #cardAttributes,
+.rightPane[data-edit-section="attributes"] :is(#gameplayGroup,#gameArtwork,#cardLook,#gameHeader,#gameCredit,#legacyFields,#frontLayoutPanel) {display:none;}
+.type-workspace {display:grid;grid-template-columns:minmax(300px,430px) minmax(300px,1fr);gap:16px;align-items:start;}
+.type-workspace textarea {width:100%;resize:vertical;background:#121b17;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:9px;font:13px/1.5 system-ui;}
+#cardWriting>textarea {width:100%;background:#121b17;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:9px;font:13px/1.5 system-ui;}
+.type-preview-panel {position:sticky;top:65px;text-align:center;}
+#typeDesignPreview {display:block;width:min(100%,480px);height:auto;margin:12px auto;}
+.type-preview-panel .label {text-align:left;}
+.symbol-context-window {padding:10px;border:1px solid #68715c;border-radius:8px;background:#141d18;margin:9px 0 13px;}
+.symbol-context-canvases {display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;align-items:center;}
+.symbol-context-canvases canvas {display:block;width:100%;height:auto;max-width:100%;touch-action:none;cursor:move;border-radius:5px;background:#0f1512;}
+.symbol-context-window[data-preview="card"] canvas {cursor:default;touch-action:auto;}
+#symbolContextMini {aspect-ratio:5/7;}
+.symbol-context-canvases canvas:focus-visible {outline:2px solid var(--lime);outline-offset:3px;}
+.symbol-move-pad {display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:9px 0;}
+.symbol-move-pad button {padding:7px 4px;font-size:11px;min-height:36px;}
+button[aria-pressed="true"] {border-color:var(--lime);}
+@media(max-width:1000px) {
+  .set-workspace {grid-template-columns:1fr;}
+  .symbols-workspace {grid-template-columns:1fr minmax(340px,460px);}
+}
+@media(max-width:700px) {
+  .type-workspace {grid-template-columns:1fr;}
+  .type-preview-panel {position:static;}
+  .symbols-workspace {grid-template-columns:1fr;}
+  .symbol-context-canvases {grid-template-columns:76px minmax(0,1fr);}
+  .symbol-editor {position:static;max-height:none;}
+  .symbol-chart {grid-template-columns:repeat(3,minmax(85px,1fr));}
+  .set-stats {grid-template-columns:repeat(2,1fr);}
+  .set-stat:last-child {grid-column:1/-1;}
+  .rightPane {position:static;max-height:none;}
+  .inspector-tabs button {min-height:42px;}
+  .set-slot-scroll {max-height:480px;}
+}

@@ -1,0 +1,1 @@
+window.MNC_CATALOG_STARTER=null;

@@ -1,0 +1,2 @@
+window.MNC_STARTER_ASSETS=[];
+window.MNC_STARTER_CARDS=[];

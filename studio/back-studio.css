@@ -1,0 +1,63 @@
+.back-workspace {
+  display:grid;
+  grid-template-columns:minmax(170px,210px) minmax(300px,1fr) minmax(310px,365px);
+  gap:14px;
+  align-items:start;
+}
+.back-drafts .buttonbar {align-items:stretch;}
+.back-drafts .buttonbar:first-of-type {flex-direction:column;}
+.back-drafts .buttonbar:first-of-type button {text-align:left;}
+.back-drafts .label {margin-top:18px;}
+.back-drafts p {margin-top:10px;}
+.back-proof {position:sticky;top:12px;}
+.back-proof .previewheading h3 {margin:0;}
+.back-canvas-frame {
+  display:grid;
+  place-items:center;
+  min-width:0;
+  padding:20px;
+  border:1px solid #303a49;
+  border-radius:10px;
+  background:#10151d;
+}
+#backPreview {
+  display:block;
+  width:min(100%,380px,calc((100vh - 270px)*.7143));
+  min-width:min(100%,200px);
+  height:auto;
+  aspect-ratio:5/7;
+  box-shadow:0 12px 32px #0008;
+  cursor:grab;
+  touch-action:none;
+}
+#backPreview:active {cursor:grabbing;}
+.back-proof-actions {margin-top:10px;}
+.back-proof-actions .toggle {margin:0 7px 0 0;}
+.back-proof-actions button,.back-controls .buttonbar :is(button,.file-label) {padding:6px 9px;font-size:11px;}
+.back-controls .panel-section summary {margin-bottom:10px;}
+.back-layer-list {
+  display:grid;
+  gap:4px;
+  max-height:235px;
+  overflow:auto;
+  margin:9px 0;
+}
+.back-layer-row {display:grid;grid-template-columns:minmax(0,1fr) 52px;gap:5px;}
+.back-layer-row button {padding:6px 8px;font-size:11px;}
+.back-layer-select {min-width:0;text-align:left;}
+.back-layer-select :is(strong,span) {display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.back-layer-select span {color:#aebac7;}
+.back-layer-select[aria-pressed="true"] {border-color:var(--lime);background:#403929;}
+.back-layer-editor {padding-top:8px;margin-top:9px;border-top:1px solid var(--line);}
+.back-controls .pair {grid-template-columns:repeat(2,minmax(0,1fr));}
+.back-proof-note {margin:0 0 10px;}
+@media(max-width:1050px){
+  .back-workspace {grid-template-columns:minmax(285px,1fr) minmax(290px,350px);}
+  .back-drafts {grid-column:1/-1;}
+  .back-drafts .buttonbar:first-of-type {flex-direction:row;}
+}
+@media(max-width:700px){
+  .back-workspace {grid-template-columns:minmax(0,1fr);}
+  .back-proof {position:static;}
+  #backPreview {width:min(100%,340px);}
+}

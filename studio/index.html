@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MNC Creative Suite · 0.9.13.2</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="layout-designer.css"><link rel="stylesheet" href="workspace.css"></head>
+<body>
+<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.13.2</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
+<div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="studio">Card Designer</button>
+<button type="button" data-tab="layoutDesigner">Layout Designer</button>
+<button type="button" data-tab="setDesigner">Set Designer</button>
+<button type="button" data-tab="visualLanguage">Visual language</button>
+<button type="button" data-tab="typeDesigner">Type Designer</button>
+<button type="button" data-tab="shapes">Shape Designer</button>
+<button type="button" data-tab="mirror">Mirror Finish</button>
+<button type="button" data-tab="backs">Back Designer</button>
+<button type="button" data-tab="library">Artwork</button>
+<button type="button" data-tab="rules">Game &amp; Set</button>
+<button type="button" data-tab="viewer">Card View</button>
+<button type="button" data-tab="production">Print Sheets</button>
+<button type="button" data-tab="fractal">Fractal Lab</button>
+<button type="button" data-tab="prism">Foil Lab</button>
+<button type="button" data-tab="glyph">Glyph Kit</button>
+<button type="button" data-tab="data">Project &amp; Backup</button></nav></div>
+<main>
+<section class="page" id="layoutDesigner" aria-labelledby="ldTitle">
+  <header class="ld-toolbar">
+    <h2 id="ldTitle">Layout Designer</h2>
+    <label class="label ld-card-choice">Card<select id="ldCard"></select></label>
+    <div class="ld-preset-choice">
+      <label class="label">Layout<select id="ldPreset"></select></label>
+      <button id="ldApply" type="button">Apply</button>
+    </div>
+    <div class="ld-toolbar-actions">
+      <button id="ldSave" type="button">Save layout</button>
+      <button id="ldExport" class="accent-btn" type="button">Export PNG</button>
+    </div>
+  </header>
+  <div class="ld-quick-tools" id="ldQuickTools" aria-label="Layout tools">
+    <button id="ldArtQuick" type="button">Art window</button>
+    <button id="ldMaskQuick" type="button">Cutout mask</button>
+    <button id="ldPlatesQuick" type="button">Nameplates</button>
+    <button id="ldBorderQuick" type="button">Outer border</button>
+    <button id="ldGradientQuick" type="button">Gradients</button>
+  </div>
+  <p id="ldEmpty" class="ld-empty" hidden>Choose <button type="button" data-tab="studio">Card Designer</button> to create your first card.</p>
+  <div class="ld-workspace" id="ldWorkspace">
+    <aside class="ld-rail ld-layer-rail" aria-labelledby="ldLayersTitle">
+      <div class="ld-panel-heading"><h3 id="ldLayersTitle">Layers</h3></div>
+      <div class="ld-layer-tools">
+        <label class="sr-only" for="ldNewLayer">Layer to add</label>
+        <select id="ldNewLayer"><option value="text">Text</option><option value="rect">Rectangle</option><option value="circle">Ellipse</option><option value="image">Image</option></select>
+        <button id="ldAdd" type="button">Add</button>
+      </div>
+      <ul id="ldLayers" class="ld-layers" aria-label="Layers in stacking order"></ul>
+      <div class="ld-layer-tools ld-reorder">
+        <button id="ldForward" type="button" title="Move toward the front">Raise</button>
+        <button id="ldBackward" type="button" title="Move toward the back">Lower</button>
+      </div>
+    </aside>
+    <div class="ld-stage" id="ldStage">
+      <div class="ld-mat" id="ldMat">
+        <div class="ld-artboard" id="ldArtboard">
+          <canvas id="ldCanvas" width="750" height="1050" tabindex="0" aria-label="Card front artboard. Select a layer, then use arrow keys to move it."></canvas>
+          <canvas id="ldMaskGuide" class="ld-mask-guide" width="750" height="1050" tabindex="0" aria-label="Trace a cutout around the artwork" hidden></canvas>
+          <div class="ld-safe-area" id="ldSafeArea" aria-hidden="true"></div>
+          <div class="ld-selection" id="ldSelection" hidden>
+            <div class="ld-handle" data-handle="nw"></div><div class="ld-handle" data-handle="ne"></div>
+            <div class="ld-handle" data-handle="sw"></div><div class="ld-handle" data-handle="se"></div>
+            <div class="ld-handle ld-handle-edge" data-handle="n"></div><div class="ld-handle ld-handle-edge" data-handle="s"></div>
+            <div class="ld-handle ld-handle-edge" data-handle="w"></div><div class="ld-handle ld-handle-edge" data-handle="e"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="ld-rail ld-inspector-rail" aria-labelledby="ldLayerTitle">
+      <div class="ld-panel-heading"><h3 id="ldLayerTitle">Properties</h3></div>
+      <div class="ld-inspector-tabs" aria-label="Layer settings">
+        <button id="ldPropertiesTab" type="button" aria-pressed="true">Properties</button>
+        <button id="ldFillTab" type="button" aria-pressed="false" hidden>Fill</button>
+        <button id="ldEffectsTab" type="button" aria-pressed="false">Effects</button>
+        <button id="ldMaskTab" type="button" aria-pressed="false" hidden>Mask</button>
+      </div>
+      <div id="ldInspector" class="ld-inspector"></div>
+    </aside>
+  </div>
+  <footer class="ld-statusbar" id="ldStatusbar">
+    <div class="ld-status-tools">
+      <button id="ldUndo" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button>
+      <button id="ldRedo" type="button" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button>
+      <label class="ld-zoom">Zoom
+        <select id="ldZoom"><option value="fit">Fit</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option></select>
+      </label>
+      <label class="ld-guides" title="Guide ⅛ inch inside the trim edge"><input id="ldGuides" type="checkbox" checked> Safe area guide</label>
+    </div>
+    <p id="ldStatus" role="status">Drag to move. Double-click text to edit.</p>
+    <div class="ld-status-links">
+      <button id="ldStudio" type="button">Card Designer</button>
+      <button id="ldView" type="button">Card View</button>
+    </div>
+  </footer>
+  <dialog id="ldSaveDialog" class="ld-dialog" aria-labelledby="ldSaveTitle">
+    <form id="ldSaveForm">
+      <h3 id="ldSaveTitle">Save layout</h3>
+      <label class="label">Layout name<input id="ldSaveName" maxlength="96" required></label>
+      <label class="label">Default for type<select id="ldDefaultType"></select></label>
+      <div class="buttonbar"><button id="ldSaveCancel" type="button">Cancel</button><button type="submit" class="accent-btn">Save</button></div>
+    </form>
+  </dialog>
+</section>
+<section class="page" id="typeDesigner">
+<div class="sectionhead"><div><h2>Type Designer</h2><p>Shared rule wording and formatting for a card type.</p></div><div class="buttonbar"><button id="typeOpenLayout" type="button">Open Layout Designer</button><button id="typeOpenSymbols" type="button">Symbols &amp; saved design</button><button id="typeOpenCard" type="button">Open preview card</button></div></div>
+<div class="type-workspace tool-workspace"><aside class="panel"><label class="label">Card type<select id="typeDesignProfile"></select></label><p id="typeDesignCount" class="status-line"></p>
+<label class="label" id="typeColorLabel">Type accent<input id="typeDesignColor" type="color"></label>
+<label class="label" id="typeHeaderSubtypeRow">Character header<select id="typeHeaderSubtype"><option value="">Use default</option><option value="false">Type only</option><option value="true">Show italic subtype</option></select></label>
+<h3>Shared printed rule</h3><label class="label">Wording<select id="typeDesignRuleMode"><option value="default">Original wording</option><option value="custom">My wording</option><option value="hidden">Do not print a type rule</option></select></label>
+<textarea id="typeDesignRule" rows="5" maxlength="4000" aria-label="Shared printed type rule"></textarea>
+<p class="status-line">Edits update matching cards that follow the type rule. For Sidekicks, {partner} inserts the card's partner name.</p>
+<button id="typeRestoreRule" type="button">Restore original wording</button>
+<details class="panel-section" open><summary>Matchup attributes</summary><div class="pair"><label class="label">Layout<select id="typeAttrLayout"><option value="columns">Side by side</option><option value="stacked">Stacked rows</option></select></label><label class="label">Order<select id="typeAttrOrder"><option value="wins-first">Beats first</option><option value="losses-first">Beaten by first</option></select></label></div><div class="pair"><label class="label">Background<select id="typeAttrStyle"><option value="tint">Type colors</option><option value="none">No background</option><option value="outline">Outline</option><option value="solid">Solid</option></select></label><label class="label">Space between groups (px)<input id="typeAttrGap" type="number" min="4" max="100" step="1"></label></div><div class="pair"><label class="label">Type names (px)<input id="typeAttrValueSize" type="number" min="10" max="48" step="1"></label><label class="label">Headings (px)<input id="typeAttrLabelSize" type="number" min="8" max="32" step="1"></label><label class="label">Type symbols (px)<input id="typeAttrIconSize" type="number" min="0" max="60" step="1"></label></div><div class="pair"><label class="toggle"><input id="typeAttrLabels" type="checkbox"> Print headings</label><label class="toggle"><input id="typeAttrIcons" type="checkbox"> Print symbols</label><label class="toggle"><input id="typeAttrNames" type="checkbox"> Print type names</label></div><div class="pair"><label class="label">Beats heading<input id="typeAttrWinLabel" maxlength="48" placeholder="Auto"></label><label class="label">Beaten by heading<input id="typeAttrLossLabel" maxlength="48" placeholder="Auto"></label></div></details>
+<details class="panel-section" open><summary>Type rule, power &amp; quote formatting</summary><div class="three"><label class="label">Type rule (px)<input id="typeCopyTypeSize" type="number" min="12" max="48" step="1"></label><label class="label">Power (px)<input id="typeCopyPowerSize" type="number" min="12" max="48" step="1"></label><label class="label">Quote (px)<input id="typeCopyQuoteSize" type="number" min="10" max="40" step="1"></label></div><div class="pair"><label class="label">Rule font<select id="typeCopyFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label><label class="label">Quote font<select id="typeCopyQuoteFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label></div><div class="pair"><label class="toggle"><input id="typeCopyItalic" type="checkbox"> Italic quote</label><label class="label">Quote alignment<select id="typeCopyAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div></details>
+<button id="typeApplyFormatting" type="button">Use this formatting on matching cards</button><p id="typeDesignStatus" class="status-line" role="status"></p>
+</aside><div class="panel type-preview-panel"><label class="label">Preview<select id="typePreviewCard"></select></label><canvas id="typeDesignPreview" width="750" height="1050" aria-label="Live type design preview"></canvas><p id="typePreviewStatus" class="status-line" role="status"></p></div></div></section>
+<section class="page" id="setDesigner">
+  <div class="sectionhead">
+    <div><h2>Set Designer</h2><p id="setPlanSummary"></p></div>
+    <div class="buttonbar"><button id="setExportPlan" type="button">Export plan CSV</button><button id="setNumberPreview" type="button">Preview numbering</button></div>
+  </div>
+  <div class="set-stats" id="setPlanStats"></div>
+  <div class="set-workspace tool-workspace">
+    <aside class="panel">
+      <div class="pair">
+        <label class="label">Set size<input id="setTarget" type="number" min="1" max="300"></label>
+        <label class="label">Edition<input id="setEdition" maxlength="14"></label>
+      </div>
+      <div class="matrix-scroll"><table class="set-counts"><thead><tr><th>Group</th><th>Planned</th><th>Named</th></tr></thead><tbody id="setGroupCounts"></tbody></table></div>
+      <p id="setPlanBalance" class="status-line" role="status"></p>
+      <button id="setCreateNamed" type="button">Create the named drafts</button>
+      <p id="setActionStatus" class="status-line" role="status"></p>
+    </aside>
+    <div class="panel">
+      <div class="previewheading"><h3 id="setGroupTitle"></h3><button id="setEditGroupStyle" type="button">Edit this standard</button></div>
+      <label class="label">Card group<select id="setGroup"></select></label>
+      <p id="itemSlotHelp" class="status-line" hidden></p>
+      <div class="matrix-scroll set-slot-scroll"><table class="set-slots"><thead><tr><th>Slot</th><th>Card name</th><th>Linked design</th><th></th></tr></thead><tbody id="setSlotRows"></tbody></table></div>
+      <details id="setOverflow" hidden><summary>Saved slots beyond this quantity</summary><div id="setOverflowRows"></div></details>
+      <details id="setNumbering" hidden>
+        <summary>Numbering preview</summary>
+        <p id="setNumberWarning" class="status-line"></p>
+        <div class="matrix-scroll set-slot-scroll"><table><thead><tr><th>Proposed</th><th>Group</th><th>Name</th><th>Current</th></tr></thead><tbody id="setNumberRows"></tbody></table></div>
+        <button id="setApplyNumbers" type="button">Apply numbers to linked cards</button>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="visualLanguage">
+  <div class="sectionhead">
+    <div><h2>Visual language</h2><p>Symbols and standard designs for the set.</p></div>
+    <div class="buttonbar"><button id="symbolRefresh" type="button">Refresh glyph folder</button><button id="symbolExportChart" type="button">Export chart PNG</button></div>
+  </div>
+  <div class="symbols-workspace tool-workspace">
+    <div class="panel symbol-chart" id="symbolChart"></div>
+    <div class="panel symbol-editor">
+      <label class="label">Standard<select id="symbolProfile"></select></label>
+      <div class="symbol-context-window" id="symbolContextWindow">
+        <p id="symbolContextLocation" class="status-line"></p>
+        <label class="label">Preview card<select id="symbolContextCard"></select></label>
+        <label class="label" id="symbolPreviewModeRow" hidden>Placement preview
+          <select id="symbolPreviewMode">
+            <option value="standard">Selected standard</option>
+            <option value="card">Card’s saved glyph and placement</option>
+          </select>
+        </label>
+        <div class="symbol-context-canvases">
+          <canvas id="symbolContextMini" width="250" height="350" tabindex="0" aria-label="Full card and glyph outline"></canvas>
+          <canvas id="symbolContextSection" width="600" height="378" tabindex="0" aria-label="Close-up of the rendered glyph"></canvas>
+        </div>
+        <div id="symbolPlacementTools">
+          <p class="status-line">Drag the glyph in either preview. Arrow keys move it 1 px. Hold Shift to move it 10 px.</p>
+          <label class="label">Glyph size <output id="symbolPlacementSizeLabel"></output><input id="symbolPlacementSize" type="range" min="0" max="250" step="1"></label>
+          <div class="three">
+            <label class="label">Size (px)<input id="symbolPlacementSizeNumber" type="number" min="0" max="250" step="1"></label>
+            <label class="label">Left / right (px)<input id="symbolPlacementX" type="number" min="-750" max="750" step="1"></label>
+            <label class="label">Up / down (px)<input id="symbolPlacementY" type="number" min="-1050" max="1050" step="1"></label>
+          </div>
+          <div class="symbol-move-pad" role="group" aria-label="Move glyph">
+            <button id="symbolMoveLeft" type="button">Left</button>
+            <button id="symbolMoveUp" type="button">Up</button>
+            <button id="symbolMoveDown" type="button">Down</button>
+            <button id="symbolMoveRight" type="button">Right</button>
+            <button id="symbolPlacementReset" type="button">Reset</button>
+          </div>
+          <div class="buttonbar">
+            <button id="symbolPlacementCard" type="button">Use glyph and placement on card</button>
+            <button id="symbolPlacementType" type="button">Use placement for type</button>
+          </div>
+        </div>
+        <p id="symbolContextStatus" class="status-line" role="status"></p>
+      </div>
+      <details class="panel-section"><summary>Glyph-only preview</summary><div class="symbol-large"><canvas id="symbolLarge" width="512" height="512" aria-label="Selected symbol"></canvas></div></details>
+      <div class="pair">
+        <label class="label">Source<select id="symbolSource"><option value="text">Font symbol</option><option value="image">PNG glyph</option><option value="builtin">Drawn type glyph</option><option value="hidden">Hidden</option></select></label>
+        <label class="label">Icon background<select id="symbolBackdrop"><option value="none">None</option><option value="circle">Circle</option></select></label>
+      </div>
+      <div id="symbolTextFields">
+        <label class="label">Symbol<input id="symbolGlyph" maxlength="32"></label>
+        <div id="symbolCandidates" class="buttonbar"></div>
+        <div class="pair">
+          <label class="label">Font<select id="symbolFont"></select></label>
+          <label class="label">Presentation<select id="symbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label>
+        </div>
+        <p id="symbolFontStatus" class="status-line" role="status"></p>
+        <div class="font-comparison"><figure><canvas id="symbolSegoe" width="180" height="130" aria-label="Segoe UI Symbol comparison"></canvas><figcaption>Segoe UI Symbol</figcaption></figure><figure><canvas id="symbolTimes" width="180" height="130" aria-label="Times New Roman comparison"></canvas><figcaption>Times New Roman</figcaption></figure></div>
+        <button id="symbolFreeze" type="button">Save this appearance as a 512 px PNG</button>
+      </div>
+      <div id="symbolImageFields" hidden>
+        <label class="label">Glyph image<select id="symbolAsset"></select></label>
+        <div class="pair">
+          <label class="label">Image style<select id="symbolImageMode"><option value="tint">Single ink silhouette</option><option value="original">Original image</option></select></label>
+          <label class="toggle"><input id="symbolRemoveWhite" type="checkbox" checked> Clear white background</label>
+        </div>
+      </div>
+      <div class="pair">
+        <label class="label">Ink<select id="symbolInkMode"><option value="auto">Use card text color</option><option value="custom">Custom</option></select></label>
+        <label class="label" id="symbolColorRow" hidden>Custom ink<input id="symbolColor" type="color" value="#000000"></label>
+      </div>
+      <div class="buttonbar"><label class="file-label secondary">Upload PNG<input id="symbolUpload" type="file" accept="image/png,.png"></label><button id="symbolFindDrawing" type="button">Find matching drawing</button></div>
+      <p id="symbolStatus" class="status-line" role="status"></p>
+      <label class="label">Saved design for this standard<select id="symbolPreset"></select></label>
+      <div class="buttonbar"><button id="symbolSaveDesign" type="button">Save selected card as standard</button><button id="symbolApplyDesign" type="button">Apply standard to selected card</button></div>
+      <p id="symbolDesignStatus" class="status-line" role="status"></p>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="library">
+  <div class="sectionhead">
+    <div><h2>Artwork</h2></div>
+    <label class="file-label">＋ Import images / GIFs<input id="newArtwork" type="file" accept="image/*,.gif" multiple></label>
+  </div>
+  <div class="panel toolbar">
+    <input id="assetSearch" placeholder="Find art by title or filename..." aria-label="Search artwork">
+    <select id="assetFilter" aria-label="Artwork type"><option value="">All artwork types</option></select>
+    <span id="assetCount" class="muted" role="status"></span>
+  </div>
+  <div class="buttonbar"><button id="diskArtworkRefresh" hidden>Refresh project artwork</button><span id="diskArtworkStatus" class="muted tiny" role="status"></span></div>
+  <div class="tool-scroll" id="assetScroll" tabindex="0" role="region" aria-label="Artwork gallery">
+    <p id="assetEmpty" class="muted" hidden></p>
+    <div id="assetGrid" class="asset-grid"></div>
+  </div>
+</section>
+<section class="page active" id="studio"><div class="sectionhead"><div><h2>Card Designer</h2></div><div class="buttonbar"><select id="newRole" aria-label="New card role"><option>Character</option><option>Critic</option><option>Item</option><option>Movie</option><option>Archive</option></select><button id="addCard">New card</button><button id="cloneCard">Duplicate</button><button id="saveCardPNG" class="accent-btn">Export PNG</button></div></div>
+<div class="workspace tool-workspace">
+<aside class="panel leftPane"><label class="label">Find card<input id="cardSearch" placeholder="Name, ID, family..."></label><label class="label">Show<select id="cardScope"><option value="game">Catalog &amp; game cards</option><option value="all">All designs</option><option value="archive">Legacy layouts</option></select></label><div id="cardList" class="card-list"></div></aside>
+<div class="preview-pane panel"><div class="previewheading"><span id="activeCardTitle">Card preview</span><div class="buttonbar"><button type="button" data-tab="layoutDesigner">Edit layout</button><button id="openCardView">Open Card View</button></div></div><div class="canvas-frame"><canvas id="cardPreview" width="750" height="1050" aria-label="Rendered trading card preview"></canvas></div><div class="preset-tools">
+  <div class="buttonbar"><select id="layoutPresets" aria-label="Saved design presets"></select><button id="applyTemplate" disabled>Apply</button><button id="saveTemplate">Save preset</button></div>
+  <p id="presetStatus" class="muted tiny" role="status"></p>
+</div>
+<div class="buttonbar center"><button id="resetTextPositions">Reset text positions</button><button id="useArt">Artwork library</button><button data-tab="backs">Edit card back</button><button id="pngBack">Export back PNG</button></div><p class="muted tiny">2.5 × 3.5 in · 750 × 1050 px</p>
+<details class="design-comparison" id="legacyVariants"><summary>Legacy layout comparisons</summary>
+ <div class="previewheading"><h3>Explore three card treatments</h3><button id="refreshVariants">Refresh variants</button></div>
+ <div id="variantsGrid" class="variants-grid"></div>
+
+</details></div>
+<aside id="rightPane" class="panel rightPane"><label class="label">Title<input id="c_title"></label><div class="pair"><label class="label">Role / family<select id="c_family"><option>Character</option><option>Movie</option><option>Member</option><option>Critic</option><option>Meme</option><option>Item</option><option>Archive</option><option>Moment</option><option>Location</option><option>Byline</option><option>Award</option><option>Reaction</option><option>Artifact</option></select></label><label class="label">Rarity<select id="c_rarity"><option>Unassigned</option><option>Common</option><option>Uncommon</option><option>Rare</option><option>Ultra Rare</option><option>Special</option></select></label></div>
+<p id="catalogCardStatus" class="muted tiny catalog-card-status" hidden></p>
+<div id="cardItemSetControls" hidden>
+  <div class="item-set-actions">
+    <label class="label">Item set group<select id="cardItemSetGroup" aria-describedby="cardItemSetStatus"></select></label>
+    <button id="cardOpenSetSlots" type="button">Open set slots</button>
+  </div>
+  <p id="cardItemSetStatus" class="status-line" role="status"></p>
+</div>
+<div class="standard-strip"><span id="cardStandardName"></span><button id="cardApplyStandard" type="button">Use standard</button><button id="cardEditStandard" type="button">Edit standard</button></div>
+<div class="inspector-tabs" role="group" aria-label="Card controls"><button type="button" data-edit-section="content">Content</button><button type="button" data-edit-section="attributes">Attributes</button><button type="button" data-edit-section="art">Art &amp; look</button><button type="button" data-edit-section="symbols">Symbols</button><button type="button" data-edit-section="footer">Footer</button></div>
+<div class="buttonbar inspector-shortcuts">
+  <button id="jumpRules" type="button">Rules</button><button id="jumpHeader" type="button">Type icon</button>
+  <button id="jumpArt" type="button">Artwork</button><button id="jumpLook" type="button">Colors</button><button id="jumpFooter" type="button">Footer</button><button id="openMirrorFinish" type="button">Mirror finish</button>
+</div>
+<div id="gameInspector" hidden>
+  <details id="gameplayGroup" class="panel-section game-rule-controls" open>
+    <summary>Type &amp; gameplay</summary>
+    <p id="gameRoleHelp" class="muted tiny"></p>
+    <div id="typeControl">
+      <div class="pair">
+        <label class="label">Character category<select id="gameCategory"></select></label>
+        <label class="label" id="creatureTypeControl">Creature type<input id="gameCharacterType" list="gameCharacterTypeOptions" maxlength="40"><datalist id="gameCharacterTypeOptions"></datalist></label>
+      </div>
+      <label class="label">Subtype<input id="gameCharacterSubtype" maxlength="40"></label>
+      <label class="label" id="sidekickPartnerRow" hidden>Sidekick partner<input id="sidekickPartner" list="sidekickPartners" maxlength="80" placeholder="Character name or Card ID" aria-describedby="sidekickPartnerName"><datalist id="sidekickPartners"></datalist><small id="sidekickPartnerName" class="muted"></small></label>
+
+    </div>
+    <div class="match-readout" id="gameMatchups"></div>
+    <button id="typeManageFromCard" type="button">Edit this type</button>
+  </details>
+  <details id="gameArtwork" class="panel-section">
+    <summary>Artwork &amp; crop</summary>
+    <label class="label">Artwork format<select id="artworkProfile"><option value="custom">Custom / existing crop</option><option value="standard">Standard · 3:2 · 2400 × 1600</option><option value="tall">Tall · 4:3 · 2400 × 1800</option><option value="wide">Wide · 2:1 · 2400 × 1200</option><option value="full">Full art · 5:7</option></select></label>
+    <label class="label">Source image<select id="gameArt"></select></label>
+    <div class="pair"><label class="label">Artwork fit<select id="gameFit"><option value="cover">Fill / crop</option><option value="contain">Show whole image</option></select></label><label class="label">Zoom<input type="range" id="gameZoom" min="1" max="2.5" step=".025"></label></div>
+    <div class="pair"><label class="label">Pan X<input type="range" id="gamePanX" min="-1" max="1" step=".02"></label><label class="label">Pan Y<input type="range" id="gamePanY" min="-1" max="1" step=".02"></label></div>
+    <div class="buttonbar"><label class="file-label secondary mini-file">Upload image<input type="file" id="gameArtUpload" accept="image/*"></label><button id="fitArt" type="button">Reset crop</button><button id="artToFractal" type="button">Open in Fractal Lab</button></div>
+    <details class="inspector-subsection">
+      <summary>Artwork window</summary>
+      <div class="pair"><label class="label">Artwork shape<select id="gameShape"><option value="marquee">Marquee arch</option><option value="rounded">Rounded</option><option value="square">Square</option><option value="cut">Cut corners</option><option value="ellipse">Oval</option></select></label><label class="label">Artwork border<select id="gameBorder"><option value="solid">Single</option><option value="double">Double</option><option value="dashed">Dashed</option><option value="none">None</option></select></label></div>
+<div class="pair"><label class="label">Artwork height<input type="range" id="artHeight" min="37" max="61"></label><label class="label">Artwork inset<input type="range" id="artInset" min="4.4" max="16" step=".2"></label></div>
+<label class="label">Artwork corner<input type="range" id="gameArtRadius" min="0" max="80"></label>
+    </details>
+  </details>
+</div>
+<details id="cardWriting" class="panel-section" open><summary>Type rule, quote &amp; special power</summary>
+<h4 class="footer-heading">Shared type rule</h4>
+<label class="label">Wording for this card<select id="cardTypeRuleMode"><option value="inherit">Follow type rule</option><option value="custom">This card only</option><option value="hidden">Do not print</option></select></label>
+<textarea id="cardTypeRuleText" rows="3" maxlength="4000" aria-label="Printed type rule"></textarea><button id="cardEditTypeRule" type="button">Edit shared type rule</button>
+<h4 class="footer-heading">Special power</h4><label class="toggle"><input id="showPower" type="checkbox"> Print special power</label><label class="label">Power name<input id="ruleTitle" maxlength="80"></label><div class="pair"><label class="label">Timing<select id="gameTiming"></select></label><label class="toggle"><input id="showTiming" type="checkbox"> Print timing</label></div><label class="label">Power text<textarea id="ruleText" rows="3" maxlength="2000"></textarea></label>
+<h4 class="footer-heading">Quote</h4><label class="toggle"><input id="showQuote" type="checkbox"> Print quote</label><textarea id="gameQuote" rows="3" aria-label="Quote"></textarea>
+<details class="inspector-subsection"><summary>Text formatting</summary><div class="three"><label class="label">Type rule (px)<input id="cardCopyTypeSize" type="number" min="12" max="48" step="1"></label><label class="label">Power (px)<input id="cardCopyPowerSize" type="number" min="12" max="48" step="1"></label><label class="label">Quote (px)<input id="cardCopyQuoteSize" type="number" min="10" max="40" step="1"></label></div><div class="pair"><label class="label">Rule font<select id="cardCopyFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label><label class="label">Quote font<select id="cardCopyQuoteFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label></div><div class="pair"><label class="toggle"><input id="cardCopyItalic" type="checkbox"> Italic quote</label><label class="label">Quote alignment<select id="cardCopyAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div><button id="cardCopyReset" type="button">Follow type formatting</button></details><p class="status-line" id="ruleFit" role="status"></p></details>
+<details id="cardAttributes" class="panel-section" open><summary>Beats &amp; beaten by</summary><div class="pair"><label class="label">Layout<select id="cardAttrLayout"><option value="columns">Side by side</option><option value="stacked">Stacked rows</option></select></label><label class="label">Order<select id="cardAttrOrder"><option value="wins-first">Beats first</option><option value="losses-first">Beaten by first</option></select></label></div><div class="pair"><label class="label">Background<select id="cardAttrStyle"><option value="tint">Type colors</option><option value="none">No background</option><option value="outline">Outline</option><option value="solid">Solid</option></select></label><label class="label">Space between groups (px)<input id="cardAttrGap" type="number" min="4" max="100" step="1"></label></div><div class="pair"><label class="label">Type names (px)<input id="cardAttrValueSize" type="number" min="10" max="48" step="1"></label><label class="label">Headings (px)<input id="cardAttrLabelSize" type="number" min="8" max="32" step="1"></label><label class="label">Type symbols (px)<input id="cardAttrIconSize" type="number" min="0" max="60" step="1"></label></div><div class="pair"><label class="toggle"><input id="cardAttrLabels" type="checkbox"> Print headings</label><label class="toggle"><input id="cardAttrIcons" type="checkbox"> Print symbols</label><label class="toggle"><input id="cardAttrNames" type="checkbox"> Print type names</label></div><div class="pair"><label class="label">Beats heading<input id="cardAttrWinLabel" maxlength="48" placeholder="Auto"></label><label class="label">Beaten by heading<input id="cardAttrLossLabel" maxlength="48" placeholder="Auto"></label></div><div class="pair"><label class="label">Horizontal position (px)<input id="cardAttrX" type="number" min="-750" max="750" step="1"></label><label class="label">Vertical position (px)<input id="cardAttrY" type="number" min="-1050" max="1050" step="1"></label></div><div class="three"><label class="toggle" id="iconControl"><input type="checkbox" id="showIcons"> Matchup symbols</label><label class="toggle" id="nameControl"><input type="checkbox" id="showMatchupNames"> Matchup names</label></div><div class="buttonbar"><button id="cardAttrReset" type="button">Follow type formatting</button><button id="cardAttrStandard" type="button">Make type standard</button></div></details>
+<details id="gameHeader" class="panel-section">
+  <summary>Top-right type icon</summary>
+  <div class="symbol-mini"><canvas id="cardSymbolPreview" width="128" height="128" aria-label="Card type symbol"></canvas><div><p id="typeIconNote" class="muted tiny"></p><button id="cardSymbolPosition" type="button">Position on card</button></div></div>
+  <label class="label">Type symbol<select id="cardSymbolMode"><option value="standard">Follow type standard</option><option value="custom">This card only</option><option value="hidden">Hidden</option></select></label>
+  <div id="cardSymbolOverrides" hidden>
+    <div class="pair"><label class="label">Icon or emoji<input id="typeIconGlyph" maxlength="24"></label><label class="label">Icon image<select id="typeIconAsset"></select></label></div>
+    <div class="pair"><label class="label">Font<select id="cardSymbolFont"></select></label><label class="label">Presentation<select id="cardSymbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label></div>
+    <label class="label">PNG style<select id="cardSymbolImageMode"><option value="tint">Single ink silhouette</option><option value="original">Original image</option></select></label>
+  </div>
+  <label class="label" id="roleSubtypeControl">Card subtype<input id="roleSubtype" maxlength="36" placeholder="Weapon, Shield, Meme"></label>
+  <div id="customTypeIcon" hidden></div>
+  <div class="buttonbar"><button id="cardSymbolToChart" type="button">Open visual language chart</button><label class="file-label secondary">Upload glyph<input id="cardSymbolUpload" type="file" accept="image/png,.png"></label></div>
+</details>
+<details id="cardLook" class="panel-section">
+  <summary>Look &amp; colors</summary>
+  <label class="label">Layout<select id="c_template"><option>Game Frame</option><option>Game Full Art</option><option>Standard</option><option>Full Art</option><option>Archive</option><option>Minimal</option><option>Glitch</option></select></label>
+  <div id="cardColors">
+    <label class="label" id="surfaceControl">Surface<select id="surface"><option value="ink">Ink</option><option value="slate">Soft slate</option><option value="paper">Paper</option><option value="midnight">Midnight</option></select></label>
+    <label class="label" id="filmThemeControl">Cinematic finish<select id="mncFilmTheme"><option value="classic">Legacy Standard</option><option value="projection">Projection Booth — navy / brass</option><option value="contact">Contact Sheet — parchment / olive</option><option value="matinee">Midnight Matinée — petrol / wine</option></select></label>
+    <div class="pair"><label class="label">Main color<input id="mainColor" type="color"></label><label class="label">Border color<input id="frameColor" type="color"></label></div>
+    <label class="label">Lightness <output id="lightnessValue">0</output><input id="backgroundLightness" type="range" min="-60" max="60" step="1" value="0"></label>
+    <button id="resetCardColors" type="button">Reset main and border colors</button>
+    <details id="gameFrameLook" class="inspector-subsection">
+      <summary>Frame &amp; accent</summary>
+      <label class="label">Outer border style<select id="frameStyle"></select></label>
+      <div class="pair"><label class="label">Border width<input type="range" id="frameWidth" min="2" max="24"></label><label class="label">Border corner<input type="range" id="frameRadius" min="0" max="65"></label></div>
+      <div class="pair"><label class="label">Accent color<input type="color" id="gameAccent"></label><label class="toggle"><input type="checkbox" id="useTypeColor"> Use category accent</label></div>
+    </details>
+  </div>
+  <label class="label">PNG corner radius <output id="cutRadiusValue">38 px</output><input id="cutRadius" type="range" min="0" max="80" step="1" value="38"></label>
+</details>
+<details class="panel-section" id="gameCredit">
+  <summary>Footer</summary>
+<h4 class="footer-heading">Footer formatting</h4><div class="buttonbar"><button id="footerCenterPreset" type="button">Try a big centered number</button><button id="footerRightPreset" type="button">Collection at right</button></div><div class="pair"><label class="label">Card number position<select id="footerPosition"><option value="right">With collection at right</option><option value="center">Centered at bottom</option></select></label><label class="label">Number text<select id="footerNumberFormat"><option value="fraction">019/100</option><option value="number">019</option><option value="label">CARD 019/100</option></select></label></div><div class="three"><label class="label">Number size (px)<input id="footerNumberSize" type="number" min="12" max="64" step="1"></label><label class="label">Number font<select id="footerNumberFont"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="mono">Monospace</option></select></label><label class="label">Number background<select id="footerNumberBadge"><option value="none">None</option><option value="outline">Outline</option><option value="pill">Soft pill</option></select></label></div><div class="pair"><label class="label">Credit format<select id="footerCreditMode"><option value="byline">Separate credit lines</option><option value="line">Credits on one line</option><option value="stacked">Split illustrator name</option><option value="hidden">Hide creator credits</option></select></label><label class="label">Credit alignment<select id="footerCreditAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label></div><div class="three"><label class="label">Credit size (px)<input id="footerCreditSize" type="number" min="8" max="32" step="1"></label><label class="label">Credit width (px)<input id="footerCreditWidth" type="number" min="120" max="640" step="1"></label><label class="label">Collection size (px)<input id="footerCollectionSize" type="number" min="8" max="32" step="1"></label></div><div class="pair"><label class="label">Set mark size (px)<input id="footerMarkSize" type="number" min="0" max="64" step="1"></label><label class="label">Metadata font<select id="footerCreditFont"><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="mono">Monospace</option></select></label></div><div class="three"><label class="toggle"><input id="footerPrintCode" type="checkbox"> Collection code</label><label class="toggle"><input id="footerPrintEdition" type="checkbox"> Edition</label><label class="toggle"><input id="footerSeparator" type="checkbox"> Divider line</label></div><div class="buttonbar"><button id="footerUseType" type="button">Use footer for this type</button><button id="footerUseAll" type="button">Use footer on all cards</button><button id="footerUndo" type="button" disabled>Undo footer apply</button></div><p id="footerFormatStatus" class="status-line" role="status"></p>
+<h4 class="footer-heading">Credits &amp; source</h4>
+  <label class="label">Illustration credit<input id="c_artist" maxlength="96"></label>
+  <div class="pair">
+    <label class="label">Concept credit<input id="conceptCredit" maxlength="96"></label>
+    <label class="label">Actor credit<input id="actorCredit" maxlength="96"></label>
+  </div>
+  <details id="gameCreditFields" class="inspector-subsection">
+    <summary>Illustrator name split</summary>
+    <div class="pair">
+      <label class="label">First name<input id="artistFirst" maxlength="40"></label>
+      <label class="label">Last name<input id="artistLast" maxlength="56"></label>
+    </div>
+  </details>
+  <label class="label">Film title<input id="gameFilm" maxlength="95"></label>
+  <div class="pair">
+    <label class="label">Episode<input id="gameEpisode" maxlength="20"></label>
+    <label class="label">Picked by<input id="gamePicker" maxlength="50"></label>
+  </div>
+  <h4 class="footer-heading">Collection details</h4>
+  <div class="pair">
+    <label class="label">Collection code<input id="cardCollectionCode" maxlength="12" placeholder="From collection" aria-describedby="collectionCodeStatus"></label>
+    <label class="label">Card number<input id="collectorNumber" maxlength="12" aria-describedby="cardNumberStatus"></label>
+  </div>
+  <p id="collectionCodeStatus" class="muted tiny" role="status"></p>
+  <p id="cardNumberStatus" class="muted tiny" role="status"></p>
+  <div id="customCollectionFields">
+    <div class="pair">
+      <label class="label">Edition<input id="gameEdition" maxlength="14"></label>
+      <label class="label">Set total<input id="setTotal" type="number" min="1" max="9999" placeholder="Auto"></label>
+    </div>
+    <label class="label">Set name<input id="gameSet" maxlength="72"></label>
+  </div>
+  <label class="label">Collection symbol<select id="cardCollectionSymbolMode"><option value="standard">Follow LX26 standard</option><option value="custom">This card only</option><option value="hidden">Hidden</option></select></label>
+  <div id="footerSetIcons" class="pair">
+    <label class="label">Set icon<input id="setGlyph" maxlength="24" placeholder="🍸"></label>
+    <label class="label">Set icon image<select id="setGlyphAsset"></select></label>
+  </div>
+  <button id="jumpNumberPlan" type="button">View LX26 numbering</button>
+</details>
+<button type="button" id="useGameFrame" hidden>Use gameplay layout</button>
+<div id="frontQuick" class="buttonbar front-quick" hidden><button id="frontOpen" type="button">Arrange front</button><button id="frontArtQuick" type="button">Artwork shape</button><button id="frontPlateQuick" type="button">Nameplate shape</button></div>
+<details id="frontLayoutPanel" class="panel-section" hidden>
+  <summary>Front layout &amp; typography</summary>
+  <label class="toggle"><input id="frontMove" type="checkbox"> Move elements on the preview</label>
+  <div class="pair">
+    <label class="label">Element<select id="frontGroup"></select></label>
+    <div class="buttonbar front-reset"><button id="frontResetPosition" type="button">Reset position</button></div>
+    <label class="label">Horizontal offset (px)<input id="frontX" type="number" min="-750" max="750"></label>
+    <label class="label">Vertical offset (px)<input id="frontY" type="number" min="-1050" max="1050"></label>
+  </div>
+  <div id="frontTextTools">
+    <label class="label">Text element<select id="frontText"></select></label>
+    <div class="pair">
+      <label class="label">Size (px)<input id="frontTextSize" type="number" min="7" max="144"></label>
+      <label class="label">Font<select id="frontTextFont"><option value="">Card default</option><option value="serif">Georgia / serif</option><option value="sans">Arial / sans serif</option><option value="mono">Courier / monospace</option></select></label>
+      <label class="label">Style<select id="frontTextStyle"><option value="">Card default</option><option value="normal">Regular</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="bold-italic">Bold italic</option></select></label>
+      <label class="label">Text color<input id="frontTextColor" type="color"></label>
+      <label class="label">Text X offset (px)<input id="frontTextX" type="number" min="-750" max="750"></label>
+      <label class="label">Text Y offset (px)<input id="frontTextY" type="number" min="-1050" max="1050"></label>
+    </div>
+    <button type="button" id="frontResetText">Reset text styling</button>
+  </div>
+  <div id="frontShapeArt" class="panel-section" hidden>
+    <label class="label">Custom artwork shape<select id="frontArtShape"></select></label>
+    <button id="frontDesignArt" type="button">Design artwork shape</button>
+  </div>
+  <p id="frontFullArtNote" class="muted tiny" hidden>Use the Game Frame layout to apply a custom art outline.</p>
+  <div id="frontShapePlate" class="panel-section" hidden>
+    <label class="label">Custom nameplate shape<select id="frontPlateShape"></select></label>
+    <button id="frontDesignPlate" type="button">Design nameplate shape</button>
+    <div id="frontPlateStyle">
+      <label class="label">Plate treatment<select id="frontPlateMode"><option value="solid">Fill</option><option value="outline">Outline only</option><option value="pill">Pill</option><option value="banner">Banner</option><option value="none">No plate</option></select></label>
+      <div class="pair">
+        <label class="label">Width (px)<input id="frontPlateWidth" type="number" min="130" max="706"></label>
+        <label class="label">Height (px)<input id="frontPlateHeight" type="number" min="24" max="140"></label>
+        <label class="label">Fill color<input id="frontPlateFill" type="color"></label>
+        <label class="label">Stroke color<input id="frontPlateStroke" type="color"></label>
+        <label class="label">Stroke (px)<input id="frontPlateStrokeWidth" type="number" min="0" max="16" step=".5"></label>
+        <label class="label">Opacity (%)<input id="frontPlateOpacity" type="number" min="0" max="100"></label>
+      </div>
+      <label class="label">Extra title inset (%)<input id="frontTitleInset" type="number" min="0" max="45"></label>
+    </div>
+  </div>
+  <div id="frontMatchStyle" class="panel-section" hidden>
+    <label class="label">Matchup background<select id="frontMatchMode"><option value="none">None</option><option value="tint">Type colors</option><option value="solid">Solid color</option><option value="outline">Outline only</option></select></label>
+    <div class="pair">
+      <label class="label" id="frontMatchColorRow">Background / outline color<input id="frontMatchColor" type="color"></label>
+      <label class="label" id="frontMatchOpacityRow">Background opacity (%)<input id="frontMatchOpacity" type="number" min="0" max="100"></label>
+      <label class="label">Column gap (px)<input id="frontMatchGap" type="number" min="4" max="180"></label>
+      <label class="label">Type glyph size (px)<input id="frontMatchIcon" type="number" min="0" max="60"></label>
+    </div>
+  </div>
+  <div id="frontCreditStyle" class="panel-section" hidden>
+    <div class="pair">
+      <label class="label">Presentation<select id="frontCreditMode"><option value="stacked">Stacked names</option><option value="line">One line</option><option value="byline">Byline</option><option value="hidden">Hide credit</option></select></label>
+      <label class="label">Alignment<select id="frontCreditAlign"><option>left</option><option>center</option><option>right</option></select></label>
+    </div>
+    <label class="label">Credit label<input id="frontCreditLabel" maxlength="32" placeholder="ILLUS."></label>
+  </div>
+  <div id="frontTypeStyle" class="panel-section" hidden>
+    <label class="label">Icon size (px)<input id="frontTypeIcon" type="number" min="0" max="250"></label>
+  </div>
+  <div id="frontFooterStyle" class="panel-section" hidden>
+    <label class="label">Set glyph size (px)<input id="frontSetIcon" type="number" min="0" max="80"></label>
+  </div>
+  <div id="frontEpisodeStyle" class="panel-section" hidden>
+    <label class="label">Episode badge<select id="frontEpisodeBadge"><option value="Auto">Auto by episode</option><option value="Cassette">Cassette · club copies</option><option value="None">None</option></select></label>
+    <div id="frontEpisodeAppearance" class="pair">
+      <label class="label">Badge width (px)<input id="frontEpisodeSize" type="number" min="12" max="80"></label>
+      <label class="label">Badge color<input id="frontEpisodeColor" type="color"></label>
+    </div>
+  </div>
+</details>
+<details id="legacyFields" class="panel-section" open><summary>Layout fields</summary>
+<div id="legacyBasics">
+<label class="label">Symbols / lore<input id="c_symbols" placeholder="🎬 📼 🏆"></label>
+<label class="label">Art source<select id="c_asset"></select></label>
+<label class="label">Flavor / source quotation<textarea id="c_lore" rows="2"></textarea></label>
+<div class="pair"><label class="toggle"><input id="c_useHandGlyphs" type="checkbox"> Use drawn glyph alternates on Glitch titles</label><label class="label">Glyph variation seed<input id="c_glyphSeed" type="number" value="1" min="1"></label></div>
+<div class="pair"><label class="label">Art fit<select id="c_fit"><option value="cover">Fill / crop</option><option value="contain">Show whole image</option></select></label><label class="label">Image zoom<input id="c_zoom" type="range" min="1" max="2.5" step="0.05"></label></div>
+<label class="label" id="legacyAccent">Trim color<input id="c_accent" type="color"></label>
+<div class="pair"><label class="label">Art pan X<input id="c_panX" type="range" min="-1" max="1" step="0.05"></label><label class="label">Art pan Y<input id="c_panY" type="range" min="-1" max="1" step="0.05"></label></div>
+</div>
+<label class="label">Overlay image<select id="c_overlayAssetId"><option value="">None</option></select></label>
+<label class="label">Overlay opacity<input id="c_overlayOpacity" type="range" min="0" max="1" step="0.05"></label>
+<label class="label">Taxonomy tags (comma-separated)<input id="c_tags" placeholder="critic, award, telescope"></label>
+<div class="standard-layout-panel">
+ <h3>Card lettering</h3>
+ <label class="label">Card lettering<select id="mncFontSelect"><option value="system">Built-in system font</option></select></label>
+ <div class="pair"><label class="label">Glyph variants<select id="mncGlyphVariation"><option value="seeded">Repeatable random alternates</option><option value="first">First glyph only</option></select></label><label class="label">Lettering seed<input id="mncLetterSeed" type="number" min="0" max="9999999" value="1"></label></div>
+ 
+ <p class="muted tiny" id="mncFontStatus"></p>
+ </div>
+ <div class="standard-layout-panel" id="legacyStandard">
+ <h3>Standard card layout</h3><label class="label">Shared Stuffies / MNC accent palette<select id="stdPalette"><option value="">Custom / keep existing</option><option value="#cf5360">Villain / red</option><option value="#518cdb">Hero / blue</option><option value="#e9c44f">Monster / yellow</option><option value="#e4a052">Consumable / orange</option><option value="#9771ca">Critic / purple</option><option value="#56a777">Item / green</option><option value="#48adb1">Film / teal</option></select></label>
+ <p class="muted tiny">Type at top · moveable artwork window · nameplate below art · gameplay text · edition footer. Drag the artwork window using the enabled tool.</p>
+ <label class="toggle"><input type="checkbox" id="stdDrag"> Drag artwork window on card</label>
+ <label class="label">Sub-type / role<input id="stdSubtype" placeholder="Hero, Villain, Monster..."></label>
+ <label class="label">Gameplay / ability description<textarea id="stdEffect" rows="3" placeholder="Brief ability or game effect (optional)"></textarea></label>
+ <div class="pair"><label class="label">Artwork window shape<select id="stdShape"><option value="rounded">Rounded</option><option value="square">Square</option><option value="ellipse">Oval</option><option value="cut">Cut corners</option></select></label><label class="label">Artwork border<select id="stdBorder"><option value="solid">Single</option><option value="double">Double</option><option value="dashed">Dashed</option><option value="none">None</option></select></label></div>
+ <div class="pair"><label class="label">Window X (%)<input id="stdX" type="number" min="0" max="90" step="1"></label><label class="label">Window Y (%)<input id="stdY" type="number" min="0" max="90" step="1"></label></div>
+ <div class="pair"><label class="label">Window width (%)<input id="stdW" type="number" min="10" max="100" step="1"></label><label class="label">Window height (%)<input id="stdH" type="number" min="10" max="90" step="1"></label></div>
+ <label class="label">Corner radius <span id="stdRadiusValue">18</span> px<input id="stdRadius" type="range" min="0" max="80" step="1"></label>
+ <div class="buttonbar"><button id="stdReset">Reset standard window</button><button id="stdApply">Apply standard layout</button></div>
+</div>
+<div class="layer-editor"><div class="previewheading"><h3>Creative layers</h3><span class="muted tiny">drag on card</span></div>
+<div class="buttonbar"><button id="addTextLayer">＋ Text</button><button id="addShapeLayer">＋ Shape</button><button id="addImageLayer">＋ Art / Icon</button></div>
+<div id="layerList" class="layer-list"></div>
+<div id="layerDetails" class="layer-details" hidden>
+<label class="label">Layer name / text<input id="layerText" placeholder="Type a label or icon"></label>
+<div class="pair"><label class="label">Color<input type="color" id="layerColor"></label><label class="label">Style<select id="layerStyle"><option value="text">Text</option><option value="rect">Rectangle</option><option value="circle">Circle</option><option value="image">Image / primitive</option></select></label></div>
+<label class="label">Image source<select id="layerAsset"></select></label>
+<div class="pair"><label class="label">X position (%)<input id="layerX" type="number" min="0" max="100" step="1"></label><label class="label">Y position (%)<input id="layerY" type="number" min="0" max="100" step="1"></label></div>
+<div class="pair"><label class="label">Width (%)<input id="layerW" type="number" min="3" max="100" step="1"></label><label class="label">Height (%)<input id="layerH" type="number" min="3" max="100" step="1"></label></div>
+<div class="pair"><label class="label">Layer lettering<select id="layerFontSelect"><option value="">Inherit card font</option><option value="system">Built-in system font</option></select></label><label class="label">Font size<input id="layerSize" type="number" min="10" max="160" step="1"></label><label class="label">Rotate (deg)<input id="layerRotate" type="number" min="-180" max="180" step="1"></label></div>
+<label class="label">Opacity<input id="layerOpacity" type="range" min="0" max="1" step="0.05"></label>
+<div class="buttonbar"><button id="layerDuplicate">Duplicate</button><button id="layerDelete">Delete</button></div>
+</div></div>
+<div class="disclosure"><details><summary>Advanced data · optional and not displayed by default</summary><div class="three"><label class="label">Presence<input id="c_presence" type="number" min="0"></label><label class="label">Influence<input id="c_influence" type="number" min="0"></label><label class="label">Chaos<input id="c_chaos" type="number" min="0"></label><label class="label">HP<input id="c_hp" type="number" min="0"></label><label class="label">Attack<input id="c_attack" type="number" min="0"></label><label class="label">Defense<input id="c_defense" type="number" min="0"></label></div><label class="toggle"><input id="c_showStats" type="checkbox"> Show coded stats on front</label></details></div></details>
+<details id="cardTools" class="panel-section" hidden><summary>Print &amp; manage</summary><div id="gameReadiness"><label class="toggle"><input type="checkbox" id="releaseReady"> Include in promo pool</label><p class="muted tiny" id="cardReadiness" role="status"></p></div><div class="buttonbar"><button id="queueCurrentCard" type="button">Add to print queue</button><button id="deleteDraftCard" type="button">Delete this design</button></div><p class="muted tiny" id="cardToolStatus" role="status"></p></details></aside></div></section>
+<section class="page" id="fractalLite"><div class="sectionhead"><div><p class="eyebrow">03 / PROCEDURAL ART LAB</p><h2>Fractal Lab · image-aware textures</h2><p>Build kaleidoscopic, recursive, and living-color variants from MNC artwork. Save a still to your library or apply it as a card texture.</p></div><div class="buttonbar"><button id="fractPNG">Export PNG</button><button id="fractRecipe">Export recipe</button><button id="fractRecord">Record loop WebM</button><button id="fractToCard" class="accent-btn">Send texture to card</button></div></div>
+<div class="fractal-workspace tool-workspace"><div class="panel fract-controls">
+<h3>01 — Source & formula</h3><label class="label">Artwork source<select id="fractSource"></select></label><label class="label">Formula family<select id="fractMode"><option value="kaleido">Kaleidoscope folds</option><option value="recursive">Recursive warp</option><option value="orbit">Orbit trap</option><option value="living">Living color layers</option><option value="mirror">Mirror tunnels</option></select></label>
+<div class="pair"><label class="label">Folds <span id="fractFoldsVal"></span><input id="fractFolds" type="range" min="2" max="16" value="7" step="1"></label><label class="label">Iterations <span id="fractIterationsVal"></span><input id="fractIterations" type="range" min="1" max="7" value="3" step="1"></label></div>
+<label class="label">Distortion <span id="fractDistortionVal"></span><input id="fractDistortion" type="range" min="0" max="1" step="0.02" value="0.36"></label>
+<label class="label">Preserve original artwork <span id="fractPreserveVal"></span><input id="fractPreserve" type="range" min="0" max="1" step="0.02" value="0.55"></label>
+<label class="label">Living color strength <span id="fractColorVal"></span><input id="fractColor" type="range" min="0" max="1" step="0.02" value="0.72"></label>
+<div class="pair"><label class="label">Zoom <span id="fractZoomVal"></span><input id="fractZoom" type="range" min="0.6" max="2.5" step="0.05" value="1.0"></label><label class="label">Rotation <span id="fractRotationVal"></span><input id="fractRotation" type="range" min="0" max="360" step="1" value="0"></label></div>
+<hr><h3>02 — Motion tracks</h3><p class="muted tiny">By default, living color strength cycles 0 → 1 → 0 in a seamless 12-second loop.</p><label class="label">Loop length <span id="fractDurationVal"></span><input id="fractDuration" type="range" min="4" max="24" step="1" value="12"></label>
+<label class="label">Timeline <span id="fractTimeVal"></span><input id="fractTime" type="range" min="0" max="1000" step="1" value="0"></label>
+<div class="buttonbar"><button id="fractPlay" class="accent-btn">Pause motion</button><button id="fractReset">Reset recipe</button></div>
+<hr><h3>03 — Export & handoff</h3><label class="label">Send frame as<select id="fractSendMode"><option value="foil">Foil texture on selected card</option><option value="overlay">Artwork overlay on selected card</option></select></label><p class="muted tiny">The exported frame is an editable new asset. Recipes are stored in project backups, separate from the original image.</p>
+</div><div class="panel fract-preview-panel"><div class="previewheading"><span id="fractStatus">Ready to render</span><span class="micro">360px live shader · 12s looping</span></div><div class="fractal-stage"><canvas id="fractCanvas" width="360" height="360" aria-label="Animated fractal art preview"></canvas></div><div class="fractal-notes"><b>Artwork DNA stays connected</b><p>Every procedural variant retains its source asset ID. You can export stills and recipes without overwriting the original artwork.</p></div></div></div></section>
+<section class="page" id="prismLegacy">
+  <div class="sectionhead"><div><p class="eyebrow">04 / SHARED DAILY MEDITATIONS ENGINE</p><h2>Foil Lab · Prism 3D v0.8</h2><p>The original Daily Meditations WebGL foil engine, with your current MNC card loaded as a texture. All original controls and shaders are preserved.</p></div></div>
+  <div class="prism-controls panel"><label class="label">MNC card <select id="prismCard"></select></label>
+   <label class="label">Foil coverage mask <select id="prismMask"><option value="whole">Whole card</option><option value="art">Artwork window</option><option value="reverse">Reverse holo — outside artwork</option></select></label>
+   <button id="prismSend" class="accent-btn">Send card into original Foil Lab</button><button id="prismCapture">Capture foil preview into library</button><button id="prismRecipe">Save full Prism recipe to card</button>
+   <span id="prismStatus" class="muted tiny">Engine starting…</span>
+  </div>
+  <iframe id="prismEngine" class="prism-iframe" title="Original Daily Meditations Prism Foil Lab v0.8" data-src="labs/prism-v08.html"></iframe>
+  <p class="muted tiny">Original v0.8 source is preserved separately in labs/. Save presets inside Prism Lab; the imported MNC front is a live raster snapshot of the same renderer used by Staples PDF. Shader effects are digital simulations, not instructions for printing physical optical foil.</p>
+</section>
+<section class="page" id="foil"><div class="sectionhead"><div><p class="eyebrow">04 / FINISHING EXPERIMENTS</p><h2>Foil Lab</h2><p>Digital preview and treatment metadata; physical holography still comes from specialty film or foil.</p></div><div class="buttonbar"><button id="foilApply" class="accent-btn">Save treatment to card</button><button id="foilExport">Export recipe JSON</button></div></div><div class="foil-layout tool-workspace"><div class="panel"><h3>Choose finish</h3><label class="label">Card<select id="foilCard"></select></label><label class="label">Pattern<select id="foilMode"><option>None</option><option>Prism</option><option>Aurora</option><option>Fractal</option><option>Static</option></select></label><label class="label">Foil coverage<select id="foilMask"><option value="whole">Whole front</option><option value="art">Artwork region</option><option value="reverse">Reverse holo · outside artwork</option></select></label><label class="label">Intensity<input id="foilStrength" type="range" min="0" max="1" step="0.02"></label><label class="label">Pattern scale<input id="foilScale" type="range" min="0.2" max="3" step="0.05"></label><label class="label">Rotation<input id="foilAngle" type="range" min="0" max="360" step="1"></label><div class="buttonbar"><button id="foilPNG">Export preview PNG</button><button id="foilMaskPNG">Export monochrome mask</button></div><p class="tiny muted">The card tilts interactively while foil colors remain a digital simulation. This does not reproduce the full Daily Meditations WebGL shader suite or manufacture real optical foil.</p></div><div class="panel foil-preview"><div class="foil-showcase"><div class="foil-3d-stage" id="foilStage"><canvas id="foilCanvas" width="750" height="1050" aria-label="Holographic card preview"></canvas><canvas id="foilBackCanvas" width="750" height="1050" aria-label="Card reverse"></canvas><div class="foil-glint" id="foilGlint"></div></div><div class="foil-showcase-caption">Drag the card to tilt and move the light. This previews reflective appearance; physical foil still requires film or specialist printing.</div><div class="buttonbar center"><button id="foilFlip">Flip card</button><button id="foilCenter">Center pose</button><label class="toggle"><input id="foilOrbit" type="checkbox"> Auto orbit</label></div></div></div></div></section>
+<section class="page" id="glyph"><div class="sectionhead"><div><p class="eyebrow">05 / HAND-DRAWN PRIMITIVES</p><h2>Glyph Kit</h2><p>Draw your own mono-color rarity marks, badges, hand-letter glyphs, or scribbles. Add them as transparent images to cards.</p></div><div class="buttonbar"><button id="glyphClear">Clear</button><button id="glyphUndo">Undo</button><button id="glyphSave" class="accent-btn">Save to library</button></div></div>
+<div class="glyph-layout tool-workspace"><div class="panel"><h3>Brush settings</h3><label class="label">Name / glyph key<input id="glyphName" value="MNC hand-drawn mark"></label>
+<label class="label">Type symbol<select id="glyphTypeTarget"></select></label>
+<p class="muted tiny">Choose a type and draw on the transparent canvas. The suite uses the drawing’s silhouette in the card’s colors.</p>
+  <div class="buttonbar"><button id="saveTypeGlyph">Save as type symbol</button></div>
+<p id="typeGlyphStatus" class="muted tiny" role="status"></p><div class="pair"><label class="label">Ink color<input id="glyphColor" type="color" value="#ffffff"></label><label class="label">Brush width<input id="glyphSize" type="range" min="2" max="45" value="12"></label></div><label class="toggle"><input id="glyphEraser" type="checkbox"> Eraser</label><label class="label">Optional alternate glyph key<input id="glyphKey" placeholder="e.g. A, STAR, CRITIC"></label><p class="muted tiny">Draw with a mouse, trackpad or touch. Drawings are saved as PNG assets with transparent backgrounds. Use them via Creative layers in Card Designer.</p><button id="glyphExport">Download transparent PNG</button></div><div class="panel glyph-drawing"><div class="glyph-paper"><canvas width="512" height="512" id="glyphCanvas" aria-label="Draw your custom symbol"></canvas></div><p class="muted tiny">Checkerboard represents transparency · 512 × 512 export</p></div></div></section>
+<section class="page" id="rules">
+  <div class="sectionhead"><div><h2>Game &amp; Set</h2><p>Two-player rules and the December 12 promo pool.</p></div><button id="addGolden">Open Golden Jupie</button></div>
+  <div class="tool-scroll" tabindex="0" aria-label="Game and set content">
+<div class="game-guide">
+    <article class="panel"><h3>Build your hand</h3><p>Choose three different Characters and up to three more distinct Redshirts. Reveal your Critic to activate its passive effect and keep up to one Item in hand.</p></article>
+    <article class="panel"><h3>Commit and reveal</h3><p>Play one Character or two Redshirts face down. Mark a pair’s lead and support before revealing together. Apply Critic passives and On reveal rules, compare the plays, then resolve After matchup and End of round effects.</p><p>Winners return to hand. On a draw, both plays return. Put defeated Characters in a loss pile and remember every Character you revealed for Sidekick partners.</p></article>
+    <article class="panel"><h3>Win the match</h3><p>The first player to lose three Characters loses the match. Both cards in a defeated Redshirt pair count. When the result would end the match, each player can reveal an unused Item with Before match ends timing. Resolve those effects before confirming the outcome.</p><p>If both players reach three losses together, the match is a draw. A card’s specific rule can override the default result.</p></article>
+  </div>
+  <div class="panel game-matrix-panel">
+    <div class="previewheading"><h3>Character matchups</h3><button id="exportMatrix">Export matchups CSV</button></div>
+    <p class="muted">Hero beats Villain, Villain beats Creature, and Creature beats Hero. Monster, Animal and Ghost share the Creature matchup against Hero, Villain and each other.</p>
+    <dl class="matchup-guide">
+      <div><dt>Redshirt</dt><dd>A lone Redshirt draws with another lone Redshirt and loses to all other plays. A pair beats Villain or one Redshirt, draws against Hero, Sidekick or another pair, and loses to Creature. Only the lead can use its special rule. Both cards count if the pair is defeated.</dd></div>
+      <div><dt>Sidekick</dt><dd>Draw against Hero or Sidekick. Beat a lone Redshirt. Lose to Villain and Creature. Once you’ve revealed the named partner in an earlier round, beat Animal and draw with Monster. A revealed partner counts whether it lost, survived, or was a Redshirt support.</dd></div>
+    </dl>
+    <div class="match-controls"><label class="label">Test a matchup<select id="testFirst"></select></label><label class="label">Against<select id="testSecond"></select></label><output id="matchResult" aria-live="polite"></output></div>
+    <div class="match-defeats">
+      <label class="label">Player 1 losses before round<input id="testFirstDefeats" type="number" min="0" max="2" step="1" value="0"></label>
+      <label class="label">Player 2 losses before round<input id="testSecondDefeats" type="number" min="0" max="2" step="1" value="0"></label>
+      <output id="matchDefeatNote" aria-live="polite"></output>
+    </div>
+    <div class="matrix-scroll" tabindex="0" role="region" aria-label="Character matchup matrix"><table id="matchMatrix"></table></div>
+    <details class="type-settings"><summary>Type colors and symbols</summary><div id="typeEditor" class="type-editor"></div></details>
+  </div>
+  <details class="panel" id="numberPlan">
+    <summary>LX26 · Draft card numbers</summary>
+    <div class="previewheading">
+      <p id="numberPlanSummary" class="muted tiny" aria-live="polite"></p>
+      <button id="exportNumberPlan" type="button">Export numbering CSV</button>
+    </div>
+    <label class="label inline-label">Draft block<select id="numberPlanFilter"></select></label>
+    <div class="matrix-scroll numbering-scroll" tabindex="0" role="region" aria-label="LX26 numbering checklist">
+      <table id="numberTable"></table>
+    </div>
+    <p id="numberUnassignedLabel" class="muted tiny"></p>
+    <div id="numberUnassigned" class="buttonbar numbering-unassigned"></div>
+  </details>
+  <div class="panel game-pool">
+    <div class="previewheading"><h3 id="promoPoolTitle">December 12 promo pool</h3><button id="exportPackPlan">Export pack manifest CSV</button></div>
+    <p class="muted">Starter collation is one Character, one Critic and one Item per three-card pack. A full match uses more Characters than one pack supplies. A Secret or chase Item can replace the regular Item in selected packs. Use fixed pack numbers for assembly.</p>
+    <div id="poolCounts" class="pool-counts"></div><p id="promoCatalogSummary" class="muted tiny" hidden></p>
+    <div id="poolCoverage" class="coverage-grid"></div>
+    <div class="promo-controls"><label class="label">Pack count<input type="number" id="packCount" min="1" max="200" value="8"></label><label class="label">Rare chase copies<input type="number" id="chaseCount" min="0" max="200" value="0"></label><label class="label">Chase Item<select id="chaseCard"></select></label><button id="buildPacks">Build pack list</button></div>
+    <div class="buttonbar"><button id="queuePacks">Queue these packs for printing</button><span class="muted tiny" id="packPrintNote">The pack cards are appended as new print sheets.</span></div>
+    <p id="packStatus" class="muted" role="status"></p><div class="matrix-scroll"><table id="packTable"></table></div>
+  </div>
+</div>
+</section>
+<section class="page" id="viewer">
+  <div class="sectionhead"><div><h2>Card View</h2><p>Inspect the rendered front and the shared print back.</p></div><div class="buttonbar"><button id="viewEdit">Edit card</button><button type="button" data-tab="backs">Edit back</button><button id="viewFoil">Open 3D Foil Lab</button></div></div>
+  <div class="card-view-layout tool-workspace">
+    <div class="panel card-inspect">
+      <div class="previewheading"><h3 id="viewTitle">Card</h3><div class="buttonbar"><button id="viewPrev" aria-label="Previous card">‹</button><button id="viewNext" aria-label="Next card">›</button></div></div>
+      <div class="buttonbar view-tools"><button id="viewFront" aria-pressed="true">Front</button><button id="viewBack" aria-pressed="false">Back</button><button id="viewPair" aria-pressed="false">Both</button><label class="label">Zoom<select id="viewZoom"><option value="1">Fit</option><option value="1.35">135%</option><option value="1.75">175%</option><option value="2.4">240%</option></select></label></div>
+      <div id="viewStage" class="view-stage"><canvas id="viewFrontCanvas" width="750" height="1050" aria-label="Card front"></canvas><canvas id="viewBackCanvas" width="750" height="1050" aria-label="Card back" hidden></canvas></div>
+      <p id="viewDetails" class="muted tiny"></p>
+    </div>
+    <div class="panel card-gallery"><div class="previewheading"><h3>Cards</h3><label class="label"><span class="sr-only">Filter cards</span><select id="viewFilter"><option value="game">Catalog &amp; game cards</option><option value="all">All designs</option><option value="Character">Characters</option><option value="Critic">Critics</option><option value="Item">Items</option><option value="Movie">Movies</option></select></label></div><div id="viewGallery" class="view-gallery"></div></div>
+  </div>
+</section>
+<section class="page" id="fractal">
+  <div class="sectionhead"><div><h2>Fractal Lab</h2><p id="fractalBridgeStatus" role="status"></p></div><div class="buttonbar"><label class="label inline-label">Artwork<select id="fullFractalArt"></select></label><button id="sendFractalArt">Load artwork</button></div></div>
+  <p class="panel lab-launch" id="fractalFileNotice" hidden>Start the local server with <code>py serve.py</code> on Windows or <code>python3 serve.py</code> on WSL/macOS/Linux to load the full labs.</p>
+  <iframe id="fullFractal" class="lab-iframe" title="Daily Meditations Fractal Lab" allow="fullscreen" allowfullscreen></iframe>
+</section>
+<section class="page" id="prism">
+  <div class="sectionhead">
+    <div><h2>Foil Lab</h2><p id="foilBridgeStatus" role="status">Prism v0.11</p></div>
+    <div class="buttonbar">
+      <label class="label inline-label">Card<select id="fullFoilCard"></select></label>
+      <button id="sendFoilCard">Load card</button><button id="savePrismRecipe" disabled>Save finish to card</button>
+      <button id="imprintFoilPattern" type="button" disabled title="Save a flat image of the pattern on the covered parts of this card">Imprint pattern</button>
+      <button id="viewFoilImprint" type="button" hidden>View card</button><button id="removeFoilImprint" type="button" hidden>Remove imprint</button>
+    </div>
+  </div>
+  <label id="foilFinishMaskRow" class="toggle" hidden><input id="foilUseFinishMask" type="checkbox"> Use the card’s mirror mask as the foil area</label>
+  <p class="panel lab-launch" id="foilFileNotice" hidden>Start the local server to use the full Prism lab.</p>
+  <iframe id="fullFoil" class="lab-iframe" title="Prism Foil Lab v0.11" allow="fullscreen" allowfullscreen></iframe>
+</section>
+<section class="page" id="mirror">
+  <div class="sectionhead">
+    <div><h2>Mirror Finish</h2><p>Choose the areas where the reflective surface shows through.</p></div>
+    <div class="buttonbar"><button id="mirrorBack" type="button">Card Designer</button><button id="mirrorFoil" type="button" disabled>Preview in Foil Lab</button></div>
+  </div>
+  <div class="mirror-workspace tool-workspace">
+    <aside class="panel mirror-controls">
+      <label class="label">Card<select id="mirrorCard"></select></label>
+      <div class="pair">
+        <label class="label">Tool<select id="mirrorTool"><option value="polygon">Trace area</option><option value="brush">Brush</option></select></label>
+        <label class="label">Action<select id="mirrorEffect"><option value="reveal">Expose mirror</option><option value="keep">Keep print</option></select></label>
+      </div>
+      <label class="label" id="mirrorBrushSettings" hidden>Brush width <output id="mirrorBrushValue">30 px</output><input id="mirrorBrushSize" type="range" min="2" max="150" value="30"></label>
+      <div class="buttonbar"><button id="mirrorClose" type="button" disabled>Close area</button><button id="mirrorCancelTrace" type="button" disabled>Cancel trace</button></div>
+      <div class="buttonbar"><button id="mirrorBorder" type="button" disabled>Add outer border</button><button id="mirrorUndo" type="button" disabled>Undo</button><button id="mirrorRedo" type="button" disabled>Redo</button></div>
+      <div class="buttonbar"><label class="file-label secondary mini-file">Import mask PNG<input id="mirrorImport" type="file" accept="image/png,.png" disabled></label><button id="mirrorClear" type="button" disabled>Clear mask</button></div>
+      <hr>
+      <label class="label">Export<select id="mirrorDownloadKind"><option value="ink">Front with clear windows</option><option value="area">Finish mask · white exposes mirror</option><option value="white">Underprint mask · white gets ink</option></select></label>
+      <button id="mirrorDownload" type="button" class="accent-btn" disabled>Download PNG</button>
+      <p id="mirrorStatus" class="muted tiny" role="status"></p>
+    </aside>
+    <div class="panel mirror-proof">
+      <label class="label inline-label">Preview<select id="mirrorPreview"><option value="overlay">Selected regions</option><option value="silver">Silver proof</option><option value="mask">Black and white mask</option></select></label>
+      <div class="mirror-canvas-frame"><canvas id="mirrorCanvas" width="750" height="1050" tabindex="0" aria-label="Mirror finish mask editor"></canvas></div>
+      <p class="muted tiny">750 × 1050 px · White in the finish mask exposes the mirror.</p>
+    </div>
+  </div>
+</section>
+<section class="page" id="shapes">
+  <div class="sectionhead">
+    <div><h2>Shape Designer</h2><p>Draw an outline or import a closed SVG path. Preview it on a card before saving.</p></div>
+    <div class="buttonbar">
+      <button id="shapeBack" type="button">Card Designer</button>
+      <button id="shapeSave" type="button" disabled>Save to shape library</button>
+      <button id="shapeSaveUse" class="accent-btn" type="button" disabled>Save &amp; apply to card</button>
+    </div>
+  </div>
+  <div class="shape-workspace tool-workspace">
+    <aside class="panel shape-library">
+      <h3>Shapes</h3>
+      <label class="label">Shape name<input id="shapeName" maxlength="80" placeholder="e.g. Marquee cutout"></label>
+      <label class="label">Starting outline<select id="shapeStarter"><option value="arch">Marquee arch</option><option value="rectangle">Rectangle</option><option value="rounded">Rounded</option><option value="clipped">Cut corners</option><option value="oval">Oval</option><option value="ticket">Ticket</option><option value="pill">Pill</option><option value="scroll">Scroll</option><option value="ribbon">Ribbon</option><option value="shield">Shield</option><option value="blank">Blank</option></select></label>
+      <div class="buttonbar"><button id="shapeStarterApply" type="button">Use outline</button><button id="shapeNew" type="button">Draw new</button></div>
+      <hr>
+      <label class="label">Saved shape<select id="shapeList"></select></label>
+      <div class="buttonbar"><button id="shapeLoad" type="button" disabled>Load</button><button id="shapeCopy" type="button" disabled>Duplicate shape</button><button id="shapeDelete" type="button" disabled>Delete</button></div>
+      <label class="file-label secondary shape-import">Import SVG path<input id="shapeSvg" type="file" accept=".svg,image/svg+xml"></label>
+      <p id="shapeStatus" class="muted tiny" role="status"></p>
+    </aside>
+
+    <div class="panel shape-editor">
+      <div class="previewheading"><h3>Outline</h3><div class="buttonbar">
+        <button id="shapeUndo" type="button" disabled>Undo</button><button id="shapeRedo" type="button" disabled>Redo</button>
+      </div></div>
+      <div id="shapePointTools">
+        <div class="buttonbar">
+          <button id="shapeMoveMode" type="button" aria-pressed="true">Move points</button>
+          <button id="shapeAddMode" type="button" aria-pressed="false">Add points</button>
+          <button id="shapeClose" type="button" hidden disabled>Close outline</button>
+          <button id="shapeRemovePoint" type="button" disabled>Remove point</button>
+        </div>
+      </div>
+      <p id="shapeSvgHelp" class="muted tiny" hidden>Imported SVG curves stay intact. To change them, edit the path in GIMP and import it again.</p>
+      <canvas id="shapeCanvas" width="600" height="440" aria-label="Shape outline canvas"></canvas>
+      <div id="shapeCoordinates">
+        <div class="buttonbar">
+          <span id="shapePointLabel" class="muted tiny" aria-live="polite">No point selected</span>
+          <button id="shapePrevious" type="button">Previous point</button><button id="shapeNext" type="button">Next point</button>
+        </div>
+        <div class="shape-point-fields">
+          <label class="label">X (%)<input id="shapePointX" type="number" min="0" max="100" step=".1"></label>
+          <label class="label">Y (%)<input id="shapePointY" type="number" min="0" max="100" step=".1"></label>
+          <label class="label">Curve (%)<input id="shapeSmooth" type="range" min="0" max="100"></label>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel shape-proof">
+      <div class="previewheading"><h3>Card preview</h3><span class="muted tiny" id="shapePreviewTitle"></span></div>
+      <div class="pair">
+        <label class="label">Apply to<select id="shapeTarget"><option value="art" selected>Artwork window</option><option value="plate">Nameplate</option></select></label>
+        <label class="label">Preview card<select id="shapeCard"></select></label>
+      </div>
+      <canvas id="shapeCardPreview" width="375" height="525" aria-label="Preview of the custom shape on the selected card"></canvas>
+    </aside>
+  </div>
+</section>
+<section class="page" id="backs">
+  <div class="sectionhead">
+    <div><h2>Back Designer</h2><p id="backActiveStatus"></p></div>
+    <div class="buttonbar">
+      <button id="backUndo" type="button" disabled>Undo</button>
+      <button id="backRedo" type="button" disabled>Redo</button>
+      <button id="backExportPNG" type="button" disabled>Export PNG</button>
+      <button id="backUse" class="accent-btn" type="button" disabled>Use as shared back</button>
+    </div>
+  </div>
+  <div class="back-workspace tool-workspace" id="backWorkspace">
+    <aside class="panel back-drafts">
+      <h3>Drafts</h3>
+      <div class="buttonbar">
+        <button id="backStartLogo" type="button">Edit a copy of the MNC back</button>
+        <button id="backStartBlank" type="button">Start blank</button>
+        <button id="backStartUpload" type="button" hidden>Edit a copy of the uploaded back</button>
+      </div>
+      <label class="label">Edit draft<select id="backSelect"></select></label>
+      <div class="buttonbar"><button id="backDuplicate" type="button" disabled>Duplicate draft</button><button id="backDelete" type="button" disabled>Delete</button></div>
+      <p class="muted tiny" id="backEmptyState">Start with the existing back or a blank canvas.</p>
+      <p class="muted tiny" id="backStatus" role="status"></p>
+    </aside>
+
+    <div class="panel back-proof">
+      <div class="previewheading"><h3>Back preview</h3><span class="muted tiny">2.5 × 3.5 in · 750 × 1050 px</span></div>
+      <div class="back-canvas-frame"><canvas id="backPreview" width="750" height="1050" aria-label="Card back preview. Move layers using the canvas or position fields."></canvas></div>
+      <div class="buttonbar back-proof-actions">
+        <label class="toggle"><input id="backSafeGuide" type="checkbox"> Safe-area guide</label>
+        <button id="backTurn" type="button" aria-pressed="false">Rotate preview 180°</button>
+        <button id="backPreviewPrint" type="button" disabled>Open print proof</button>
+      </div>
+    </div>
+
+    <aside class="panel back-controls" id="backHasDesign" hidden>
+      <label class="label">Draft name<input id="backName" data-back-field="name" maxlength="90"></label>
+      <details class="panel-section" open>
+        <summary>Layers</summary>
+        <div class="buttonbar">
+          <button id="backAddImage" type="button">Add image</button>
+          <button id="backAddText" type="button">Add text</button>
+          <button id="backAddShape" type="button">Add shape</button>
+          <label class="file-label secondary mini-file">Upload image<input id="backImageUpload" type="file" accept="image/*"></label>
+        </div>
+        <div class="back-layer-list" id="backLayerList"></div>
+        <p class="muted tiny" id="backEmptyLayers">Add a layer to place artwork, lettering, or a shape on the back.</p>
+        <div class="buttonbar">
+          <button id="backRaise" type="button">Move up</button><button id="backLower" type="button">Move down</button>
+          <button id="backDuplicateLayer" type="button">Copy layer</button><button id="backDeleteLayer" type="button">Remove layer</button>
+        </div>
+        <div class="back-layer-editor" id="backLayerEditor" hidden>
+          <label class="label">Layer name<input data-back-layer="name" maxlength="160"></label>
+          <div data-back-kind="image" hidden>
+            <label class="label">Artwork<select id="backLayerAsset" data-back-layer="assetId"></select></label>
+            <p id="backImageNotice" class="muted tiny"></p>
+            <div class="pair">
+              <label class="label">Fit<select data-back-layer="fit"><option value="contain">Show whole image</option><option value="cover">Fill / crop</option><option value="stretch">Stretch to box</option></select></label>
+              <label class="label">Image zoom<input type="range" data-back-layer="zoom" min="1" max="4" step=".025"></label>
+            </div>
+            <div class="pair">
+              <label class="label">Crop X<input type="range" data-back-layer="panX" min="-1" max="1" step=".02"></label>
+              <label class="label">Crop Y<input type="range" data-back-layer="panY" min="-1" max="1" step=".02"></label>
+            </div>
+            <div class="pair"><label class="toggle"><input type="checkbox" data-back-layer="flipX"> Flip horizontal</label><label class="toggle"><input type="checkbox" data-back-layer="flipY"> Flip vertical</label></div>
+          </div>
+          <div data-back-kind="text" hidden>
+            <label class="label">Text<textarea id="backLayerText" data-back-layer="text" rows="3" maxlength="1000"></textarea></label>
+            <div class="pair">
+              <label class="label">Lettering<select data-back-layer="font"><option value="serif">Serif</option><option value="sans">Sans serif</option><option value="system">System font</option><option value="mono">Monospace</option></select></label>
+              <label class="label">Size (px)<input type="number" data-back-layer="size" min="8" max="230"></label>
+            </div>
+            <div class="pair">
+              <label class="label">Alignment<select data-back-layer="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+              <label class="label">Text color<input type="color" data-back-layer="color"></label>
+            </div>
+            <div class="pair"><label class="toggle"><input type="checkbox" data-back-layer="bold"> Bold</label><label class="toggle"><input type="checkbox" data-back-layer="italic"> Italic</label></div>
+          </div>
+          <div data-back-kind="shape" hidden>
+            <div class="pair">
+              <label class="label">Shape<select id="backShape" data-back-layer="shape"><option value="rectangle">Rectangle</option><option value="rounded">Rounded rectangle</option><option value="ellipse">Ellipse</option><option value="diamond">Diamond</option></select></label>
+              <label class="label">Fill color<input type="color" data-back-layer="color"></label>
+            </div>
+            <label class="toggle"><input type="checkbox" data-back-layer="filled"> Fill shape</label>
+            <label class="label" id="backShapeRadiusField">Corner radius<input type="range" data-back-layer="radius" min="0" max="125"></label>
+          </div>
+          <div id="backLayerOutline" class="pair">
+            <label class="label">Outline (px)<input type="number" data-back-layer="outline" min="0" max="40"></label>
+            <label class="label">Outline color<input type="color" data-back-layer="outlineColor"></label>
+          </div>
+          <div class="pair">
+            <label class="label">X center (%)<input id="backLayerX" type="number" data-back-layer="x" min="-50" max="150" step=".1"></label>
+            <label class="label">Y center (%)<input id="backLayerY" type="number" data-back-layer="y" min="-50" max="150" step=".1"></label>
+            <label class="label">Width (%)<input type="number" data-back-layer="w" min="1" max="200" step=".1"></label>
+            <label class="label">Height (%)<input type="number" data-back-layer="h" min="1" max="200" step=".1"></label>
+            <label class="label">Rotation (°)<input type="number" data-back-layer="rotation" min="-180" max="180" step="1"></label>
+            <label class="label">Opacity<input type="range" data-back-layer="opacity" min="0" max="1" step=".01"></label>
+          </div>
+          <label class="label">Blend<select data-back-layer="blend"><option value="source-over">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft light</option></select></label>
+          <label class="toggle"><input type="checkbox" data-back-layer="repeat"> Repeat at 180°</label>
+        </div>
+      </details>
+      <details class="panel-section" open>
+        <summary>Background</summary>
+        <div class="pair">
+          <label class="label">Fill<select data-back-field="fill"><option value="solid">Solid</option><option value="gradient">Gradient</option></select></label>
+          <label class="label">Base color<input type="color" data-back-field="background"></label>
+        </div>
+        <div id="backGradientFields" class="pair" hidden>
+          <label class="label">Second color<input type="color" data-back-field="backgroundTo"></label>
+          <label class="label">Gradient angle (°)<input type="range" data-back-field="angle" min="0" max="360" step=".1"></label>
+        </div>
+        <label class="label">Pattern<select data-back-field="pattern"><option value="none">None</option><option value="rings">Rings</option><option value="diagonal">Diagonal lines</option><option value="lattice">Lattice</option><option value="dots">Dots</option><option value="film">Film perforations</option></select></label>
+        <div id="backPatternFields" class="pair" hidden>
+          <label class="label">Pattern color<input type="color" data-back-field="patternColor"></label>
+          <label class="label">Pattern opacity<input type="range" data-back-field="patternOpacity" min="0" max="1" step=".01"></label>
+          <label class="label">Spacing<input type="range" data-back-field="patternSpacing" min="12" max="125"></label>
+          <label class="label">Pattern angle (°)<input type="range" data-back-field="patternAngle" min="0" max="360"></label>
+        </div>
+      </details>
+      <details class="panel-section">
+        <summary>Border</summary>
+        <label class="label">Style<select data-back-field="border"><option value="none">None</option><option value="single">Single line</option><option value="double">Double line</option></select></label>
+        <div id="backBorderFields" class="pair" hidden>
+          <label class="label">Border color<input type="color" data-back-field="borderColor"></label>
+          <label class="label" id="backInnerColor">Inner line<input type="color" data-back-field="borderInner"></label>
+          <label class="label">Inset<input type="range" data-back-field="borderInset" min="8" max="165"></label>
+          <label class="label">Line weight<input type="range" data-back-field="borderWidth" min="1" max="40"></label>
+          <label class="label">Corner radius<input type="range" data-back-field="borderRadius" min="0" max="125"></label>
+        </div>
+      </details>
+    </aside>
+  </div>
+</section>
+<section class="page" id="production"><div class="sectionhead"><div><h2>Print Sheets</h2><p>Eight slots per Letter sheet. Preview both sides, then export duplex PDF.</p></div><div class="buttonbar"><button id="addSheet">Add eight-card sheet</button><button id="pdfExport" class="accent-btn">Download Staples PDF</button></div></div>
+<div class="production-layout tool-workspace"><div class="panel"><h3>Staples preset</h3><div class="spec-list"><span>Canvas</span><b>11 × 8.5 in · landscape</b><span>Front trim margin</span><b>≥ 0.29 in</b><span>Card trim</span><b>2.5 × 3.5 in</b><span>Bleed simulation</span><b>0.04 in beyond trim</b><span>Pages</span><b>Front / Back / Front / Back</b><span>Stock</span><b>Colour Laser · 98 Bright · 100-lb</b><span>Scale / duplex</span><b>100% / double-sided</b></div><hr><label class="label">Duplex registration layout<select id="duplexMode"><option value="same">Same position</option><option value="mirrorColumns">Mirror columns (left/right)</option><option value="mirrorRows">Mirror rows (top/bottom)</option><option value="rotate">Rotate positions 180°</option></select></label><div class="pair"><label class="label">Back X (mm)<input id="backOffsetX" type="number" value="0" min="-3" max="3" step=".1"></label><label class="label">Back Y (mm)<input id="backOffsetY" type="number" value="0" min="-3" max="3" step=".1"></label></div><label class="label">Card-back design<select id="backMode"><option value="mnc">Original MNC logo back</option><option id="backDesignedOption" value="designed" disabled hidden>Designed back</option><option value="custom">Custom uploaded artwork</option><option value="calibration">Calibration numbers (test only)</option></select></label><div class="buttonbar"><button type="button" data-tab="backs">Edit in Back Designer</button><label class="file-label secondary">Upload card-back image<input id="customBackUpload" type="file" accept="image/*"></label></div><label class="toggle"><input id="includeFinishPreview" type="checkbox"> Print simulated foil pattern in card art (normally off)</label><label class="toggle"><input id="bleedOn" type="checkbox" checked> Extend artwork 0.04 in beyond cut marks</label><div class="buttonbar"><button id="printManifest">Download sheet manifest CSV</button><button id="resetSheets">Load legacy sample sheets</button></div><p class="muted tiny">Use actual size (100%). Proof duplex registration before printing the final run.</p></div><div class="panel print-work"><div class="previewheading"><h3>Sheet queue</h3><span class="micro" id="sheetsSummary"></span></div><div class="sheetqueue" id="sheetQueue"></div>
+<div class="previewheading print-preview-head"><h3>Sheet proof</h3><div class="buttonbar"><label class="label inline-label">Sheet<select id="proofSheet"></select></label><button id="proofFront" aria-pressed="true">Front</button><button id="proofBack" aria-pressed="false">Back</button><button id="proofBoth" aria-pressed="false">Both</button></div></div>
+<div class="buttonbar back-proof-note" id="proofDraftNotice" hidden><span id="proofDraftName" class="muted tiny" role="status"></span><button id="proofClearDraft" type="button">Show shared back</button></div>
+<div class="sheet-proof" id="sheetProof"><canvas id="proofFrontCanvas" width="1320" height="1020" aria-label="Print sheet front"></canvas><canvas id="proofBackCanvas" width="1320" height="1020" aria-label="Print sheet back" hidden></canvas></div></div></div></section>
+<section class="page" id="data"><div class="sectionhead"><div><h2>Project &amp; Backup</h2><p id="saveStatus" role="status">Opening local project…</p><p id="projectFolderStatus" class="muted tiny">Browser workspace. Export project JSON to back up or share your card.</p></div></div><div class="tool-scroll" tabindex="0" aria-label="Project and backup settings">
+<div class="panel catalog-panel">
+  <div class="previewheading"><h3>Excel catalog</h3></div>
+  <p>Load the Excel catalog by card ID. You can edit imported cards in Card Designer and choose how to handle those edits when you import again.</p>
+  <div class="buttonbar">
+    <button id="loadProjectWorkbook" hidden>Load project workbook</button>
+    <label class="file-label secondary">Choose workbook<input id="catalogFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+    <button id="catalogApply" class="accent-btn" disabled>Apply workbook</button>
+  </div>
+  <label class="toggle" id="catalogKeepEditsRow" hidden><input id="catalogKeepEdits" type="checkbox" checked> Keep edits made in Card Designer</label>
+  <p id="catalogStatus" class="muted" role="status"></p>
+  <ul id="catalogIssues" class="catalog-issues" hidden></ul>
+</div>
+<div class="data-layout"><div class="panel"><h3>Back up / restore</h3><div class="buttonbar"><button class="accent-btn" id="exportProject">Export project JSON</button><label class="file-label secondary">Import project JSON<input id="importProject" type="file" accept=".json,application/json"></label></div><p class="muted">Keep your project JSON, workbook, and assets folder together. Images imported in browser-only mode are embedded in the JSON.</p><hr><div class="buttonbar"><button id="exportCardsCSV">Export cards CSV</button><button id="exportAssetsCSV">Export assets CSV</button></div></div><div class="panel"><h3>Project status</h3><div id="projectSummary" class="summary-stats"></div><hr><h3>Earlier tools</h3><div class="buttonbar"><button data-tab="fractalLite">Fractal Lite</button><button data-tab="prismLegacy">Prism v0.8</button><button data-tab="foil">Foil Lite</button></div></div></div></div>
+</section>
+</main>
+<script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js"></script><script src="artwork-profiles.js"></script><script src="front-layout.js"></script><script src="front-effects.js"></script><script src="outer-border.js"></script><script src="layout-design.js"></script><script src="art-cutout.js"></script><script src="type-design.js"></script><script src="mirror-mask.js"></script><script src="app.js"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js"></script><script src="design-system-ui.js"></script><script src="type-design-ui.js"></script><script src="glyph-context-ui.js"></script><script src="cutout-editor.js"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js"></script><script src="lab-links.js"></script></body></html>
