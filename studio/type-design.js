@@ -10,6 +10,44 @@ globalThis.MNC_TYPE_DESIGN = (() => {
   const footerOffsets=['artist','footer','number','episodeBadge'];
   const typeText=['typeRule','rule','ruleTitle','timing','quote','matchLabel','matchValue','headerSubtype'];
   const typeOffsets=['match','typeRule','rule','quote'];
+  const paletteFields=['mainColor','borderColor','accent'];
+
+  function normalizePalette(value) {
+    return Object.fromEntries(paletteFields.filter(key=>MNC_FRONT.hex(value?.[key])).map(key=>[key,value[key].toLowerCase()]));
+  }
+
+  function setColor(card,key,color) {
+    if(!MNC_FRONT.hex(color))return;
+    card[key]=color;
+    if(key==='mainColor'){
+      if(!MNC_GAME.isGameCard(card)&&card.template!=='Standard'&&!card.layoutDesign?.background){
+        MNC_LAYOUT.replaceBackground(card,{mode:'solid',color});
+      }else MNC_LAYOUT.backgroundStart(card,color);
+    }
+    if(key==='borderColor'){
+      const stops=MNC_LAYOUT.get(card,'border')?.gradient?.stops;
+      if(stops?.length)stops.reduce((first,stop)=>stop.at<first.at?stop:first).color=color;
+    }
+    if(key==='accent')card.useTypeColor=false;
+  }
+
+  function applyPalette(card,palette) {
+    for(const key of paletteFields)if(palette[key])setColor(card,key,palette[key]);
+  }
+
+  function palette(card) {
+    const visual=MNC_GAME.isGameCard(card)?window.MNC_gamePalette(card):
+      card.template==='Standard'?window.MNC_standardPalette(card):
+      {base:card.template==='Archive'?'#ddd5c8':'#161a24',ink:'#ffffff',accent:card.accent};
+    const background=card.layoutDesign?.background,edge=MNC_LAYOUT.get(card,'border')?.gradient;
+    return {
+      mainColor:background?.mode==='solid'?background.color:background?.gradient?
+        MNC_FRONT_EFFECTS.firstColor(background.gradient):visual.sourceBase||visual.base,
+      borderColor:edge?MNC_FRONT_EFFECTS.firstColor(edge):MNC_OUTER_BORDER.color(card),
+      accent:visual.accent||visual.outer||card.accent||'#bbac8b',
+      ink:visual.ink
+    };
+  }
 
   function restore(project) {
     const previous=project.typeDesigns?.profiles||{};
@@ -84,5 +122,6 @@ globalThis.MNC_TYPE_DESIGN = (() => {
   function clearFooter(layout) {clear(layout,footerKeys,footerText,footerOffsets);}
   function clearType(layout) {clear(layout,[...matchKeys,'showCharacterSubtype'],typeText,typeOffsets);}
 
-  return {profiles,idFor,matching,restore,merge,layout,rule,original,footer,clearFooter,clearType,matchKeys,typeText,typeOffsets};
+  return {profiles,idFor,matching,restore,merge,layout,rule,original,footer,clearFooter,clearType,matchKeys,typeText,typeOffsets,
+    paletteFields,normalizePalette,palette,setColor,applyPalette};
 })();

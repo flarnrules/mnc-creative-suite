@@ -67,7 +67,8 @@
    const ink=custom?front.surfaceText(base).ink:look?.text||'#f7f4ee';
    const type=c.useTypeColor!==false?game.visualFor(c,state.typeOverrides):null;
    const outer=front.hex(c.borderColor)?c.borderColor:look?.frame||type?.color||c.accent||'#4d82b1';
-   return {sourceBase,base,ink,outer,
+   const accent=c.useTypeColor===false&&front.hex(c.accent)?c.accent:outer;
+   return {sourceBase,base,ink,outer,accent,
      bottom:front.tone(c.mainColor?front.mix(sourceBase,'#101519',.11):look?.bg[1]||'#11151f',c.backgroundLightness),
      plate:custom?front.mix(base,ink,.07):look?.plate||'#181e2c',
      footer:custom?front.mix(base,ink,.06):look?.footer||'rgba(10,13,20,.9)'};
@@ -75,14 +76,14 @@
  window.MNC_standardPalette=palette;
  window.MNC_addStandardLayers=function(scene,ctx,c,{foil,recipe}={}){
    const border=c.artBorder||'solid';
-   const {base,bottom,ink,outer:trim,plate:plateColor,footer:footerColor}=palette(c);
+   const {base,bottom,ink,outer:trim,accent,plate:plateColor,footer:footerColor}=palette(c);
    const layout=front.values(c), nameBox=plateBox(c), design=MNC_LAYOUT;
    scene.add('background',design.full(),ctx=>design.background(ctx,c,()=>design.linear(ctx,[[0,base],[1,bottom]])));
    MNC_OUTER_BORDER.addLayer(scene,c);
-   front.addHeader(scene,ctx,c,{x:54,y:128,ink,quiet:trim,standard:true});
+   front.addHeader(scene,ctx,c,{x:54,y:128,ink,quiet:accent,standard:true});
    scene.add('art',cardRect(c),async (ctx,rect)=>{
      const outline=standardArtPath(c,rect);
-     ctx.fillStyle=trim;ctx.fill(outline,'evenodd');
+     ctx.fillStyle=accent;ctx.fill(outline,'evenodd');
      const im=MNC_ARTWORK.image(c,await imgLoad(assetURI(artById(c.sourceAssetId))));
      if(im){ctx.save();ctx.clip(outline,'evenodd');fitImage(ctx,im,rect,c.fit||'cover',Number(c.zoom)||1,Number(c.panX)||0,Number(c.panY)||0);ctx.restore();}
      if(border==='none')return;
@@ -96,8 +97,8 @@
    },{adjustBox:true});
    MNC_ART_CUTOUT.addLayer(scene,c);
    const plate=c.nameplate||'solid';
-   scene.add('plate',nameBox,ctx=>front.paintNameplate(ctx,c,nameBox,plate,{fill:plate==='banner'?trim:plateColor,
-     stroke:trim,weight:plate==='outline'?4:0,radius:plate==='banner'?2:19}),{empty:plate==='none'});
+   scene.add('plate',nameBox,ctx=>front.paintNameplate(ctx,c,nameBox,plate,{fill:plate==='banner'?accent:plateColor,
+     stroke:accent,weight:plate==='outline'?4:0,radius:plate==='banner'?2:19}),{empty:plate==='none'});
    design.addTitle(scene,ctx,c,nameBox,{size:45,min:20,weight:800,family:'system-ui',color:ink,inset:45,baseline:14.5/45});
    const contentTop=bodyStart(c)+layout.plateHeight+39;
    const footer=front.offset(c,'footer');

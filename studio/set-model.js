@@ -25,7 +25,8 @@ globalThis.MNC_SET_PLAN = (() => {
   const key=value=>String(value??'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
   const definition=id=>definitions.find(entry=>entry.id===id);
   const profile=id=>definition(id)||auxiliaries.find(entry=>entry.id===id);
-  const aliases={};
+  const aliases=globalThis.MNC_EDITION?.setAliases||{};
+  const names=globalThis.MNC_EDITION?.setNames||{};
 
   function profileFor(card) {
     if(card?.family==='Character'){
@@ -57,7 +58,7 @@ globalThis.MNC_SET_PLAN = (() => {
   function fresh(project) {
     return {version:1,code:'LX26',name:'Liquor Exchange 2026',target:100,edition:'01',
       groups:definitions.map(group=>({id:group.id,target:group.target,slots:Array.from({length:group.target},(_,i)=>{
-        const name=group.names?.[i]||'',card=name&&matching(project.cards,name,group.id,project.catalogCollections);
+        const name=names[group.id]?.[i]||'',card=name&&matching(project.cards,name,group.id,project.catalogCollections);
         return {id:group.id+'-'+String(i+1).padStart(3,'0'),name,cardId:card?.id||''};
       })}))};
   }

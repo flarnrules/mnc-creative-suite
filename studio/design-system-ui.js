@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const planModel=MNC_SET_PLAN,symbols=MNC_SYMBOLS;
+  const planModel=MNC_SET_PLAN,symbols=MNC_SYMBOLS,types=MNC_TYPE_DESIGN;
   const itemGroups=planModel.definitions.filter(group=>group.family==='Item');
   const current=()=>cardById(currentId);
   const plan=()=>state.setPlan;
@@ -9,7 +9,12 @@
   const selectedGroup=()=>plan().groups.find(group=>group.id===$('setGroup').value)||plan().groups[0];
   const selectedProfile=()=>state.visualLanguage.profiles[$('symbolProfile').value];
   let previewRevision=0,chartRevision=0,cardRevision=0;
-  let designArtwork='';
+  let designArtwork='',standardsPane='colors',designPreviewRevision=0;
+  const colorFields=[
+    ['mainColor','Main','Card background'],
+    ['borderColor','Secondary','Outer frame'],
+    ['accent','Accent','Type and nameplate highlights']
+  ];
 
   function element(tag,text,className) {
     const node=document.createElement(tag);
@@ -35,8 +40,9 @@
     dropDownOptions(select,symbols.imageOptions(state,chosen),chosen||'');
   }
 
-  function openProfile(id) {
-    tab('visualLanguage',{profileId:planModel.profile(id)?id:'other'});
+  function openProfile(id,pane='layout') {
+    tab('visualLanguage',{profileId:planModel.profile(id)?id:'other',pane,
+      assetId:activeTab==='visualLanguage'?designArtwork:''});
   }
 
   function renderCounts() {
@@ -209,41 +215,51 @@
 
   async function paintSymbol(canvas,symbol,id,size=canvas.width*.72,ink='#000000') {
     const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
-    await symbols.draw(ctx,symbol,canvas.width/2,canvas.height/2,size,ink,id);
+    await symbols.drawBadge(ctx,symbol,canvas.width/2,canvas.height/2,size,ink,id);
+  }
+
+  function playableProfile(id) {
+    const profile=planModel.profile(id);
+    return id==='creature'?{...profile,family:'Character',category:'Creature'}:profile;
+  }
+
+  function draftFor(id) {
+    const profile=playableProfile(id);
+    return cardDraft(null,profile.family,profile);
   }
 
   function designTile(profile) {
     const card=cardDraft(null,profile.family,profile);
-    const palette=game.isGameCard(card)?window.MNC_gamePalette(card):
-      card.template==='Standard'?window.MNC_standardPalette(card):
-      {base:'#161a24',ink:'#ffffff',accent:card.accent};
-    const background=card.layoutDesign?.background, accent=palette.accent||palette.outer;
-    const tone=value=>front.tone(value,card.backgroundLightness);
-    const surface=background?.mode==='solid'?tone(background.color):
-      background?.gradient?tone(MNC_FRONT_EFFECTS.firstColor(background.gradient)):palette.base;
-    const edge=MNC_LAYOUT.get(card,'border')?.gradient;
-    const border=MNC_OUTER_BORDER.visible(card)?edge?MNC_FRONT_EFFECTS.firstColor(edge):MNC_OUTER_BORDER.color(card):'';
+    const palette=types.palette(card);
     const label=profile.type||profile.category||(profile.family==='Item'?profile.subtype+' item':profile.family==='Movie'?'Film':profile.family);
-    const tile=element('button',undefined,'design-choice');
-    tile.type='button';
-    tile.setAttribute('aria-label','New '+label+' card');
-    tile.style.setProperty('--design-accent',accent);
+    const tile=element('article',undefined,'design-choice');
+    tile.style.setProperty('--design-accent',palette.accent);
     const canvas=element('canvas');canvas.width=canvas.height=96;
     canvas.setAttribute('aria-hidden','true');
-    canvas.style.backgroundColor=surface;
-    const colors=element('span',undefined,'design-swatches');
-    const swatches=[['Accent',accent],['Background',surface],['Border',border]];
-    for(const [name,color] of swatches){
-      const chip=element('span');
-      chip.title=name+' '+(color||'hidden');
-      chip.style.backgroundColor=color||'transparent';
+    canvas.style.backgroundColor=palette.mainColor;
+    const glyph=element('button',undefined,'design-glyph');
+    glyph.type='button';
+    glyph.setAttribute('aria-label','Edit '+label+' glyph');
+    glyph.title='Edit '+label+' glyph';
+    glyph.onclick=()=>openProfile(profile.id,'glyphs');
+    glyph.append(canvas);
+    const colors=element('button',undefined,'design-swatches');
+    colors.type='button';
+    colors.setAttribute('aria-label','Edit '+label+' colors');
+    colors.onclick=()=>openProfile(profile.id,'colors');
+    for(const [key,name] of colorFields){
+      const chip=element('span',name);
+      chip.title=name+' '+palette[key].toUpperCase();
+      chip.style.setProperty('--swatch',palette[key]);
       colors.append(chip);
     }
-    tile.setAttribute('aria-description',swatches.map(([name,color])=>name+' '+(color||'hidden')).join(', '));
-    const caption=element('span',undefined,'design-choice-caption');
-    caption.append(element('strong',label),colors);
-    tile.append(canvas,caption);
-    tile.onclick=()=>createCard(designArtwork,profile.family,profile);
+    const create=element('button','New card','design-create');
+    create.type='button';
+    create.setAttribute('aria-label','New '+label+' card');
+    create.onclick=()=>createCard(designArtwork,profile.family,profile);
+    const heading=element('div',undefined,'design-choice-heading');
+    heading.append(glyph,element('strong',label),create);
+    tile.append(heading,colors);
     const {symbol}=symbols.cardSymbol(state,card);
     paintSymbol(canvas,symbol,profile.id,62,palette.ink).catch(console.error);
     return tile;
@@ -256,7 +272,7 @@
     $('openSavedCards').disabled=!state.cards.length;
     const profiles=planModel.definitions;
     const groups=[
-      ['Characters',[...profiles.filter(profile=>profile.family==='Character'),{...planModel.profile('creature'),family:'Character',category:'Creature'}]],
+      ['Characters',[...profiles.filter(profile=>profile.family==='Character'),playableProfile('creature')]],
       ['Critics & films',profiles.filter(profile=>['Critic','Movie'].includes(profile.family))],
       ['Items',itemGroups]
     ];
@@ -287,9 +303,92 @@
     return token===chartRevision;
   }
 
+  function editedGlyph() {
+    const id=$('symbolProfile').value;
+    const mark=!!state.typeDesigns.profiles[id]&&$('symbolTarget').value==='setMark';
+    return {id,mark,key:mark?'setMark':'symbol',project:state};
+  }
+
+  function glyphValue({id,mark,project}=editedGlyph()) {
+    return mark?symbols.typeMark(project,id):symbols.profileSymbol(project,id);
+  }
+
+  function setGlyph(value,target=editedGlyph()) {
+    if(target.project!==state)return;
+    target.project.visualLanguage.profiles[target.id][target.key]=value;
+    changed();
+  }
+
+  const glyphCanvas=$('symbolAlignment');
+  const glyphBox=160;
+  let alignmentRevision=0,alignmentDrag=null;
+
+  async function paintAlignment() {
+    const token=++alignmentRevision,target=editedGlyph(),symbol=glyphValue(target);
+    const canvas=element('canvas');canvas.width=canvas.height=glyphCanvas.width;
+    const ctx=canvas.getContext('2d'),middle=canvas.width/2,edge=(canvas.width-glyphBox)/2;
+    ctx.strokeStyle='#8f948b';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    ctx.strokeRect(edge,edge,glyphBox,glyphBox);
+    ctx.beginPath();ctx.moveTo(edge,middle);ctx.lineTo(canvas.width-edge,middle);
+    ctx.moveTo(middle,edge);ctx.lineTo(middle,canvas.height-edge);ctx.stroke();
+    ctx.setLineDash([]);
+    $('symbolAlignmentStatus').textContent='X '+symbol.offsetX+'% · Y '+symbol.offsetY+'%';
+    await symbols.drawBadge(ctx,symbol,middle,middle,glyphBox,'#20251e',target.mark?'collection':target.id);
+    if(token===alignmentRevision){
+      const output=glyphCanvas.getContext('2d');output.clearRect(0,0,glyphCanvas.width,glyphCanvas.height);
+      output.drawImage(canvas,0,0);
+    }
+  }
+
+  function alignGlyph(x,y) {
+    const target=editedGlyph(),symbol=glyphValue(target);
+    const offsetX=clamp(Math.round(x),-50,50),offsetY=clamp(Math.round(y),-50,50);
+    if(offsetX===symbol.offsetX&&offsetY===symbol.offsetY)return;
+    setGlyph({...symbol,offsetX,offsetY},target);
+    syncMarkTools(target);
+    paintAlignment().catch(console.error);
+  }
+
+  glyphCanvas.addEventListener('pointerdown',event=>{
+    if(event.button!==0||glyphValue().source==='hidden')return;
+    const symbol=glyphValue(),rect=glyphCanvas.getBoundingClientRect();
+    alignmentDrag={pointer:event.pointerId,x:event.clientX,y:event.clientY,offsetX:symbol.offsetX,offsetY:symbol.offsetY,
+      scaleX:glyphCanvas.width*100/(rect.width*glyphBox),scaleY:glyphCanvas.height*100/(rect.height*glyphBox)};
+    glyphCanvas.focus({preventScroll:true});glyphCanvas.setPointerCapture(event.pointerId);event.preventDefault();
+  });
+  glyphCanvas.addEventListener('pointermove',event=>{
+    const drag=alignmentDrag;
+    if(!drag||drag.pointer!==event.pointerId)return;
+    alignGlyph(drag.offsetX+(event.clientX-drag.x)*drag.scaleX,drag.offsetY+(event.clientY-drag.y)*drag.scaleY);
+  });
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])glyphCanvas.addEventListener(name,event=>{
+    if(alignmentDrag?.pointer===event.pointerId)alignmentDrag=null;
+  });
+  glyphCanvas.addEventListener('keydown',event=>{
+    const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
+    if(!delta||glyphValue().source==='hidden')return;
+    const {offsetX,offsetY}=glyphValue(),step=event.shiftKey?5:1;
+    event.preventDefault();alignGlyph(offsetX+delta[0]*step,offsetY+delta[1]*step);
+  });
+  $('symbolAlignReset').onclick=()=>alignGlyph(0,0);
+  $('symbolAlignCenter').onclick=async()=>{
+    const target=editedGlyph(),version=alignmentRevision;
+    const {offsetX,offsetY}=await symbols.centerOffsets(glyphValue(target),target.mark?'collection':target.id);
+    if(target.project===state&&target.id===editedGlyph().id&&target.key===editedGlyph().key&&version===alignmentRevision)alignGlyph(offsetX,offsetY);
+  };
+
+  function syncMarkTools(target=editedGlyph()) {
+    $('typeMarkTools').hidden=!target.mark;
+    const own=Boolean(selectedProfile()?.setMark);
+    $('resetTypeMark').disabled=!own;
+    $('typeMarkStatus').textContent=own?'Custom mark for this type':'Inherits the LX26 mark';
+  }
+
   function syncSymbolEditor() {
-    const id=$('symbolProfile').value,profile=planModel.profile(id),setting=selectedProfile();
-    const symbol=symbols.profileSymbol(state,id);
+    const target=editedGlyph(),id=target.mark?'collection':target.id;
+    const profile=planModel.profile(id),symbol=glyphValue(target);
+    $('symbolTargetRow').hidden=!state.typeDesigns.profiles[target.id];
+    syncMarkTools(target);
     for(const [name,key] of [['symbolSource','source'],['symbolGlyph','glyph'],['symbolFont','font'],['symbolPresentation','presentation'],['symbolBackdrop','backdrop'],['symbolImageMode','imageMode']])$(name).value=symbol[key];
     $('symbolRemoveWhite').checked=symbol.removeWhite;
     $('symbolInkMode').value=symbol.color?'custom':'auto';$('symbolColor').value=symbol.color||'#000000';
@@ -300,18 +399,17 @@
     const suggestions=(profile.choices||[profile.glyph]).map(glyph=>{
       const button=element('button',symbols.presentation(glyph,'text'));button.type='button';
       button.style.fontFamily=symbols.fontStack(symbol);
-      button.onclick=()=>{setting.symbol={...symbol,source:'text',glyph};changed();syncSymbolEditor();renderChart();};
+      button.onclick=()=>{setGlyph({...symbol,source:'text',glyph},target);syncSymbolEditor();renderChart();};
       return button;
     });
     $('symbolCandidates').replaceChildren(...suggestions);
-    dropDownOptions($('symbolPreset'),[['','No saved design'],...state.templates.map(preset=>[preset.id,preset.name])],setting.presetId);
-    $('symbolDesignStatus').textContent=current()?'Selected card · '+current().title:'';
-    previewSymbol();
+    previewSymbol().catch(console.error);
   }
 
   async function previewSymbol() {
-    const token=++previewRevision,id=$('symbolProfile').value,symbol=symbols.profileSymbol(state,id);
+    const token=++previewRevision,target=editedGlyph(),id=target.mark?'collection':target.id,symbol=glyphValue(target);
     await Promise.all([
+      paintAlignment(),
       paintSymbol($('symbolLarge'),symbol,id),
       paintSymbol($('symbolSegoe'),{...symbol,source:'text',font:'Segoe UI Symbol'},id,95),
       paintSymbol($('symbolTimes'),{...symbol,source:'text',font:'Times New Roman'},id,95)
@@ -320,9 +418,109 @@
     if(token===previewRevision)$('symbolFontStatus').textContent=status;
   }
 
+  const sourceCard=()=>cardById($('standardSource').value);
+  function sourceOptions() {
+    const id=$('symbolProfile').value;
+    const cards=state.cards.filter(card=>!card.catalogUnlisted&&types.matching(card,id));
+    const selected=cards.find(card=>card.id===$('standardSource').value)||cards.find(card=>card.id===currentId)||cards[0];
+    dropDownOptions($('standardSource'),cards.length?cards.map(card=>[card.id,card.title||'Untitled']):[['','Create or open a card of this type']],selected?.id||'');
+    for(const key of ['symbolSaveDesign','symbolApplyDesign','standardEditLayout','editSourceColors'])$(key).disabled=!selected;
+    $('editSourceColors').textContent=selected?'Edit card colors · '+(selected.title||'Untitled'):'Edit card colors';
+  }
+
+  async function paintStartingCard() {
+    const token=++designPreviewRevision,id=$('symbolProfile').value;
+    const card=window.MNC_typePreviewCard?.(id)||draftFor(id);
+    const image=await cardCanvas(card,{rounded:true});
+    if(token!==designPreviewRevision||$('typeStandardPreviewPanel').hidden)return;
+    const canvas=$('typeStandardPreview'),ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  }
+
+  let previewQueued=false;
+  function previewStartingCard() {
+    if(previewQueued)return;
+    previewQueued=true;
+    requestAnimationFrame(()=>{
+      previewQueued=false;
+      if(!$('typeStandardPreviewPanel').hidden)paintStartingCard().catch(console.error);
+    });
+  }
+
+  function editPalette() {
+    const id=$('symbolProfile').value,palette=types.palette(draftFor(id)),setting=selectedProfile();
+    $('resetTypeColors').disabled=!Object.keys(setting.palette).length;
+    $('typeColorFields').replaceChildren(...colorFields.map(([key,label,role])=>{
+      const row=element('div',undefined,'type-color-row');
+      const picker=element('input');picker.type='color';picker.value=palette[key];
+      picker.setAttribute('aria-label',label+' color picker');
+      const description=element('div',undefined,'type-color-label');
+      description.append(element('strong',label),element('span',role));
+      const hex=element('input');hex.type='text';hex.maxLength=7;hex.spellcheck=false;hex.value=picker.value.toUpperCase();
+      hex.setAttribute('aria-label',label+' hex color');
+      const update=(value,formatHex=true)=>{
+        setting.palette[key]=value.toLowerCase();
+        picker.value=value;
+        if(formatHex)hex.value=value.toUpperCase();
+        $('resetTypeColors').disabled=false;
+        setStatus('typeColorStatus','Starting colors updated.');
+        persist();previewStartingCard();
+      };
+      picker.oninput=()=>update(picker.value);
+      const hexValue=()=>'#'+hex.value.trim().replace(/^#/,'');
+      hex.oninput=()=>{
+        const value=hexValue();
+        if(front.hex(value))update(value,false);
+      };
+      hex.onchange=()=>{
+        const value=hexValue();
+        if(!front.hex(value)){
+          setStatus('typeColorStatus','Enter a six-digit hex color for '+label.toLowerCase()+'.',true);
+          hex.value=picker.value.toUpperCase();
+          return;
+        }
+        update(value);
+      };
+      row.append(picker,description,hex);
+      return row;
+    }));
+  }
+
+  function editStartingLayout() {
+    const id=$('symbolProfile').value,setting=selectedProfile(),profile=playableProfile(id);
+    const entries=state.templates.filter(template=>
+      (!template.typeDefaultFor||template.typeDefaultFor===id||template.id===setting.presetId)&&
+      (!['Game Frame','Game Full Art'].includes(template.template)||game.roles[profile.family]));
+    const defaultLabel=profile.category==='Creature'&&id!=='creature'?'Inherit Creature layout':'Use built-in layout';
+    dropDownOptions($('symbolPreset'),[['',defaultLabel],...entries.map(template=>[template.id,template.name])],setting.presetId||'');
+  }
+
+  function showPane(requested) {
+    const isType=!!state.typeDesigns.profiles[$('symbolProfile').value];
+    standardsPane=isType?requested:'glyphs';
+    for(const button of document.querySelectorAll('button[data-standard-tab]')){
+      button.disabled=!isType&&button.dataset.standardTab!=='glyphs';
+      button.setAttribute('aria-pressed',String(button.dataset.standardTab===standardsPane));
+    }
+    $('standardColors').hidden=standardsPane!=='colors';
+    $('standardLayout').hidden=standardsPane!=='layout';
+    $('standardGlyphs').hidden=$('standardGlyphTools').hidden=standardsPane!=='glyphs';
+    $('typeStandardPreviewPanel').hidden=standardsPane==='glyphs';
+    designPreviewRevision++;
+    alignmentDrag=null;
+    if(standardsPane==='glyphs'){
+      syncSymbolEditor();renderChart();window.MNC_refreshSymbolContext?.({sync:true});
+    }else{
+      sourceOptions();
+      if(standardsPane==='colors')editPalette();
+      else editStartingLayout();
+      previewStartingCard();window.MNC_refreshSymbolContext?.();
+    }
+  }
+
   function renderStandards(id=$('symbolProfile').value||'hero') {
     dropDownOptions($('symbolProfile'),symbolCanvases().map(profile=>[profile.id,profile.name]),id);
-    syncSymbolEditor();renderChart();window.MNC_refreshSymbolContext?.({sync:true});
+    showPane(standardsPane);
   }
   function renderDesigns(){
     if($('designStandards').hidden)renderGallery();
@@ -335,46 +533,63 @@
     button.setAttribute('aria-expanded',String(open));
     button.textContent=open?'Back to card types':'Edit type standards';
   }
-  function renderLanguage({assetId='',profileId}={}) {
+  function renderLanguage({assetId='',profileId,pane='glyphs'}={}) {
     designArtwork=artById(assetId)?.id||'';
     showStandards(Boolean(profileId));
-    if(profileId)renderStandards(profileId);
-    else{
-      renderGallery();
-      $('designGallery').scrollTop=0;
-      window.MNC_refreshSymbolContext?.();
+    if(profileId){
+      standardsPane=pane;
+      $('symbolTarget').value='icon';
+      $('standardSource').value=currentId||'';
+      setStatus('typeColorStatus','');setStatus('symbolDesignStatus','');
+      renderStandards(profileId);
+    }else{
+      renderGallery();$('designGallery').scrollTop=0;window.MNC_refreshSymbolContext?.();
     }
   }
+
   $('toggleDesignStandards').onclick=()=>{
     showStandards($('designStandards').hidden);
+    if(!$('designStandards').hidden)standardsPane='colors';
     renderDesigns();
     if($('designStandards').hidden)window.MNC_refreshSymbolContext?.();
   };
-  $('createArchiveCard').onclick=()=>createCard(designArtwork,'Archive');
-  $('symbolProfile').onchange=()=>{syncSymbolEditor();renderChart();window.MNC_refreshSymbolContext?.({sync:true});};
+  for(const button of document.querySelectorAll('button[data-standard-tab]'))button.onclick=()=>showPane(button.dataset.standardTab);
+  $('createOtherCard').onclick=()=>createCard(designArtwork,$('otherCardType').value);
+  $('symbolProfile').onchange=()=>{
+    $('symbolTarget').value='icon';
+    setStatus('typeColorStatus','');setStatus('symbolDesignStatus','');
+    showPane(standardsPane);
+  };
+  $('symbolTarget').onchange=()=>{alignmentDrag=null;syncSymbolEditor();window.MNC_refreshSymbolContext?.({sync:true});};
+  $('resetTypeMark').onclick=()=>{setGlyph(null);syncSymbolEditor();};
   dropDownOptions($('symbolFont'),symbols.fonts.map(font=>[font,font]));
   dropDownOptions($('cardSymbolFont'),symbols.fonts.map(font=>[font,font]));
-  const controls={symbolSource:'source',symbolGlyph:'glyph',symbolFont:'font',symbolPresentation:'presentation',
+  const controls={symbolSource:'source',symbolFont:'font',symbolPresentation:'presentation',
     symbolBackdrop:'backdrop',symbolAsset:'assetId',symbolImageMode:'imageMode',symbolRemoveWhite:'removeWhite'};
   for(const [id,key] of Object.entries(controls)){
     $(id).onchange=()=>{
-      const setting=selectedProfile(),value=$(id).type==='checkbox'?$(id).checked:$(id).value;
-      setting.symbol={...symbols.profileSymbol(state,$('symbolProfile').value),[key]:value};
-      changed();syncSymbolEditor();renderChart();
+      const field=$(id),value=field.type==='checkbox'?field.checked:field.value;
+      setGlyph({...glyphValue(),[key]:value});syncSymbolEditor();renderChart();
     };
   }
-  $('symbolInkMode').onchange=()=>{
-    selectedProfile().symbol.color=$('symbolInkMode').value==='custom'?$('symbolColor').value:'';
-    changed();syncSymbolEditor();renderChart();
+  $('symbolGlyph').oninput=()=>{
+    setGlyph({...glyphValue(),glyph:$('symbolGlyph').value});
+    syncMarkTools();
+    previewSymbol().catch(console.error);renderChart();
   };
-  $('symbolColor').onchange=()=>{selectedProfile().symbol.color=$('symbolColor').value;changed();previewSymbol();renderChart();};
+  $('symbolInkMode').onchange=()=>{
+    setGlyph({...glyphValue(),color:$('symbolInkMode').value==='custom'?$('symbolColor').value:''});
+    syncSymbolEditor();renderChart();
+  };
+  $('symbolColor').onchange=()=>{setGlyph({...glyphValue(),color:$('symbolColor').value});syncSymbolEditor();renderChart();};
 
   async function uploadSymbol(file,input) {
-    const id=$('symbolProfile').value;
+    const target=editedGlyph(),symbol=glyphValue(target);
     try{
-      const asset=await symbols.storeGlyph(file,id+'-'+Date.now()+'.png');
-      state.visualLanguage.profiles[id].symbol={...symbols.profileSymbol(state,id),source:'image',assetId:asset.id};
-      changed();if($('symbolProfile').value===id)syncSymbolEditor();renderChart();
+      const asset=await symbols.storeGlyph(file,target.id+'-'+Date.now()+'.png');
+      setGlyph({...symbol,source:'image',assetId:asset.id},target);
+      if(activeTab==='visualLanguage'&&standardsPane==='glyphs')syncSymbolEditor();
+      renderChart();
       setStatus('symbolStatus','Glyph saved and linked.');
     }catch(error){setStatus('symbolStatus',error.message,true);}
     finally{input.value='';}
@@ -383,24 +598,24 @@
     const file=event.target.files[0];if(file)uploadSymbol(file,event.target);
   };
   $('symbolFreeze').onclick=async()=>{
-    const id=$('symbolProfile').value,button=$('symbolFreeze');button.disabled=true;
+    const target=editedGlyph(),symbol=glyphValue(target),button=$('symbolFreeze');button.disabled=true;
     try{
       const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
-      const symbol=symbols.profileSymbol(state,id);
-      await paintSymbol(canvas,{...symbol,color:'#000000'},id,400);
+      const id=target.mark?'collection':target.id;
+      await paintSymbol(canvas,{...symbol,color:'#000000',backdrop:'none',offsetX:0,offsetY:0},id,400);
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       const asset=await symbols.storeGlyph(blob,'frozen-'+id+'-'+Date.now()+'.png');
-      state.visualLanguage.profiles[id].symbol={...symbol,source:'image',assetId:asset.id};
-      changed();syncSymbolEditor();renderChart();
+      setGlyph({...symbol,source:'image',assetId:asset.id},target);
+      if(activeTab==='visualLanguage'&&standardsPane==='glyphs')syncSymbolEditor();
+      renderChart();
       setStatus('symbolStatus','Saved the current appearance as a 512 × 512 PNG.');
     }catch(error){setStatus('symbolStatus',error.message,true);}
     finally{button.disabled=false;}
   };
   $('symbolFindDrawing').onclick=()=>{
-    const id=$('symbolProfile').value,matches=symbols.matchingGlyphs(state,id);
+    const target=editedGlyph(),id=target.mark?'collection':target.id,matches=symbols.matchingGlyphs(state,id);
     if(matches.length!==1){setStatus('symbolStatus',matches.length?'Several drawings match. Choose one in Glyph image.':'No matching PNG found in the glyph folder.');return;}
-    selectedProfile().symbol={...symbols.profileSymbol(state,id),source:'image',assetId:matches[0].id};
-    changed();syncSymbolEditor();renderChart();
+    setGlyph({...glyphValue(target),source:'image',assetId:matches[0].id},target);syncSymbolEditor();renderChart();
   };
   $('symbolRefresh').onclick=async()=>{
     try{
@@ -410,20 +625,36 @@
   };
 
   function applyStandard(card,id) {
-    const setting=state.visualLanguage.profiles[id],preset=state.templates.find(item=>item.id===setting?.presetId);
-    if(preset)applyDesignPreset(card,preset);
-    editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
+    applyTypeDesignPreset(card,id,{followSymbols:true});
     persist();refreshStudio();
   }
-  $('symbolPreset').onchange=()=>{selectedProfile().presetId=$('symbolPreset').value;changed();renderChart();};
+  $('resetTypeColors').onclick=()=>{
+    selectedProfile().palette={};
+    persist();editPalette();previewStartingCard();setStatus('typeColorStatus','Using the starting layout colors.');
+  };
+  $('editSourceColors').onclick=()=>{
+    const card=sourceCard();if(!card)return;
+    window.MNC_openStudioCard(card);editSection('art');
+  };
+  $('symbolPreset').onchange=()=>{
+    selectedProfile().presetId=$('symbolPreset').value;
+    persist();previewStartingCard();setStatus('symbolDesignStatus','Starting layout saved for new cards.');
+  };
+  $('standardSource').onchange=()=>setStatus('symbolDesignStatus','');
   $('symbolApplyDesign').onclick=()=>{
-    if(current())applyStandard(current(),$('symbolProfile').value);
+    const card=sourceCard();if(!card)return;
+    applyStandard(card,$('symbolProfile').value);
+    setStatus('symbolDesignStatus','Applied the type default to '+card.title+'.');
   };
   $('symbolSaveDesign').onclick=()=>{
-    const card=current();if(!card)return;
-    const preset=saveDesignPreset(card);
-    if(!preset)return;
-    selectedProfile().presetId=preset.id;changed();syncSymbolEditor();renderChart();
+    const card=sourceCard(),id=$('symbolProfile').value;
+    if(!card||!captureTypeDesign(card,id))return;
+    editStartingLayout();previewStartingCard();
+    setStatus('symbolDesignStatus','Saved '+card.title+' as the starting layout for '+planModel.profile(id).name+'.');
+  };
+  $('standardEditLayout').onclick=()=>{
+    const card=sourceCard();if(!card)return;
+    currentId=card.id;tab('layoutDesigner');
   };
   $('symbolExportChart').onclick=async()=>{
     const profiles=symbolCanvases(),canvas=document.createElement('canvas');
@@ -559,7 +790,7 @@
   };
   $('setGlyph').oninput=$('setGlyph').onchange=()=>updateCardSymbol('collection',{glyph:$('setGlyph').value,source:'text',assetId:''});
   $('setGlyphAsset').onchange=()=>updateCardSymbol('collection',{assetId:$('setGlyphAsset').value,source:$('setGlyphAsset').value?'image':'text'});
-  $('cardSymbolToChart').onclick=()=>openProfile(planModel.profileFor(current()));
+  $('cardSymbolToChart').onclick=()=>openProfile(planModel.profileFor(current()),'glyphs');
   $('cardEditStandard').onclick=()=>openProfile(planModel.profileFor(current()));
   $('cardApplyStandard').onclick=()=>{const card=current();if(card)applyStandard(card,planModel.profileFor(card));};
   $('cardSymbolUpload').onchange=async event=>{

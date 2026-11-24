@@ -6,8 +6,10 @@ globalThis.MNC_SYMBOLS = (() => {
   const clean=value=>String(value??'').replace(/[\ufe0e\ufe0f]/g,'').trim();
   const monoStack='"MNC Symbols", "MNC Symbols One", "MNC Emoji Fallback", "DejaVu Sans", serif';
   const safeColor=value=>/^#[0-9a-f]{6}$/i.test(value||'')?value:'';
+  const backdrops=['none','circle','square','pill','diamond','shield'];
+  const alignment=value=>Number.isFinite(value)?Math.max(-50,Math.min(50,Math.round(value))):0;
   const defaults=id=>({source:'text',glyph:MNC_SET_PLAN.profile(id)?.glyph||'◆',font:'Segoe UI Symbol',
-    presentation:'text',assetId:'',imageMode:'tint',removeWhite:true,color:'',backdrop:'none'});
+    presentation:'text',assetId:'',imageMode:'tint',removeWhite:true,color:'',backdrop:'none',offsetX:0,offsetY:0});
 
   function normalize(value,id='') {
     const base=defaults(id),v=value||{};
@@ -16,7 +18,8 @@ globalThis.MNC_SYMBOLS = (() => {
       font:fonts.includes(v.font)?v.font:base.font,
       presentation:v.presentation==='emoji'?'emoji':'text',assetId:typeof v.assetId==='string'?v.assetId:'',
       imageMode:v.imageMode==='original'?'original':'tint',removeWhite:v.removeWhite!==false,
-      color:safeColor(v.color),backdrop:v.backdrop==='circle'?'circle':'none'};
+      color:safeColor(v.color),backdrop:backdrops.includes(v.backdrop)?v.backdrop:'none',
+      offsetX:alignment(v.offsetX),offsetY:alignment(v.offsetY)};
     if(symbol.source==='builtin'&&MNC_SET_PLAN.profile(v.builtinId))symbol.builtinId=v.builtinId;
     return symbol;
   }
@@ -24,7 +27,7 @@ globalThis.MNC_SYMBOLS = (() => {
   function restore(project) {
     const prior=project.visualLanguage||{};
     const previousCritic={...defaults('critic'),glyph:'📰'};
-    project.visualLanguage={version:2,profiles:Object.fromEntries(
+    project.visualLanguage={version:3,profiles:Object.fromEntries(
       [...MNC_SET_PLAN.definitions,...MNC_SET_PLAN.auxiliaries].map(({id})=>{
         const value=prior.profiles?.[id];
         const symbol=normalize(value?.symbol,id);
@@ -33,6 +36,8 @@ globalThis.MNC_SYMBOLS = (() => {
           symbol.glyph=defaults(id).glyph;
         }
         return [id,{symbol,presetId:String(value?.presetId||''),
+          setMark:value?.setMark?normalize(value.setMark,'collection'):null,
+          palette:globalThis.MNC_TYPE_DESIGN?.normalizePalette(value?.palette)||{},
           placement:globalThis.MNC_FRONT?MNC_FRONT.settings(value?.placement):{offsets:{},text:{}}}];
       }))};
     for(const card of project.cards){
@@ -57,13 +62,22 @@ globalThis.MNC_SYMBOLS = (() => {
     return symbol;
   }
 
+  function typeMark(project,type) {
+    const settings=project.visualLanguage?.profiles;
+    const own=settings?.[type]?.setMark;
+    const profile=MNC_SET_PLAN.profile(type);
+    const inherited=profile?.category==='Creature'?settings?.creature?.setMark:null;
+    return own||inherited?normalize(own||inherited,'collection'):profileSymbol(project,'collection');
+  }
+
   function cardSymbol(project,card,place='type') {
     const collection=place==='collection', id=collection?'collection':MNC_SET_PLAN.profileFor(card);
     const policy=card[collection?'collectionSymbolMode':'typeSymbolMode'];
     if(policy==='hidden')return {symbol:{...defaults(id),source:'hidden'},id};
     const override=card[collection?'collectionSymbol':'typeSymbol'];
     if(override)return {symbol:normalize(override,id),id};
-    const standard=profileSymbol(project,id);
+    const promo=collection&&MNC_CARD_METADATA.isPromo(card,project.catalogCollections?.[card.collectionId]);
+    const standard=promo?typeMark(project,MNC_SET_PLAN.profileFor(card)):profileSymbol(project,id);
     if(policy==='standard')return {symbol:standard,id};
     const assetId=collection?card.setGlyphAsset:card.typeIconAsset;
     const glyph=collection?card.setGlyph:MNC_CARD_METADATA.customIcon(card);
@@ -201,6 +215,8 @@ globalThis.MNC_SYMBOLS = (() => {
   async function draw(ctx,symbol,x,y,size,ink,id='') {
     const s=normalize(symbol,id);
     if(!size||s.source==='hidden')return false;
+    x+=s.offsetX*size/100;
+    y+=s.offsetY*size/100;
     const color=s.color||ink;
     if(s.source==='image'){
       const image=await preparedImage(artById(s.assetId),s,color);
@@ -263,17 +279,47 @@ globalThis.MNC_SYMBOLS = (() => {
     return output;
   }
 
-  async function drawCard(ctx,card,x,y,size,ink,place='type') {
-    const {symbol,id}=cardSymbol(state,card,place);
-    if(symbol.backdrop==='circle'&&symbol.source!=='hidden'){
-      ctx.save();ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);
-      ctx.fillStyle='#e3d4b5';ctx.fill();ctx.restore();
-      return draw(ctx,symbol,x,y,size*.75,'#20251e',id);
-    }
-    return draw(ctx,symbol,x,y,size,ink,id);
+  function badgeScale(shape){
+    return {none:1,circle:.75,square:.75,pill:.68,diamond:.58,shield:.64}[shape]||1;
   }
 
-  return {fonts,normalize,defaults,restore,profileSymbol,cardSymbol,cardMode,setCardMode,setCardSymbol,
-    glyphAssets,imageOptions,storeGlyph,matchingGlyphs,fontStack,presentation,fontStatus,ready,draw,drawCard,
-    centeredPreview,preparedImage};
+  async function drawBadge(ctx,symbol,x,y,size,ink,id='') {
+    const s=normalize(symbol,id),shape=s.backdrop,r=size/2;
+    if(!size||s.source==='hidden')return false;
+    if(shape==='none')return draw(ctx,s,x,y,size,ink,id);
+    ctx.save();
+    ctx.beginPath();
+    if(shape==='circle')ctx.arc(x,y,r,0,Math.PI*2);
+    else if(shape==='square')ctx.roundRect(x-r,y-r,size,size,r*.22);
+    else if(shape==='pill')ctx.roundRect(x-r,y-r*.68,size,size*.68,r*.68);
+    else if(shape==='diamond'){
+      ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath();
+    }else{
+      ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r*.85,y+r*.34);
+      ctx.quadraticCurveTo(x+r*.57,y+r*.78,x,y+r);
+      ctx.quadraticCurveTo(x-r*.57,y+r*.78,x-r*.85,y+r*.34);
+      ctx.closePath();
+    }
+    ctx.fillStyle='#e3d4b5';ctx.fill();ctx.restore();
+    return draw(ctx,{...s,offsetX:0,offsetY:0},x+s.offsetX*size/100,y+s.offsetY*size/100,
+      size*badgeScale(shape),'#20251e',id);
+  }
+
+  async function centerOffsets(symbol,id=''){
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true}),size=144;
+    const s=normalize(symbol,id);
+    await draw(ctx,{...s,offsetX:0,offsetY:0},128,128,size*badgeScale(s.backdrop),'#000000',id);
+    const box=MNC_FRONT_EFFECTS.alphaBounds(ctx);
+    return {offsetX:box?alignment((128-box.x-box.w/2)*100/size):0,offsetY:box?alignment((128-box.y-box.h/2)*100/size):0};
+  }
+
+  async function drawCard(ctx,card,x,y,size,ink,place='type') {
+    const {symbol,id}=cardSymbol(state,card,place);
+    return drawBadge(ctx,symbol,x,y,size,ink,id);
+  }
+
+  return {fonts,normalize,defaults,restore,profileSymbol,typeMark,cardSymbol,cardMode,setCardMode,setCardSymbol,
+    glyphAssets,imageOptions,storeGlyph,matchingGlyphs,fontStack,presentation,fontStatus,ready,draw,drawBadge,drawCard,
+    centeredPreview,centerOffsets,preparedImage};
 })();

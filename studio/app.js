@@ -7,7 +7,7 @@ const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const ascii=s=>String(s||'').normalize('NFKD').replace(/[^\x20-\x7e]/g,'?');
 const slug=s=>String(s||'file').replace(/[^a-z0-9_-]+/gi,'_').slice(0,70);
-const storageKey = 'mnc-creative-suite-friend-v1:' + new URL('./', location.href).pathname;
+const storageKey = window.MNC_EDITION?.storageKey||'mnc-creative-suite-v09';
 const cardSelectionKey=storageKey+':active-card';
 const projectVersion=9;
 const catalog = window.MNC_CATALOG;
@@ -89,18 +89,20 @@ function assetURI(a){if(!a)return ''; if(a.dataURI)return a.dataURI;const key=a.
 function imgLoad(uri){if(!uri)return Promise.resolve(null);if(imageCache.has(uri))return imageCache.get(uri);const promise=new Promise(resolve=>{let im=new Image();im.onload=()=>{imageSizes.set(uri,{w:im.naturalWidth||im.width,h:im.naturalHeight||im.height});resolve(im);};im.onerror=()=>resolve(null);im.src=uri;});imageCache.set(uri,promise);return promise}
 let saveTimer=null;
 function cardSaveStatus(message) {
-  const status=$('cardSaveStatus');
-  if(status.textContent!==message)status.textContent=message;
+  for(const id of ['cardSaveStatus','designSaveStatus']){
+    const status=$(id);
+    if(status.textContent!==message)status.textContent=message;
+  }
 }
 function writeAutosave() {
   clearTimeout(saveTimer);
   saveTimer=null;
   try {
     localStorage.setItem(storageKey,JSON.stringify(state));
-    cardSaveStatus('Saved in this browser');
+    if(!window.MNC_DISK?.connected)cardSaveStatus('Saved in this browser');
     if(!window.MNC_DISK?.connected)$('saveStatus').textContent='Project saved in this browser.';
   } catch(error) {
-    cardSaveStatus('Couldn’t save in this browser. Export a project backup.');
+    if(!window.MNC_DISK?.connected)cardSaveStatus('Couldn’t save in this browser. Export a project backup.');
     if(!window.MNC_DISK?.connected)$('saveStatus').textContent='Browser storage is full or unavailable. Export a project JSON to keep your edits.';
   }
   window.MNC_DISK?.save();
@@ -184,29 +186,39 @@ const presetAppearanceFields=[
   'typeIconGlyph','typeIconAsset','typeSymbol','collectionSymbol','typeSymbolMode','collectionSymbolMode','artworkProfile','overlayAssetId','overlayOpacity','foilRecipe','prismRecipe'
 ];
 
-function saveDesignPreset(c,{defaultName,name:enteredName}={}) {
-  const name=(enteredName??prompt('Name this layout preset:',defaultName||(c.title||'Untitled')+' layout'))?.trim();
-  if(!name)return;
-  const existing=state.templates.find(t=>t.name.toLowerCase()===name.toLowerCase());
-  if(existing&&!confirm('Replace the design preset “'+existing.name+'”?'))return;
+function designPreset(c,id,name,{typeDefaultFor}={}) {
   const appearance=Object.fromEntries(presetAppearanceFields.map(key=>[key,c[key]??null]));
   appearance.setGlyph=c.setGlyph??collectionFor(c)?.glyph??(game.isGameCard(c)?'✦':'');
   appearance.setGlyphAsset=c.setGlyphAsset||'';
   appearance.typeIconGlyph=MNC_CARD_METADATA.customIcon(c)||null;
-  const template=deep({
-    id:existing?.id||uniqueId('LAY-',state.templates),name,template:c.template,
+  return deep({
+    id,name,template:c.template,typeDefaultFor,
     titlePosition:c.titlePosition||[.075,.075],creditPosition:c.creditPosition||[.07,.958],
     microPosition:c.microPosition||[.93,.958],layers:c.layers||[],useHandGlyphs:!!c.useHandGlyphs,
     artWindow:c.artWindow||{x:.07,y:.14,w:.86,h:.52},artShape:c.artShape||'rounded',
     artBorder:c.artBorder||'solid',artRadius:c.artRadius??24,nameplate:c.nameplate||'solid',
-    artShapeId:c.artShapeId||'',nameplateShapeId:c.nameplateShapeId||'',frontLayout:c.frontLayout||null,
+    artShapeId:c.artShapeId||'',nameplateShapeId:c.nameplateShapeId||'',
+    frontLayout:typeDefaultFor?front.settings(front.values(c)):c.frontLayout||null,
     layoutDesign:c.layoutDesign||null,
     appearance
   });
-  if(existing)state.templates[state.templates.indexOf(existing)]=template;
+}
+
+function writeDesignPreset(template) {
+  const index=state.templates.findIndex(entry=>entry.id===template.id);
+  if(index>=0)state.templates[index]=template;
   else state.templates.push(template);
   renderTemplateOptions(template.id);
   persist();
+}
+
+function saveDesignPreset(c,{defaultName,name:enteredName}={}) {
+  const name=(enteredName??prompt('Name this layout preset:',defaultName||(c.title||'Untitled')+' layout'))?.trim();
+  if(!name)return;
+  const existing=state.templates.find(t=>!t.typeDefaultFor&&t.name.toLowerCase()===name.toLowerCase());
+  if(existing&&!confirm('Replace the design preset “'+existing.name+'”?'))return;
+  const template=designPreset(c,existing?.id||uniqueId('LAY-',state.templates),name);
+  writeDesignPreset(template);
   $('presetStatus').textContent='Saved layout preset “'+name+'”.';
   return template;
 }
@@ -257,22 +269,44 @@ function applyDesignPreset(c,t,{refresh=true}={}) {
   return true;
 }
 
+function designProfileIds(card,id=MNC_SET_PLAN.profileFor(card)){
+  return card.family==='Character'&&game.categoryFor(card.characterCategory)?.id==='creature'&&id!=='creature'
+    ?['creature',id]:[id];
+}
+
 function typeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card)){
   const profiles=state.visualLanguage?.profiles||{};
-  const fallback=card.family==='Character'&&game.categoryFor(card.characterCategory)?.id==='creature'?'creature':'';
-  const presetId=profiles[id]?.presetId||profiles[fallback]?.presetId;
+  const presetId=designProfileIds(card,id).reverse().map(key=>profiles[key]?.presetId).find(Boolean);
   return state.templates.find(item=>item.id===presetId);
 }
 
-function applyTypeDesignPreset(card,id){
+function applyTypeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card),{followSymbols=false}={}){
   const preset=typeDesignPreset(card,id);
-  if(!preset||(['Game Frame','Game Full Art'].includes(preset.template)&&!game.role(card)))return false;
-  applyDesignPreset(card,preset,{refresh:false});
-  editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
-  return true;
+  const compatible=preset&&(!['Game Frame','Game Full Art'].includes(preset.template)||game.role(card));
+  if(compatible)applyDesignPreset(card,preset,{refresh:false});
+  const palette=Object.assign({},...designProfileIds(card,id).map(key=>state.visualLanguage.profiles[key]?.palette));
+  MNC_TYPE_DESIGN.applyPalette(card,palette);
+  if(compatible||followSymbols)editCardFields(card,{typeSymbol:null,collectionSymbol:null,typeSymbolMode:'standard',collectionSymbolMode:'standard'});
+  return !!compatible||Object.keys(palette).length>0;
+}
+
+function captureTypeDesign(card,id){
+  const setting=state.visualLanguage.profiles[id],type=MNC_SET_PLAN.profile(id);
+  if(!setting||!type||!MNC_TYPE_DESIGN.matching(card,id))return null;
+  const previous=state.templates.find(item=>item.id===setting.presetId&&item.typeDefaultFor===id);
+  const template=designPreset(card,previous?.id||uniqueId('LAY-',state.templates),type.name+' · starting layout',{typeDefaultFor:id});
+  const {symbol}=MNC_SYMBOLS.cardSymbol(state,card);
+  const {symbol:mark}=MNC_SYMBOLS.cardSymbol(state,card,'collection');
+  setting.symbol=deep(symbol);
+  setting.setMark=deep(mark);
+  setting.palette={};
+  setting.presetId=template.id;
+  writeDesignPreset(template);
+  return template;
 }
 
 function attachListeners(){
+ $('catalogStarterLink').hidden=!window.MNC_EDITION?.starterWorkbook;
  $('assetSearch').oninput=renderLibrary;$('assetFilter').onchange=renderLibrary;
  $('newArtwork').addEventListener('change', async e=>{const fs=[...e.target.files];await importImages(fs);e.target.value=''});
  $('cardSearch').oninput=renderCardList; $('cardScope').onchange=renderCardList;
