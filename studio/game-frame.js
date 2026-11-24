@@ -2,10 +2,7 @@
 
 (() => {
   const game = window.MNC_GAME;
-  const frames = {
-    double:'Double rule', single:'Single rule', cut:'Cut corners',
-    film:'Film edge', none:'No outline'
-  };
+  const frames = MNC_OUTER_BORDER.classicStyles;
   const surfaces = {
     ink:{base:'#191b18', panel:'#212420', ink:'#f4ecda', quiet:'#b7b3a4'},
     paper:{base:'#e8deca', panel:'#f2e7d2', ink:'#27271f', quiet:'#595647'},

@@ -2,6 +2,7 @@
 
 globalThis.MNC_OUTER_BORDER=(()=>{
   const styles=[['classic','Classic frame'],['band','Solid band'],['double','Double band'],['bevel','Beveled band']];
+  const classicStyles={double:'Double rule',single:'Single rule',cut:'Cut corners',film:'Film edge',none:'No outline'};
   const contours=[['match','Match card'],['rounded','Rounded'],['cut','Cut corners'],['square','Square']];
   const channels=[['alpha','Image transparency'],['light','Keep light areas'],['dark','Keep dark areas']];
   const mappings=[['stretch','Stretch to frame'],['cover','Crop to fill'],['tile','Tile']];
@@ -36,6 +37,38 @@ globalThis.MNC_OUTER_BORDER=(()=>{
 
   function settings(card){
     return MNC_LAYOUT.get(card,'border')?.frame||defaults;
+  }
+
+  function setFrame(card,patch){
+    const layer=MNC_LAYOUT.layerEdit(card,'border'),prior=settings(card);
+    const next=normalize({...prior,...patch});
+    if((prior.style==='classic')!==(next.style==='classic')){
+      for(const key of ['x','y','w','h'])delete layer[key];
+    }
+    layer.frame=next;
+  }
+
+  function normalizeStandard(value){
+    if(!value||typeof value!=='object')return null;
+    const layer=MNC_LAYOUT.normalize({version:1,layers:{border:value.layer}}).layers.border||{};
+    const result={layer};
+    if(Object.hasOwn(classicStyles,value.frameStyle))result.frameStyle=value.frameStyle;
+    if(Number.isFinite(value.frameWidth))result.frameWidth=clamp(value.frameWidth,2,24);
+    if(Number.isFinite(value.frameRadius))result.frameRadius=clamp(value.frameRadius,0,80);
+    return result;
+  }
+
+  function standard(card){
+    const classic=game.isGameCard(card)?{
+      frameStyle:card.frameStyle||'double',frameWidth:card.frameWidth??13,frameRadius:card.frameRadius??27
+    }:{};
+    return normalizeStandard({layer:MNC_LAYOUT.get(card,'border'),...classic});
+  }
+
+  function applyStandard(card,border){
+    if(Object.keys(border.layer).length)MNC_LAYOUT.editable(card).layers.border=deep(border.layer);
+    else delete card.layoutDesign?.layers?.border;
+    for(const key of ['frameStyle','frameWidth','frameRadius'])if(Object.hasOwn(border,key))card[key]=border[key];
   }
 
   function maskSettings(card){
@@ -254,6 +287,6 @@ globalThis.MNC_OUTER_BORDER=(()=>{
     }finally{ctx.restore();}
   }
 
-  return {styles,contours,channels,mappings,maskDefaults,normalize,normalizeMask,settings,maskSettings,visible,
-    color,hitWidth,loadMask,addLayer,drawMask};
+  return {styles,classicStyles,contours,channels,mappings,maskDefaults,normalize,normalizeMask,settings,setFrame,
+    normalizeStandard,standard,applyStandard,maskSettings,visible,color,hitWidth,loadMask,addLayer,drawMask};
 })();
