@@ -16,6 +16,19 @@ globalThis.MNC_GAME = (() => {
     {id:'alien',name:'Alien',color:'#528e8b',glyph:'alien'}
   ];
   const core=['hero','villain','creature'];
+  const villainSubtypes=['Anti-hero','Agent of Chaos'];
+
+  function villainSubtypeOptions(project){
+    const names=new Map();
+    const saved=Array.isArray(project.villainSubtypes)?project.villainSubtypes:[];
+    const fromCards=(project.cards||[]).filter(card=>categoryFor(card.characterCategory)?.id==='villain').map(card=>card.characterSubtype);
+    for(const entry of [...villainSubtypes,...saved,...fromCards]){
+      if(typeof entry!=='string')continue;
+      const name=entry.trim().slice(0,40),key=name.toLowerCase();
+      if(name&&!names.has(key))names.set(key,name);
+    }
+    return [...names.values()];
+  }
   const winsOver={hero:'villain',villain:'creature',creature:'hero'};
   const redshirtRule='Play up to two Redshirts. Solo, draw with a lone Redshirt. A pair draws against Hero, Sidekick or another pair. Only the lead uses its special rule. A defeated pair counts as two losses.';
   const defeatLimit=3;
@@ -233,5 +246,5 @@ globalThis.MNC_GAME = (() => {
 
   return {categories,creatures,core,profiles,roles,timingLabel,defeatLimit,countDefeats,golden,release,redshirtRule,ashArt,ashman,typeChart,visualFor,paletteEntry,
     categoryFor,creatureFor,categoryRule,migrateCharacter,role,matchups,matchupHeading,compare,partnerFor,partnerRef,
-    newFields,changeRole,isGameCard,readyIssues};
+    newFields,changeRole,isGameCard,readyIssues,villainSubtypeOptions};
 })();

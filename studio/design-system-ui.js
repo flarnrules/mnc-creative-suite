@@ -10,6 +10,8 @@
   const selectedProfile=()=>state.visualLanguage.profiles[$('symbolProfile').value];
   let previewRevision=0,chartRevision=0,cardRevision=0;
   let designArtwork='',standardsPane='colors',designPreviewRevision=0;
+  let designChoicesProject;
+  const chosenDesigns=new Map();
   let footerPreviewRevision=0,footerUndo=null;
   const colorFields=[
     ['mainColor','Main','Card background'],
@@ -219,10 +221,7 @@
     await symbols.drawBadge(ctx,symbol,canvas.width/2,canvas.height/2,size,ink,id);
   }
 
-  function playableProfile(id) {
-    const profile=planModel.profile(id);
-    return id==='creature'?{...profile,family:'Character',category:'Creature'}:profile;
-  }
+  const playableProfile=playableDesignType;
 
   function draftFor(id) {
     const profile=playableProfile(id);
@@ -230,14 +229,10 @@
   }
 
   function designTile(profile) {
-    const card=cardDraft(null,profile.family,profile);
-    const palette=types.palette(card);
     const label=profile.type||profile.category||(profile.family==='Item'?profile.subtype+' item':profile.family==='Movie'?'Film':profile.family);
     const tile=element('article',undefined,'design-choice');
-    tile.style.setProperty('--design-accent',palette.accent);
     const canvas=element('canvas');canvas.width=canvas.height=96;
     canvas.setAttribute('aria-hidden','true');
-    canvas.style.backgroundColor=palette.mainColor;
     const glyph=element('button',undefined,'design-glyph');
     glyph.type='button';
     glyph.setAttribute('aria-label','Edit '+label+' glyph');
@@ -246,18 +241,42 @@
     glyph.append(canvas);
     const colors=element('button',undefined,'design-swatches');
     colors.type='button';
-    colors.setAttribute('aria-label','Edit '+label+' colors');
+    colors.setAttribute('aria-label','Edit '+label+' default colors');
     colors.onclick=()=>openProfile(profile.id,'colors');
-    for(const [key,name] of colorFields){
-      const chip=element('span',name);
-      chip.title=name+' '+palette[key].toUpperCase();
-      chip.style.setProperty('--swatch',palette[key]);
-      colors.append(chip);
+    const starting=typeDesignPreset({family:profile.family,characterCategory:profile.category},profile.id);
+    const options=[['',starting&&!starting.typeDefaultFor?'Default · '+starting.name:'Default'],
+      ...typeDesignVariants(profile.id).map(design=>[design.id,design.name])];
+    const designField=element('select');
+    designField.setAttribute('aria-label',label+' design');
+    const savedChoice=chosenDesigns.get(profile.id);
+    dropDownOptions(designField,options,options.some(([id])=>id===savedChoice)?savedChoice:'');
+    const designRow=element('label','Design','label');designRow.append(designField);
+    const subtypeField=element('select');
+    const subtypeRow=element('label','Villain subtype','label');subtypeRow.append(subtypeField);
+    if(profile.id==='villain')dropDownOptions(subtypeField,[['','None'],...game.villainSubtypeOptions(state).map(name=>[name,name])],'');
+    let styleRevision=0;
+    async function paintChoice(){
+      const revision=++styleRevision,card=cardDraft(null,profile.family,profile,{designId:designField.value});
+      const palette=types.palette(card);
+      tile.style.setProperty('--design-accent',palette.accent);
+      canvas.style.backgroundColor=palette.mainColor;
+      colors.replaceChildren(...colorFields.map(([key,name])=>{
+        const chip=element('span',name);
+        chip.title=name+' '+palette[key].toUpperCase();
+        chip.style.setProperty('--swatch',palette[key]);
+        return chip;
+      }));
+      const sample=element('canvas');sample.width=sample.height=canvas.width;
+      await paintSymbol(sample,symbols.cardSymbol(state,card).symbol,profile.id,62,palette.ink);
+      if(revision!==styleRevision)return;
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(sample,0,0);
     }
+    designField.onchange=()=>{chosenDesigns.set(profile.id,designField.value);paintChoice().catch(console.error);};
     const create=element('button','New card','design-create');
     create.type='button';
     create.setAttribute('aria-label','New '+label+' card');
-    create.onclick=()=>createCard(designArtwork,profile.family,profile);
+    create.onclick=()=>beginCardArtwork(profile.family,profile,{designId:designField.value,
+      characterSubtype:subtypeField.value,assetId:designArtwork});
     const border=element('button','Border','design-border');
     border.type='button';
     border.setAttribute('aria-label','Edit '+label+' border');
@@ -269,13 +288,15 @@
     actions.append(starter,border);
     const heading=element('div',undefined,'design-choice-heading');
     heading.append(glyph,element('strong',label),create);
-    tile.append(heading,colors,actions);
-    const {symbol}=symbols.cardSymbol(state,card);
-    paintSymbol(canvas,symbol,profile.id,62,palette.ink).catch(console.error);
+    tile.append(heading,colors,designRow);
+    if(profile.id==='villain')tile.append(subtypeRow);
+    tile.append(actions);
+    paintChoice().catch(console.error);
     return tile;
   }
 
   function renderGallery() {
+    if(designChoicesProject!==state){designChoicesProject=state;chosenDesigns.clear();}
     const art=artById(designArtwork);
     $('designArtworkNote').hidden=!art;
     $('designArtworkNote').textContent=art?'Start a card using “'+art.title+'”.':'';
@@ -292,6 +313,52 @@
       group.append(element('h3',name),grid);
       return group;
     }));
+    const previewType=$('designNewType');
+    dropDownOptions(previewType,types.profiles().map(type=>[type.id,type.name]),previewType.value||'hero');
+    const assigned=new Set(types.profiles().flatMap(({id})=>{
+      const setting=state.visualLanguage.profiles[id];
+      return [setting.presetId,...(setting.variantIds||[])];
+    }));
+    const other=state.templates.filter(design=>design.name&&!design.typeDefaultFor&&!assigned.has(design.id));
+    $('designOtherList').replaceChildren(...(other.length?other.map(design=>{
+      const {family,profile}=designPreviewContext(design);
+      const create=element('button','New card');create.type='button';
+      create.onclick=()=>beginCardArtwork(family,profile,{designId:design.id,assetId:designArtwork});
+      return designListRow(design,profile?.id,create);
+    }):[element('p','No unassigned designs.','status-line')]));
+  }
+
+  function designListRow(design,previewType,action){
+    const row=element('div',undefined,'design-list-row'),buttons=element('div',undefined,'buttonbar');
+    const edit=element('button','Edit design');edit.type='button';
+    edit.setAttribute('aria-label','Edit '+design.name);
+    edit.onclick=()=>window.MNC_editReusableDesign(design.id,previewType);
+    buttons.append(edit,action);row.append(element('strong',design.name),buttons);
+    return row;
+  }
+
+  function renderComponents(){
+    function thumbnail(name,part,path,options){
+      const button=element('button',undefined,'design-shape-tile');button.type='button';
+      const sample=element('canvas');sample.width=108;sample.height=66;
+      sample.setAttribute('aria-hidden','true');
+      const ctx=sample.getContext('2d');
+      ctx.fillStyle='#a58b5d';ctx.fill(path,'evenodd');
+      ctx.strokeStyle='#ead6a1';ctx.lineWidth=1.5;ctx.stroke(path);
+      button.append(sample,element('span',name));
+      button.onclick=()=>window.MNC_openShapeDesigner(part,null,{fromDesigns:true,...options});
+      return button;
+    }
+    const artRect={x:16,y:6,w:76,h:54},plateRect={x:6,y:20,w:96,h:26};
+    const outlines=[['arch','Marquee arch'],['rectangle','Rectangle'],['rounded','Rounded'],
+      ['clipped','Cut corners'],['oval','Oval'],['ticket','Ticket']];
+    $('designArtShapes').replaceChildren(...outlines.map(([starterId,name])=>
+      thumbnail(name,'art',shapes.polygonPath(shapes.start(starterId),artRect),{starterId})));
+    $('designPlateShapes').replaceChildren(...shapes.platePresets.map(([starterId,name])=>
+      thumbnail(name,'plate',shapes.platePath(starterId,plateRect),{starterId})));
+    $('designSavedShapes').replaceChildren(...(state.cardShapes.length?state.cardShapes.map(shape=>
+      thumbnail(shape.name,'art',shapes.path(shape,artRect),{shapeId:shape.id})):
+      [element('p','No saved shapes.','status-line')]));
   }
 
   async function renderChart() {
@@ -511,6 +578,29 @@
       inherit?'Inherits the Creature starting layout':'Built-in starting layout';
     $('resetStartingDesign').hidden=!setting.presetId;
     $('resetStartingDesign').textContent=inherit?'Inherit Creature layout':'Use built-in layout';
+    const assign=$('typeAssignDesign'),options=state.templates.filter(design=>
+      !design.typeDefaultFor&&designFitsFamily(design,profile.family)&&design.id!==setting.presetId);
+    const value=options.some(design=>design.id===assign.value)?assign.value:options[0]?.id||'';
+    dropDownOptions(assign,options.map(design=>[design.id,design.name]),value);
+    $('typeAssignSection').hidden=!options.length;
+    const variants=typeDesignVariants(id);
+    $('typeDesignVariants').replaceChildren(...(variants.length?variants.map(design=>{
+      const remove=element('button','Remove variant');remove.type='button';
+      remove.setAttribute('aria-label','Remove '+design.name+' from '+profile.name);
+      remove.onclick=()=>{
+        setting.variantIds=setting.variantIds.filter(key=>key!==design.id);
+        persist();editStartingLayout();
+        setStatus('symbolDesignStatus','Removed '+design.name+' from '+profile.name+'.');
+      };
+      return designListRow(design,id,remove);
+    }):[element('p','No variants for this type.','status-line')]));
+  }
+
+  function assignSelectedDesign(assignment){
+    const id=$('symbolProfile').value,design=state.templates.find(item=>item.id===$('typeAssignDesign').value);
+    if(!assignDesign(design,id,assignment))return;
+    editStartingLayout();previewStartingCard();
+    setStatus('symbolDesignStatus',design.name+(assignment==='default'?' is now the default.':' was added as a variant.'));
   }
 
   async function paintSharedFooter(){
@@ -525,23 +615,57 @@
 
   const footerFields=[['sharedFooterPosition','position'],['sharedFooterCodeSize','codeSize'],
     ['sharedFooterNumberSize','numberSize'],['sharedFooterMarkSize','markSize']];
+  function sharedFooterTarget(){
+    return $('sharedFooterScope').value==='card'?cardById($('sharedFooterCard').value):draftFor($('sharedFooterPreviewType').value);
+  }
+  function syncFooterConnection(){
+    const card=sharedFooterTarget();
+    $('sharedFooterCardRow').hidden=$('sharedFooterScope').value!=='card';
+    $('sharedFooterLink').disabled=$('sharedFooterOpenLayout').disabled=!card;
+    $('sharedFooterLink').checked=front.usesSharedFooter(card);
+  }
   function renderSharedFooter(){
     const type=$('sharedFooterPreviewType');
     dropDownOptions(type,types.profiles().map(profile=>[profile.id,profile.name]),type.value||'hero');
+    const card=$('sharedFooterCard'),chosen=cardById(card.value)||current()||state.cards[0];
+    dropDownOptions(card,state.cards.map(item=>[item.id,item.title]),chosen?.id);
+    syncFooterConnection();
     for(const [id,key] of footerFields)$(id).value=state.sharedFooter[key];
     $('sharedFooterApplyAll').disabled=state.cards.every(front.usesSharedFooter);
     $('sharedFooterUndo').disabled=footerUndo?.project!==state;
     paintSharedFooter().catch(console.error);
   }
 
-  function openSharedFooter(){tab('visualLanguage',{sharedFooter:true});}
+  function openSharedFooter({footerScope}={}){
+    if(footerScope){
+      $('sharedFooterScope').value=footerScope;
+      if(footerScope==='card')$('sharedFooterCard').value=currentId;
+    }
+    tab('visualLanguage',{sharedFooter:true});
+  }
+  function editFooterInLayout(mode){
+    const card=sharedFooterTarget();
+    if(!card)return;
+    if($('sharedFooterScope').value==='card')window.MNC_editCardFooter(card,mode);
+    else window.MNC_editTypeStarter($('sharedFooterPreviewType').value,{layer:'footer',footerMode:mode,fromSharedFooter:true});
+  }
+  $('sharedFooterScope').onchange=$('sharedFooterCard').onchange=syncFooterConnection;
+  $('sharedFooterOpenLayout').onclick=()=>editFooterInLayout();
+  $('sharedFooterLink').onchange=()=>{
+    const mode=$('sharedFooterLink').checked?'shared':'custom';
+    if(mode==='shared'&&$('sharedFooterScope').value==='card'){
+      const card=sharedFooterTarget();if(!card)return;
+      front.setFooterMode(card,mode);persist();syncFooterConnection();
+      setStatus('sharedFooterStatus','Shared footer enabled for '+card.title+'.');
+    }else editFooterInLayout(mode);
+  };
   for(const [id,key] of footerFields)$(id).onchange=()=>{
     const field=$(id),value=key==='position'?field.value:field.valueAsNumber;
     state.sharedFooter=front.sharedFooterSettings({...state.sharedFooter,[key]:value});
     setStatus('sharedFooterStatus','Shared footer saved.');
     persist();renderSharedFooter();
   };
-  $('sharedFooterPreviewType').onchange=()=>paintSharedFooter().catch(console.error);
+  $('sharedFooterPreviewType').onchange=()=>{syncFooterConnection();paintSharedFooter().catch(console.error);};
   $('sharedFooterEditMark').onclick=()=>openProfile('collection','glyphs');
   $('sharedFooterApplyAll').onclick=()=>{
     const cards=state.cards.filter(card=>!front.usesSharedFooter(card));
@@ -620,11 +744,16 @@
     showPane(standardsPane);
   }
   function renderDesigns(){
-    if(!$('sharedFooterPanel').hidden)renderSharedFooter();
+    if(!$('designComponentsPanel').hidden)renderComponents();
+    else if(!$('sharedFooterPanel').hidden)renderSharedFooter();
     else if($('designStandards').hidden)renderGallery();
     else renderStandards();
   }
   function showStandards(open) {
+    $('designComponentsPanel').hidden=true;
+    $('openDesignComponents').hidden=open;
+    $('openDesignComponents').setAttribute('aria-expanded','false');
+    $('openDesignComponents').textContent='Shapes & components';
     $('sharedFooterPanel').hidden=true;
     $('openSharedFooter').setAttribute('aria-expanded','false');
     $('openSharedFooter').textContent='Shared footer';
@@ -635,10 +764,16 @@
     button.setAttribute('aria-expanded',String(open));
     button.textContent=open?'Back to card types':'Edit type standards';
   }
-  function renderLanguage({assetId='',profileId,pane='glyphs',sharedFooter=false}={}) {
+  function renderLanguage({assetId='',profileId,pane='glyphs',sharedFooter=false,components=false,otherDesigns=false}={}) {
     designArtwork=artById(assetId)?.id||'';
     showStandards(Boolean(profileId));
-    if(sharedFooter){
+    if(components){
+      $('designGallery').hidden=$('designsIntro').hidden=$('openSavedCards').hidden=$('toggleDesignStandards').hidden=true;
+      $('designComponentsPanel').hidden=false;
+      $('openDesignComponents').setAttribute('aria-expanded','true');
+      $('openDesignComponents').textContent='Back to card types';
+      renderComponents();
+    }else if(sharedFooter){
       $('designGallery').hidden=$('designsIntro').hidden=$('openSavedCards').hidden=true;
       $('toggleDesignStandards').hidden=true;
       $('sharedFooterPanel').hidden=false;
@@ -654,8 +789,12 @@
       renderStandards(profileId);
     }else{
       renderGallery();$('designGallery').scrollTop=0;window.MNC_refreshSymbolContext?.();
+      if(otherDesigns){$('otherDesigns').open=true;$('otherDesigns').scrollIntoView({block:'nearest'});}
     }
   }
+  $('openDesignComponents').onclick=()=>tab('visualLanguage',{components:$('designComponentsPanel').hidden});
+  $('drawDesignShape').onclick=()=>window.MNC_openShapeDesigner('art',null,{fromDesigns:true,blank:true});
+  $('designNewLayout').onclick=()=>window.MNC_editReusableDesign('',$('designNewType').value);
   $('openSharedFooter').onclick=()=>{
     if($('sharedFooterPanel').hidden)openSharedFooter();
     else tab('visualLanguage');
@@ -668,7 +807,7 @@
     if($('designStandards').hidden)window.MNC_refreshSymbolContext?.();
   };
   for(const button of document.querySelectorAll('button[data-standard-tab]'))button.onclick=()=>showPane(button.dataset.standardTab);
-  $('createOtherCard').onclick=()=>createCard(designArtwork,$('otherCardType').value);
+  $('createOtherCard').onclick=()=>beginCardArtwork($('otherCardType').value,null,{assetId:designArtwork});
   $('symbolProfile').onchange=()=>{
     $('symbolTarget').value='icon';
     setStatus('typeColorStatus','');setStatus('typeBorderStatus','');setStatus('symbolDesignStatus','');
@@ -815,6 +954,10 @@
   }
   $('symbolSaveDesign').onclick=()=>useCardAsStarter(sourceCard(),$('symbolProfile').value);
   $('standardEditLayout').onclick=()=>window.MNC_editTypeStarter($('symbolProfile').value);
+  $('standardNewVariant').onclick=()=>window.MNC_editReusableDesign('',$('symbolProfile').value,'variant');
+  $('standardTypeRules').onclick=()=>window.MNC_openTypeDesigner($('symbolProfile').value);
+  $('typeSetDesignDefault').onclick=()=>assignSelectedDesign('default');
+  $('typeAddDesignVariant').onclick=()=>assignSelectedDesign('variant');
   $('resetStartingDesign').onclick=()=>{
     selectedProfile().presetId='';
     persist();editStartingLayout();previewStartingCard();
@@ -864,7 +1007,7 @@
     $('cardOpenSetSlots').disabled=!eligible&&!linked;
     const message=card.catalogUnlisted?'Restore this item to the catalog to link it to an LX26 slot.':
       card.classification==='Secret'?'Set Designer slots are for regular LX26 cards.':
-      !eligible?'Set the Collection code to LX26 under Footer to link this item.':
+      !eligible?'Set the Set Abbrev to LX26 under Credits & set to link this item.':
       linked?'Linked to '+planModel.definition(linked.group.id).name+', slot '+(linked.index+1)+'.':
       'Choose this card under Linked design in '+group.name+'.';
     setStatus('cardItemSetStatus',message);

@@ -68,17 +68,25 @@
     }
   }
 
-  function open(part,c,{blank=false}={}) {
+  function open(part,c,{blank=false,fromDesigns=false,starterId,shapeId}={}) {
+    const destination=fromDesigns?'visualLanguage':activeTab==='layoutDesigner'?'layoutDesigner':'studio';
+    tab('shapes');
+    if(activeTab!=='shapes')return;
     project=state;
-    returnTab=activeTab==='layoutDesigner'?'layoutDesigner':'studio';
-    $('shapeBack').textContent=returnTab==='layoutDesigner'?'Back to Layout Designer':'Back to Card Designer';
+    returnTab=destination;
+    $('shapeBack').textContent={visualLanguage:'Back to components',layoutDesigner:'Back to Layout Designer',studio:'Back to Card Designer'}[returnTab];
+    $('shapeSaveUse').hidden=fromDesigns;
     if(part)target.value=part;
     setCards(c?.id||currentId);
-    tab('shapes');
-    if(blank){
+    const item=shapeId&&state.cardShapes.find(shape=>shape.id===shapeId);
+    if(item){
+      updateCatalog(item.id);
+      begin(item);
+    }else if(starterId||blank){
+      $('shapeStarter').value=starterId||'blank';
       updateCatalog();
-      begin({name:'',kind:'points',points:[]});
-      title.focus();
+      begin({name:'',kind:'points',points:shapes.start(starterId)});
+      if(blank)title.focus();
     }else fromCard();
   }
 
@@ -334,7 +342,7 @@
   };
   $('shapeSave').onclick=()=>use(false);
   $('shapeSaveUse').onclick=()=>use(true);
-  $('shapeBack').onclick=()=>tab(returnTab);
+  $('shapeBack').onclick=()=>tab(returnTab,returnTab==='visualLanguage'?{components:true}:undefined);
   window.MNC_openShapeDesigner=open;
   window.MNC_refreshShapeDesigner=()=>{
     if(!['art','plate'].includes(target.value))target.value='art';
