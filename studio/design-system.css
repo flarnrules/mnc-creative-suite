@@ -37,13 +37,35 @@
 .item-set-actions .label {margin:0;min-width:0;}
 .item-set-actions button {white-space:nowrap;}
 #cardItemSetStatus {margin:6px 0;}
-.symbols-workspace {display:grid;grid-template-columns:minmax(340px,1fr) minmax(360px,530px);gap:16px;align-items:start;}
+.design-palette-key {margin:0 0 14px;color:var(--muted);font-size:.875rem;}
+.design-group {margin:0 0 18px;}
+.design-group h3 {margin:0 0 8px;font-size:1rem;font-weight:650;}
+.design-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,12rem),1fr));gap:8px;}
+.design-choice {
+  display:grid;
+  grid-template-columns:3rem minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  min-height:68px;
+  text-align:left;
+  background:var(--panel);
+  border-left:3px solid var(--design-accent);
+}
+.design-choice:hover {border-left-color:var(--design-accent);}
+.design-choice canvas {display:block;width:3rem;height:3rem;border-radius:5px;}
+.design-choice-caption {display:grid;gap:6px;min-width:0;}
+.design-choice strong {font-size:.9375rem;line-height:1.25;overflow-wrap:anywhere;}
+.design-swatches {display:flex;align-items:center;gap:4px;}
+.design-swatches span {width:1rem;height:.75rem;border:1px solid #fff5;border-radius:3px;}
+#designArtworkNote {font-size:.9375rem;color:var(--lime);}
+.symbols-workspace {display:grid;grid-template-columns:minmax(290px,1fr) minmax(360px,580px);gap:16px;align-items:start;}
 .symbol-chart {display:grid;grid-template-columns:repeat(3,minmax(95px,1fr));gap:10px;}
 .symbol-tile {background:#19201b;border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;justify-items:center;gap:5px;}
 .symbol-tile.active {border-color:var(--lime);background:#303b2e;}
 .symbol-tile canvas {width:72px;height:72px;background:#f8f6ee;border-radius:5px;}
 .symbol-tile span {font-size:12px;}
-.symbol-tile small {font-size:10px;color:var(--muted);}
+#presetStatus:empty {display:none;}
 .symbol-editor {position:sticky;top:63px;max-height:calc(100vh - 85px);overflow:auto;}
 .symbol-large {display:grid;place-items:center;background:#f8f6ee;border-radius:8px;margin:10px 0;}
 .symbol-large canvas {width:180px;height:180px;max-width:100%;}
@@ -67,6 +89,7 @@
 #cardSymbolPreview {width:64px;height:64px;background:#f8f6ee;border-radius:5px;}
 #cardSymbolOverrides {margin-top:10px;}
 #cardSymbolOverrides .pair {align-items:end;}
+.rightPane:not([data-edit-section="art"]) #cardLayoutPresets,
 .rightPane:not([data-edit-section="content"]) #cardWriting,
 .rightPane:not([data-edit-section="attributes"]) #cardAttributes,
 .rightPane[data-edit-section="attributes"] :is(#gameplayGroup,#gameArtwork,#cardLook,#gameHeader,#gameCredit,#legacyFields,#frontLayoutPanel) {display:none;}
@@ -77,7 +100,10 @@
 #typeDesignPreview {display:block;width:min(100%,480px);height:auto;margin:12px auto;}
 .type-preview-panel .label {text-align:left;}
 .symbol-context-window {padding:10px;border:1px solid #68715c;border-radius:8px;background:#141d18;margin:9px 0 13px;}
-.symbol-context-canvases {display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;align-items:center;}
+.symbol-context-window h3 {margin:0;font-size:1rem;}
+.symbol-context-canvases {display:grid;grid-template-columns:clamp(82px,24%,126px) minmax(0,1fr);gap:12px;align-items:end;}
+.symbol-context-canvases figure {min-width:0;margin:0;}
+.symbol-context-canvases figcaption {margin-top:5px;color:var(--muted);font-size:.8125rem;text-align:center;}
 .symbol-context-canvases canvas {display:block;width:100%;height:auto;max-width:100%;touch-action:none;cursor:move;border-radius:5px;background:#0f1512;}
 .symbol-context-window[data-preview="card"] canvas {cursor:default;touch-action:auto;}
 #symbolContextMini {aspect-ratio:5/7;}
@@ -90,12 +116,13 @@ button[aria-pressed="true"] {border-color:var(--lime);}
   .symbols-workspace {grid-template-columns:1fr minmax(340px,460px);}
 }
 @media(max-width:700px) {
+  .design-grid {grid-template-columns:repeat(auto-fill,minmax(min(100%,10rem),1fr));}
   .type-workspace {grid-template-columns:1fr;}
   .type-preview-panel {position:static;}
   .symbols-workspace {grid-template-columns:1fr;}
   .symbol-context-canvases {grid-template-columns:76px minmax(0,1fr);}
   .symbol-editor {position:static;max-height:none;}
-  .symbol-chart {grid-template-columns:repeat(3,minmax(85px,1fr));}
+  #designStandards .symbol-chart {display:none;}
   .set-stats {grid-template-columns:repeat(2,1fr);}
   .set-stat:last-child {grid-column:1/-1;}
   .rightPane {position:static;max-height:none;}

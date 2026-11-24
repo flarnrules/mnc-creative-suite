@@ -9,6 +9,7 @@
   const selectedGroup=()=>plan().groups.find(group=>group.id===$('setGroup').value)||plan().groups[0];
   const selectedProfile=()=>state.visualLanguage.profiles[$('symbolProfile').value];
   let previewRevision=0,chartRevision=0,cardRevision=0;
+  let designArtwork='';
 
   function element(tag,text,className) {
     const node=document.createElement(tag);
@@ -35,8 +36,7 @@
   }
 
   function openProfile(id) {
-    $('symbolProfile').value=planModel.profile(id)?id:'other';
-    tab('visualLanguage');
+    tab('visualLanguage',{profileId:planModel.profile(id)?id:'other'});
   }
 
   function renderCounts() {
@@ -207,9 +207,65 @@
     return [...MNC_SET_PLAN.definitions,...MNC_SET_PLAN.auxiliaries];
   }
 
-  async function paintSymbol(canvas,symbol,id,size=canvas.width*.72) {
+  async function paintSymbol(canvas,symbol,id,size=canvas.width*.72,ink='#000000') {
     const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
-    await symbols.draw(ctx,symbol,canvas.width/2,canvas.height/2,size,'#000000',id);
+    await symbols.draw(ctx,symbol,canvas.width/2,canvas.height/2,size,ink,id);
+  }
+
+  function designTile(profile) {
+    const card=cardDraft(null,profile.family,profile);
+    const palette=game.isGameCard(card)?window.MNC_gamePalette(card):
+      card.template==='Standard'?window.MNC_standardPalette(card):
+      {base:'#161a24',ink:'#ffffff',accent:card.accent};
+    const background=card.layoutDesign?.background, accent=palette.accent||palette.outer;
+    const tone=value=>front.tone(value,card.backgroundLightness);
+    const surface=background?.mode==='solid'?tone(background.color):
+      background?.gradient?tone(MNC_FRONT_EFFECTS.firstColor(background.gradient)):palette.base;
+    const edge=MNC_LAYOUT.get(card,'border')?.gradient;
+    const border=MNC_OUTER_BORDER.visible(card)?edge?MNC_FRONT_EFFECTS.firstColor(edge):MNC_OUTER_BORDER.color(card):'';
+    const label=profile.type||profile.category||(profile.family==='Item'?profile.subtype+' item':profile.family==='Movie'?'Film':profile.family);
+    const tile=element('button',undefined,'design-choice');
+    tile.type='button';
+    tile.setAttribute('aria-label','New '+label+' card');
+    tile.style.setProperty('--design-accent',accent);
+    const canvas=element('canvas');canvas.width=canvas.height=96;
+    canvas.setAttribute('aria-hidden','true');
+    canvas.style.backgroundColor=surface;
+    const colors=element('span',undefined,'design-swatches');
+    const swatches=[['Accent',accent],['Background',surface],['Border',border]];
+    for(const [name,color] of swatches){
+      const chip=element('span');
+      chip.title=name+' '+(color||'hidden');
+      chip.style.backgroundColor=color||'transparent';
+      colors.append(chip);
+    }
+    tile.setAttribute('aria-description',swatches.map(([name,color])=>name+' '+(color||'hidden')).join(', '));
+    const caption=element('span',undefined,'design-choice-caption');
+    caption.append(element('strong',label),colors);
+    tile.append(canvas,caption);
+    tile.onclick=()=>createCard(designArtwork,profile.family,profile);
+    const {symbol}=symbols.cardSymbol(state,card);
+    paintSymbol(canvas,symbol,profile.id,62,palette.ink).catch(console.error);
+    return tile;
+  }
+
+  function renderGallery() {
+    const art=artById(designArtwork);
+    $('designArtworkNote').hidden=!art;
+    $('designArtworkNote').textContent=art?'Start a card using “'+art.title+'”.':'';
+    $('openSavedCards').disabled=!state.cards.length;
+    const profiles=planModel.definitions;
+    const groups=[
+      ['Characters',[...profiles.filter(profile=>profile.family==='Character'),{...planModel.profile('creature'),family:'Character',category:'Creature'}]],
+      ['Critics & films',profiles.filter(profile=>['Critic','Movie'].includes(profile.family))],
+      ['Items',itemGroups]
+    ];
+    $('designChoices').replaceChildren(...groups.map(([name,entries])=>{
+      const group=element('section',undefined,'design-group'),grid=element('div',undefined,'design-grid');
+      grid.append(...entries.map(designTile));
+      group.append(element('h3',name),grid);
+      return group;
+    }));
   }
 
   async function renderChart() {
@@ -217,11 +273,12 @@
     const work=[];
     for(const profile of symbolCanvases()){
       const tile=element('button',undefined,'symbol-tile');tile.type='button';
-      tile.classList.toggle('active',profile.id===$('symbolProfile').value);
+      const selected=profile.id===$('symbolProfile').value;
+      tile.classList.toggle('active',selected);
+      tile.setAttribute('aria-pressed',String(selected));
       const canvas=element('canvas');canvas.width=canvas.height=144;
-      canvas.setAttribute('aria-label',profile.name+' symbol');
-      const setting=state.visualLanguage.profiles[profile.id];
-      tile.append(canvas,element('span',profile.name),element('small',setting.presetId?'Saved design linked':'Symbol standard'));
+      canvas.setAttribute('aria-hidden','true');
+      tile.append(canvas,element('span',profile.name));
       tile.onclick=()=>{$('symbolProfile').value=profile.id;$('symbolProfile').onchange();};
       host.append(tile);
       work.push(paintSymbol(canvas,symbols.profileSymbol(state,profile.id),profile.id));
@@ -263,10 +320,37 @@
     if(token===previewRevision)$('symbolFontStatus').textContent=status;
   }
 
-  function renderLanguage() {
-    dropDownOptions($('symbolProfile'),symbolCanvases().map(profile=>[profile.id,profile.name]),$('symbolProfile').value||'hero');
+  function renderStandards(id=$('symbolProfile').value||'hero') {
+    dropDownOptions($('symbolProfile'),symbolCanvases().map(profile=>[profile.id,profile.name]),id);
     syncSymbolEditor();renderChart();window.MNC_refreshSymbolContext?.({sync:true});
   }
+  function renderDesigns(){
+    if($('designStandards').hidden)renderGallery();
+    else renderStandards();
+  }
+  function showStandards(open) {
+    $('designStandards').hidden=!open;
+    $('designGallery').hidden=$('designsIntro').hidden=$('openSavedCards').hidden=open;
+    const button=$('toggleDesignStandards');
+    button.setAttribute('aria-expanded',String(open));
+    button.textContent=open?'Back to card types':'Edit type standards';
+  }
+  function renderLanguage({assetId='',profileId}={}) {
+    designArtwork=artById(assetId)?.id||'';
+    showStandards(Boolean(profileId));
+    if(profileId)renderStandards(profileId);
+    else{
+      renderGallery();
+      $('designGallery').scrollTop=0;
+      window.MNC_refreshSymbolContext?.();
+    }
+  }
+  $('toggleDesignStandards').onclick=()=>{
+    showStandards($('designStandards').hidden);
+    renderDesigns();
+    if($('designStandards').hidden)window.MNC_refreshSymbolContext?.();
+  };
+  $('createArchiveCard').onclick=()=>createCard(designArtwork,'Archive');
   $('symbolProfile').onchange=()=>{syncSymbolEditor();renderChart();window.MNC_refreshSymbolContext?.({sync:true});};
   dropDownOptions($('symbolFont'),symbols.fonts.map(font=>[font,font]));
   dropDownOptions($('cardSymbolFont'),symbols.fonts.map(font=>[font,font]));
@@ -320,7 +404,7 @@
   };
   $('symbolRefresh').onclick=async()=>{
     try{
-      await window.MNC_DISK?.refreshAssets();renderLanguage();
+      await window.MNC_DISK?.refreshAssets();renderStandards();
       setStatus('symbolStatus',glyphOptions().length+' glyph images available.');
     }catch(error){setStatus('symbolStatus',error.message,true);}
   };
@@ -337,22 +421,21 @@
   };
   $('symbolSaveDesign').onclick=()=>{
     const card=current();if(!card)return;
-    const before=state.templates.map(preset=>JSON.stringify(preset)).join('');
-    saveDesignPreset(card);
-    if(before===state.templates.map(preset=>JSON.stringify(preset)).join(''))return;
-    selectedProfile().presetId=$('layoutPresets').value;changed();syncSymbolEditor();renderChart();
+    const preset=saveDesignPreset(card);
+    if(!preset)return;
+    selectedProfile().presetId=preset.id;changed();syncSymbolEditor();renderChart();
   };
   $('symbolExportChart').onclick=async()=>{
     const profiles=symbolCanvases(),canvas=document.createElement('canvas');
     canvas.width=1200;canvas.height=Math.ceil(profiles.length/4)*250+70;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#fbf9f2';ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#202820';ctx.font='700 28px sans-serif';ctx.fillText('LX26 · Visual language',30,43);
+    ctx.fillStyle='#202820';ctx.font='700 28px sans-serif';ctx.fillText('LX26 · Type standards',30,43);
     for(const [i,profile] of profiles.entries()){
       const x=i%4*300,y=70+Math.floor(i/4)*250;
       await symbols.draw(ctx,symbols.profileSymbol(state,profile.id),x+150,y+98,130,'#000000',profile.id);
       ctx.fillStyle='#202820';ctx.font='700 19px sans-serif';ctx.textAlign='center';ctx.fillText(profile.name,x+150,y+193,280);
     }
-    canvasPNG(canvas,'LX26_Visual_Language.png');
+    canvasPNG(canvas,'LX26_Type_Standards.png');
   };
 
   function editSection(section) {
@@ -495,6 +578,9 @@
   window.MNC_refreshSetDesigner=renderSet;
   window.MNC_refreshItemSetGroup=syncItemSetGroup;
   window.MNC_refreshVisualLanguage=renderLanguage;
+  window.MNC_refreshDesigns=renderDesigns;
+  window.MNC_openTypeStandard=openProfile;
+  window.MNC_editCardSection=editSection;
   window.MNC_applyCardStandard=applyStandard;
   editSection('content');
 })();

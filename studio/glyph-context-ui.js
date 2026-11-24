@@ -11,7 +11,7 @@
 
   function selection() {
     const id=profile();
-    if(activeTab!=='visualLanguage'||!state.visualLanguage.profiles[id])return null;
+    if(activeTab!=='visualLanguage'||$('designStandards').hidden||!state.visualLanguage.profiles[id])return null;
     const actual=cardById(menu.value),collection=id==='collection';
     return {id,actual,collection,isType:!!state.typeDesigns.profiles[id],
       layer:collection?'setIcon':'cornerIcon',saved:!!actual&&mode.value==='card'};
@@ -201,7 +201,7 @@
       if(token===revision&&same(context,selection())){
         last=null;
         status.textContent='This card preview could not be drawn.';
-        console.error('Visual Language card preview',error);
+        console.error('Type standard card preview',error);
       }
     }finally{
       rendering=false;

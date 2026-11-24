@@ -133,19 +133,61 @@ main .leftPane > .card-list {
   align-content: start;
 }
 
-main .preview-pane {
-  display: flex;
-  flex-direction: column;
+#studio .workspace {
+  grid-template-columns: clamp(9.5rem, 15vw, 13.5rem) minmax(0, 1fr) clamp(17rem, 27vw, 24rem);
+  grid-template-areas: "cards preview edit";
+  gap: clamp(8px, 1vw, 16px);
 }
-main .preview-pane > .canvas-frame {
-  flex: 1 0 auto;
-  min-height: 154px;
+#studio .leftPane {grid-area: cards;}
+#studio .leftPane h3 {margin: 0 0 4px; font-size: 1rem;}
+#studio .rightPane {grid-area: edit; grid-column: auto;}
+#studio .preview-pane {
+  grid-area: preview;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0;
+  overflow: hidden;
+}
+#studio .canvas-frame {
+  display: grid;
+  place-items: center;
   container-type: size;
+  padding: clamp(8px, 1.2vw, 16px);
+  border: 0;
+  border-radius: 0;
 }
-main #cardPreview {
-  width: min(100%, 400px, 68cqh);
+#studio #cardPreview {
+  display: block;
+  width: min(100%, calc(100cqh * 5 / 7));
   min-width: 0;
   height: auto;
+  aspect-ratio: 5 / 7;
+}
+.card-preview-bar, .card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.card-preview-bar {
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line);
+}
+.card-preview-bar .buttonbar {flex: none;}
+#activeCardTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+.card-actions {flex-wrap: wrap; justify-content: flex-end;}
+.card-designer-heading {align-items: center;}
+#cardSaveStatus {font-size: .8125rem; margin: 0;}
+#studio .card-list .card-tile {
+  width: 100%;
+  min-width: 0;
 }
 #library.active {
   display: grid;
@@ -196,7 +238,14 @@ main #cardPreview {
   }
   .tool-workspace > .panel {overflow: visible;}
   main .leftPane {overflow: hidden;max-height: 205px;}
-  main .preview-pane > .canvas-frame {height: min(52dvh, 420px);}
+  #studio .workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, .85fr);
+    grid-template-areas: "preview edit" "cards cards";
+    align-items: start;
+  }
+  #studio .preview-pane {height: clamp(19rem, 68dvh, 40rem);}
+  #studio .leftPane > .card-list {display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));}
+  #studio .rightPane {max-height: clamp(19rem, 68dvh, 40rem); overflow: auto;}
 }
 
 @media (max-width: 850px) {
@@ -204,6 +253,16 @@ main #cardPreview {
     grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
   }
   #layoutDesigner .ld-rail {min-height: 0;height: auto;}
+}
+
+@media (max-width: 640px) {
+  #studio .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "preview" "cards" "edit";
+  }
+  #studio .preview-pane {height: clamp(16rem, 58dvh, 34rem);}
+  #studio .rightPane {max-height: none; overflow: visible;}
+  .card-designer-heading, .card-actions {justify-content: flex-start;}
 }
 
 @media (max-width: 540px) {
