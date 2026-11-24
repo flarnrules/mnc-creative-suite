@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MNC Creative Suite · 0.9.13.2</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="layout-designer.css"><link rel="stylesheet" href="workspace.css"></head>
+<title>MNC Creative Suite · 0.9.14</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="back-studio.css"><link rel="stylesheet" href="shape-studio.css"><link rel="stylesheet" href="design-system.css"><link rel="stylesheet" href="layout-designer.css"><link rel="stylesheet" href="workspace.css"></head>
 <body>
-<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.13.2</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
+<header class="mast" id="suiteTray" hidden><div class="brand"><div class="brand-mark" aria-hidden="true"><span class="r">m</span><span class="b">n</span><span class="g">c</span></div><div><h1>Movie Night Club <b>Creative Suite</b></h1><p>TRADING CARD WORKSHOP</p></div></div><div class="mast-side"><span class="pill">v0.9.14</span><span class="pill gold">LIQUOR EXCHANGE · DEC 12 2026</span></div></header>
 <div class="suite-nav"><button id="suiteTrayToggle" type="button" aria-controls="suiteTray" aria-expanded="false" title="Show suite header">Header</button><nav id="suiteTabs" class="tabs" aria-label="Workspace sections"><button type="button" class="active" data-tab="visualLanguage">Current Designs</button>
 <button type="button" data-tab="studio">Card Designer</button>
 <button type="button" data-tab="layoutDesigner">Layout Designer</button>
@@ -29,7 +29,8 @@
       <button id="ldApply" type="button">Apply</button>
     </div>
     <div class="ld-toolbar-actions">
-      <button id="ldSave" type="button">Save layout</button>
+      <button id="ldSave" type="button">Save layout preset</button>
+      <button id="ldTypeDefault" type="button">Set type default</button>
       <button id="ldExport" class="accent-btn" type="button">Export PNG</button>
     </div>
   </header>
@@ -100,13 +101,12 @@
     <form id="ldSaveForm">
       <h3 id="ldSaveTitle">Save layout</h3>
       <label class="label">Layout name<input id="ldSaveName" maxlength="96" required></label>
-      <label class="label">Default for type<select id="ldDefaultType"></select></label>
       <div class="buttonbar"><button id="ldSaveCancel" type="button">Cancel</button><button type="submit" class="accent-btn">Save</button></div>
     </form>
   </dialog>
 </section>
 <section class="page" id="typeDesigner">
-<div class="sectionhead"><div><h2>Type Designer</h2><p>Shared rule wording and formatting for a card type.</p></div><div class="buttonbar"><button id="typeOpenLayout" type="button">Open Layout Designer</button><button id="typeOpenSymbols" type="button">Symbols &amp; saved design</button><button id="typeOpenCard" type="button">Open preview card</button></div></div>
+<div class="sectionhead"><div><h2>Type Designer</h2><p>Shared rule wording and formatting for a card type.</p></div><div class="buttonbar"><button id="typeOpenLayout" type="button">Open Layout Designer</button><button id="typeOpenSymbols" type="button">Edit type design</button><button id="typeOpenCard" type="button">Open preview card</button></div></div>
 <div class="type-workspace tool-workspace"><aside class="panel"><label class="label">Card type<select id="typeDesignProfile"></select></label><p id="typeDesignCount" class="status-line"></p>
 <label class="label" id="typeColorLabel">Type accent<input id="typeDesignColor" type="color"></label>
 <label class="label" id="typeHeaderSubtypeRow">Character header<select id="typeHeaderSubtype"><option value="">Use default</option><option value="false">Type only</option><option value="true">Show italic subtype</option></select></label>
@@ -153,22 +153,111 @@
 
 <section class="page active" id="visualLanguage" aria-labelledby="currentDesignsTitle">
   <div class="sectionhead">
-    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Choose a card type to start with its colors, glyph, and layout.</p></div>
+    <div><h2 id="currentDesignsTitle" tabindex="-1">Current Designs</h2><p id="designsIntro">Start a card from a type, or click its glyph or palette to edit the default.</p></div>
     <div class="buttonbar">
+      <span id="designSaveStatus" class="status-line" role="status"></span>
       <button id="openSavedCards" type="button" data-tab="studio">Open saved cards</button>
       <button id="toggleDesignStandards" type="button" aria-controls="designStandards" aria-expanded="false">Edit type standards</button>
     </div>
   </div>
   <div id="designGallery" class="tool-scroll">
     <p id="designArtworkNote" class="status-line" hidden></p>
-    <p class="design-palette-key">Swatches show accent, background, and border.</p>
     <div id="designChoices"></div>
-    <button id="createArchiveCard" type="button">New archive card</button>
+    <details class="other-card-types">
+      <summary>Other card types</summary>
+      <div class="buttonbar">
+        <label class="label">Legacy type<select id="otherCardType"><option>Archive</option><option>Member</option><option>Meme</option><option>Moment</option><option>Location</option><option>Byline</option><option>Award</option><option>Reaction</option><option>Artifact</option></select></label>
+        <button id="createOtherCard" type="button">New card</button>
+      </div>
+    </details>
   </div>
   <div id="designStandards" class="symbols-workspace tool-workspace" hidden>
-    <div class="panel symbol-chart" id="symbolChart"></div>
+    <div id="standardGlyphTools" class="panel">
+      <div class="glyph-alignment">
+        <canvas id="symbolAlignment" width="224" height="224" tabindex="0" aria-label="Glyph alignment in its box. Drag or use the arrow keys to move the glyph."></canvas>
+        <div>
+          <h3>Glyph alignment</h3>
+          <p class="muted">Drag the glyph in the square to adjust it within its box. Arrow keys move it in small steps.</p>
+          <output id="symbolAlignmentStatus">X 0% · Y 0%</output>
+          <div class="buttonbar"><button id="symbolAlignCenter" type="button">Center glyph</button><button id="symbolAlignReset" type="button">Reset</button></div>
+        </div>
+      </div>
+      <label class="label">Glyph source<select id="symbolSource"><option value="text">Text or emoji</option><option value="image">PNG image</option><option value="builtin">Drawn type glyph</option><option value="hidden">Hidden</option></select></label>
+      <div id="symbolTextFields">
+        <label class="label">Glyph<input id="symbolGlyph" maxlength="32"></label>
+        <div id="symbolCandidates" class="buttonbar"></div>
+        <details class="panel-section">
+          <summary>Font and presentation</summary>
+          <div class="pair">
+            <label class="label">Font<select id="symbolFont"></select></label>
+            <label class="label">Presentation<select id="symbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label>
+          </div>
+          <p id="symbolFontStatus" class="status-line" role="status"></p>
+          <div class="font-comparison"><figure><canvas id="symbolSegoe" width="180" height="130" aria-label="Segoe UI Symbol comparison"></canvas><figcaption>Segoe UI Symbol</figcaption></figure><figure><canvas id="symbolTimes" width="180" height="130" aria-label="Times New Roman comparison"></canvas><figcaption>Times New Roman</figcaption></figure></div>
+          <button id="symbolFreeze" type="button">Save glyph as PNG</button>
+        </details>
+      </div>
+      <div id="symbolImageFields" hidden>
+        <label class="label">Glyph image<select id="symbolAsset"></select></label>
+        <div class="buttonbar"><label class="file-label secondary">Upload PNG<input id="symbolUpload" type="file" accept="image/png,.png"></label><button id="symbolFindDrawing" type="button">Find matching drawing</button></div>
+        <details class="panel-section">
+          <summary>Image appearance</summary>
+          <label class="label">Image style<select id="symbolImageMode"><option value="tint">Single ink silhouette</option><option value="original">Original image</option></select></label>
+          <label class="toggle"><input id="symbolRemoveWhite" type="checkbox" checked> Clear white background</label>
+        </details>
+      </div>
+      <p id="symbolStatus" class="status-line" role="status"></p>
+      <details class="panel-section">
+        <summary>Glyph ink and background</summary>
+        <label class="label">Ink<select id="symbolInkMode"><option value="auto">Use card text color</option><option value="custom">Custom</option></select></label>
+        <label class="label" id="symbolColorRow" hidden>Custom ink<input id="symbolColor" type="color" value="#000000"></label>
+        <div class="symbol-large"><canvas id="symbolLarge" width="512" height="512" aria-label="Selected glyph on its own"></canvas></div>
+      </details>
+      <details class="panel-section">
+        <summary>Chart tools</summary>
+        <div class="buttonbar"><button id="symbolRefresh" type="button">Refresh glyph folder</button><button id="symbolExportChart" type="button">Export chart PNG</button></div>
+      </details>
+      <details id="browseTypeGlyphs" class="panel-section">
+        <summary>Browse type glyphs</summary>
+        <div class="symbol-chart" id="symbolChart"></div>
+      </details>
+    </div>
+    <div id="typeStandardPreviewPanel" class="panel type-standard-preview" hidden>
+      <h3>Starting design preview</h3>
+      <canvas id="typeStandardPreview" width="375" height="525" aria-label="Preview of the default for a new card of this type"></canvas>
+    </div>
     <div class="panel symbol-editor">
       <label class="label">Type or mark<select id="symbolProfile"></select></label>
+      <div class="standard-tabs" role="group" aria-label="Type design settings">
+        <button type="button" data-standard-tab="colors">Colors</button>
+        <button type="button" data-standard-tab="glyphs">Glyphs</button>
+        <button type="button" data-standard-tab="layout">Starting layout</button>
+      </div>
+      <section id="standardColors" hidden>
+        <h3>Starting colors</h3>
+        <p class="muted">Choose a swatch or enter a hex value. New cards of this type use these colors.</p>
+        <div id="typeColorFields" class="type-color-fields"></div>
+        <div class="buttonbar"><button id="resetTypeColors" type="button">Use layout colors</button><button id="editSourceColors" type="button">Edit card colors</button></div>
+        <p id="typeColorStatus" role="status" class="status-line"></p>
+      </section>
+      <section id="standardLayout" hidden>
+        <h3>Starting layout</h3>
+        <label class="label">Layout for new cards<select id="symbolPreset"></select></label>
+        <label class="label">Card to use as a model<select id="standardSource"></select></label>
+        <p class="muted">Use a finished card to capture its colors, glyphs, layers, and footer. New cards start with their own content and number.</p>
+        <div class="buttonbar">
+          <button id="symbolSaveDesign" class="accent-btn" type="button">Save this card as type default</button>
+          <button id="standardEditLayout" type="button">Edit card layout</button>
+          <button id="symbolApplyDesign" type="button">Apply default to this card</button>
+        </div>
+        <p id="symbolDesignStatus" class="status-line" role="status"></p>
+      </section>
+      <section id="standardGlyphs">
+      <div class="pair">
+        <label id="symbolTargetRow" class="label">Glyph to edit<select id="symbolTarget"><option value="icon">Type icon</option><option value="setMark">LX26 set mark</option></select></label>
+        <label class="label">Badge shape<select id="symbolBackdrop"><option value="none">None</option><option value="circle">Circle</option><option value="square">Rounded square</option><option value="pill">Pill</option><option value="diamond">Diamond</option><option value="shield">Shield</option></select></label>
+      </div>
+      <div id="typeMarkTools" class="buttonbar" hidden><p id="typeMarkStatus" class="status-line"></p><button id="resetTypeMark" type="button">Use shared LX26 mark</button></div>
       <div class="symbol-context-window" id="symbolContextWindow">
         <h3>Glyph preview</h3>
         <p id="symbolContextLocation" class="status-line"></p>
@@ -209,45 +298,7 @@
         </div>
         <p id="symbolContextStatus" class="status-line" role="status"></p>
       </div>
-      <label class="label">Glyph source<select id="symbolSource"><option value="text">Text or emoji</option><option value="image">PNG image</option><option value="builtin">Drawn type glyph</option><option value="hidden">Hidden</option></select></label>
-      <div id="symbolTextFields">
-        <label class="label">Glyph<input id="symbolGlyph" maxlength="32"></label>
-        <div id="symbolCandidates" class="buttonbar"></div>
-        <details class="panel-section">
-          <summary>Font and presentation</summary>
-          <div class="pair">
-            <label class="label">Font<select id="symbolFont"></select></label>
-            <label class="label">Presentation<select id="symbolPresentation"><option value="text">Monochrome text</option><option value="emoji">Color emoji</option></select></label>
-          </div>
-          <p id="symbolFontStatus" class="status-line" role="status"></p>
-          <div class="font-comparison"><figure><canvas id="symbolSegoe" width="180" height="130" aria-label="Segoe UI Symbol comparison"></canvas><figcaption>Segoe UI Symbol</figcaption></figure><figure><canvas id="symbolTimes" width="180" height="130" aria-label="Times New Roman comparison"></canvas><figcaption>Times New Roman</figcaption></figure></div>
-          <button id="symbolFreeze" type="button">Save glyph as PNG</button>
-        </details>
-      </div>
-      <div id="symbolImageFields" hidden>
-        <label class="label">Glyph image<select id="symbolAsset"></select></label>
-        <div class="buttonbar"><label class="file-label secondary">Upload PNG<input id="symbolUpload" type="file" accept="image/png,.png"></label><button id="symbolFindDrawing" type="button">Find matching drawing</button></div>
-        <details class="panel-section">
-          <summary>Image appearance</summary>
-          <label class="label">Image style<select id="symbolImageMode"><option value="tint">Single ink silhouette</option><option value="original">Original image</option></select></label>
-          <label class="toggle"><input id="symbolRemoveWhite" type="checkbox" checked> Clear white background</label>
-        </details>
-      </div>
-      <p id="symbolStatus" class="status-line" role="status"></p>
-      <details class="panel-section">
-        <summary>Glyph ink and background</summary>
-        <label class="label">Icon background<select id="symbolBackdrop"><option value="none">None</option><option value="circle">Circle</option></select></label>
-        <label class="label">Ink<select id="symbolInkMode"><option value="auto">Use card text color</option><option value="custom">Custom</option></select></label>
-        <label class="label" id="symbolColorRow" hidden>Custom ink<input id="symbolColor" type="color" value="#000000"></label>
-        <div class="symbol-large"><canvas id="symbolLarge" width="512" height="512" aria-label="Selected glyph on its own"></canvas></div>
-      </details>
-      <details class="panel-section">
-        <summary>Layout and chart tools</summary>
-        <label class="label">Saved layout for this type<select id="symbolPreset"></select></label>
-        <div class="buttonbar"><button id="symbolSaveDesign" type="button">Save selected card as standard</button><button id="symbolApplyDesign" type="button">Apply standard to selected card</button></div>
-        <p id="symbolDesignStatus" class="status-line" role="status"></p>
-        <div class="buttonbar"><button id="symbolRefresh" type="button">Refresh glyph folder</button><button id="symbolExportChart" type="button">Export chart PNG</button></div>
-      </details>
+      </section>
     </div>
   </div>
 </section>
@@ -391,11 +442,11 @@
     <div class="pair"><label class="label">Main color<input id="mainColor" type="color"></label><label class="label">Border color<input id="frameColor" type="color"></label></div>
     <label class="label">Lightness <output id="lightnessValue">0</output><input id="backgroundLightness" type="range" min="-60" max="60" step="1" value="0"></label>
     <button id="resetCardColors" type="button">Reset main and border colors</button>
+    <div class="pair"><label class="label">Accent color<input type="color" id="gameAccent"></label><label class="toggle"><input type="checkbox" id="useTypeColor"> Use default accent</label></div>
     <details id="gameFrameLook" class="inspector-subsection">
-      <summary>Frame &amp; accent</summary>
+      <summary>Frame options</summary>
       <label class="label">Outer border style<select id="frameStyle"></select></label>
       <div class="pair"><label class="label">Border width<input type="range" id="frameWidth" min="2" max="24"></label><label class="label">Border corner<input type="range" id="frameRadius" min="0" max="65"></label></div>
-      <div class="pair"><label class="label">Accent color<input type="color" id="gameAccent"></label><label class="toggle"><input type="checkbox" id="useTypeColor"> Use category accent</label></div>
     </details>
   </div>
   <label class="label">PNG corner radius <output id="cutRadiusValue">38 px</output><input id="cutRadius" type="range" min="0" max="80" step="1" value="38"></label>
@@ -440,7 +491,7 @@
     </div>
     <label class="label">Set name<input id="gameSet" maxlength="72"></label>
   </div>
-  <label class="label">Collection symbol<select id="cardCollectionSymbolMode"><option value="standard">Follow LX26 standard</option><option value="custom">This card only</option><option value="hidden">Hidden</option></select></label>
+  <label class="label">Collection symbol<select id="cardCollectionSymbolMode"><option value="standard">Follow type’s LX26 mark</option><option value="custom">This card only</option><option value="hidden">Hidden</option></select></label>
   <div id="footerSetIcons" class="pair">
     <label class="label">Set icon<input id="setGlyph" maxlength="24" placeholder="🍸"></label>
     <label class="label">Set icon image<select id="setGlyphAsset"></select></label>
@@ -908,9 +959,9 @@
 <div class="previewheading print-preview-head"><h3>Sheet proof</h3><div class="buttonbar"><label class="label inline-label">Sheet<select id="proofSheet"></select></label><button id="proofFront" aria-pressed="true">Front</button><button id="proofBack" aria-pressed="false">Back</button><button id="proofBoth" aria-pressed="false">Both</button></div></div>
 <div class="buttonbar back-proof-note" id="proofDraftNotice" hidden><span id="proofDraftName" class="muted tiny" role="status"></span><button id="proofClearDraft" type="button">Show shared back</button></div>
 <div class="sheet-proof" id="sheetProof"><canvas id="proofFrontCanvas" width="1320" height="1020" aria-label="Print sheet front"></canvas><canvas id="proofBackCanvas" width="1320" height="1020" aria-label="Print sheet back" hidden></canvas></div></div></div></section>
-<section class="page" id="data"><div class="sectionhead"><div><h2>Project &amp; Backup</h2><p id="saveStatus" role="status">Opening local project…</p><p id="projectFolderStatus" class="muted tiny">Browser workspace. Export project JSON to back up or share your card.</p></div></div><div class="tool-scroll" tabindex="0" aria-label="Project and backup settings">
+<section class="page" id="data"><div class="sectionhead"><div><h2>Project &amp; Backup</h2><p id="saveStatus" role="status">Opening local project…</p><p id="projectFolderStatus" class="muted tiny">Browser workspace. Export project JSON to back up or share your work.</p></div></div><div class="tool-scroll" tabindex="0" aria-label="Project and backup settings">
 <div class="panel catalog-panel">
-  <div class="previewheading"><h3>Excel catalog</h3></div>
+  <div class="previewheading"><h3>Excel catalog</h3><a id="catalogStarterLink" hidden href="../starter/MNC_TCG_Starter.xlsx" download>Download starter workbook</a></div>
   <p>Load the Excel catalog by card ID. You can edit imported cards in Card Designer and choose how to handle those edits when you import again.</p>
   <div class="buttonbar">
     <button id="loadProjectWorkbook" hidden>Load project workbook</button>
@@ -924,4 +975,4 @@
 <div class="data-layout"><div class="panel"><h3>Back up / restore</h3><div class="buttonbar"><button class="accent-btn" id="exportProject">Export project JSON</button><label class="file-label secondary">Import project JSON<input id="importProject" type="file" accept=".json,application/json"></label></div><p class="muted">Keep your project JSON, workbook, and assets folder together. Images imported in browser-only mode are embedded in the JSON.</p><hr><div class="buttonbar"><button id="exportCardsCSV">Export cards CSV</button><button id="exportAssetsCSV">Export assets CSV</button></div></div><div class="panel"><h3>Project status</h3><div id="projectSummary" class="summary-stats"></div><hr><h3>Earlier tools</h3><div class="buttonbar"><button data-tab="fractalLite">Fractal Lite</button><button data-tab="prismLegacy">Prism v0.8</button><button data-tab="foil">Foil Lite</button></div></div></div></div>
 </section>
 </main>
-<script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js"></script><script src="artwork-profiles.js"></script><script src="front-layout.js"></script><script src="front-effects.js"></script><script src="outer-border.js"></script><script src="layout-design.js"></script><script src="art-cutout.js"></script><script src="type-design.js"></script><script src="mirror-mask.js"></script><script src="app.js"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js"></script><script src="design-system-ui.js"></script><script src="type-design-ui.js"></script><script src="glyph-context-ui.js"></script><script src="cutout-editor.js"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js"></script><script src="lab-links.js"></script></body></html>
+<script src="edition.js"></script><script src="card-metadata.js"></script><script src="game-model.js"></script><script src="catalog-schema.js"></script><script src="catalog-model.js"></script><script src="catalog-starter.js"></script><script src="assets.js"></script><script src="asset_image_data.js"></script><script src="back-model.js"></script><script src="shape-model.js"></script><script src="set-model.js"></script><script src="symbols.js"></script><script src="artwork-profiles.js"></script><script src="front-layout.js"></script><script src="front-effects.js"></script><script src="outer-border.js"></script><script src="layout-design.js"></script><script src="art-cutout.js"></script><script src="type-design.js"></script><script src="mirror-mask.js"></script><script src="app.js"></script><script src="suite.js"></script><script src="standard_and_prism.js"></script><script src="glyph_fonts_manifest.js"></script><script src="glyph_font_bridge.js"></script><script src="type-glyphs.js"></script><script src="game-frame.js"></script><script src="game-studio.js"></script><script src="shape-studio.js"></script><script src="front-studio.js"></script><script src="mirror-studio.js"></script><script src="back-render.js"></script><script src="back-studio.js"></script><script src="print-proof.js"></script><script src="vendor/jszip.min.js"></script><script src="catalog-xlsx.js"></script><script src="project-disk.js"></script><script src="catalog-ui.js"></script><script src="design-system-ui.js"></script><script src="type-design-ui.js"></script><script src="glyph-context-ui.js"></script><script src="cutout-editor.js"></script><script src="layout-fill-inspector.js"></script><script src="layout-designer.js"></script><script src="lab-links.js"></script></body></html>

@@ -11,14 +11,16 @@
 
   function selection() {
     const id=profile();
-    if(activeTab!=='visualLanguage'||$('designStandards').hidden||!state.visualLanguage.profiles[id])return null;
-    const actual=cardById(menu.value),collection=id==='collection';
-    return {id,actual,collection,isType:!!state.typeDesigns.profiles[id],
+    if(activeTab!=='visualLanguage'||$('designStandards').hidden||$('standardGlyphs').hidden||!state.visualLanguage.profiles[id])return null;
+    const actual=cardById(menu.value),isType=!!state.typeDesigns.profiles[id];
+    const typeMark=isType&&$('symbolTarget').value==='setMark';
+    const collection=id==='collection'||typeMark;
+    return {id,actual,collection,typeMark,isType,
       layer:collection?'setIcon':'cornerIcon',saved:!!actual&&mode.value==='card'};
   }
 
   function same(a,b) {
-    return !!a&&!!b&&a.id===b.id&&a.actual===b.actual&&a.saved===b.saved;
+    return !!a&&!!b&&a.id===b.id&&a.actual===b.actual&&a.saved===b.saved&&a.collection===b.collection;
   }
 
   function syncMenu() {
@@ -35,8 +37,8 @@
     if(!menu.value)mode.value='standard';
   }
 
-  function target({collection,isType,id}) {
-    if(collection)return state.footerDesign;
+  function target({collection,typeMark,isType,id}) {
+    if(collection&&!typeMark)return state.footerDesign;
     if(isType)return state.typeDesigns.profiles[id].frontLayout;
     return state.visualLanguage.profiles[id].placement;
   }
@@ -47,7 +49,10 @@
 
   function configFor(context,source) {
     const settings=target(context);
-    if(context.collection)return {size:settings.setIcon??29,x:settings.setIconX??0,y:settings.setIconY??0};
+    if(context.collection){
+      const inherited=context.typeMark?state.footerDesign:{};
+      return {size:settings.setIcon??inherited.setIcon??29,x:settings.setIconX??inherited.setIconX??0,y:settings.setIconY??inherited.setIconY??0};
+    }
     // Keep the card's template and text styles, but omit its local glyph placement.
     const inherited={...source,frontLayout:{...source.frontLayout,offsets:{...source.frontLayout?.offsets}}};
     delete inherited.frontLayout.typeIcon;
@@ -73,8 +78,8 @@
     design.cleanLayer(card,id);
   }
 
-  function standardSymbol({id}) {
-    const symbol=symbols.profileSymbol(state,id);
+  function standardSymbol({id,typeMark}) {
+    const symbol=typeMark?symbols.typeMark(state,id):symbols.profileSymbol(state,id);
     if(symbol.source==='builtin')symbol.builtinId??=id;
     return symbol;
   }
@@ -110,7 +115,7 @@
     $('symbolPlacementSizeLabel').textContent=Math.round(config.size)+' px';
     $('symbolPlacementCard').disabled=!context.actual;
     const destination=context.isType?context.id:model.idFor(source),name=plan.profile(destination)?.name;
-    $('symbolPlacementType').textContent=context.collection?'Use placement on all cards':
+    $('symbolPlacementType').textContent=context.collection&&!context.typeMark?'Use placement on all cards':
       context.isType?'Use placement for '+name:'Use glyph and placement for '+(name||'this type');
     $('symbolPlacementType').disabled=!context.collection&&!state.typeDesigns.profiles[destination];
   }
@@ -299,15 +304,15 @@
   $('symbolPlacementType').onclick=()=>{
     const context=editableSelection();
     if(!context)return;
-    const source=sourceCard(context),{collection,isType,id}=context;
+    const source=sourceCard(context),{collection,typeMark,isType,id}=context;
     const destination=isType?id:model.idFor(source);
-    const targets=state.cards.filter(card=>collection||model.matching(card,destination));
+    const targets=state.cards.filter(card=>collection&&!typeMark||model.matching(card,destination));
     const clear=layout=>{
       if(!layout)return;
       if(collection){delete layout.setIcon;delete layout.setIconX;delete layout.setIconY;}
       else{delete layout.typeIcon;if(layout.offsets)delete layout.offsets.cornerIcon;}
     };
-    if(collection)for(const profile of Object.values(state.typeDesigns.profiles))clear(profile.frontLayout);
+    if(collection&&!typeMark)for(const profile of Object.values(state.typeDesigns.profiles))clear(profile.frontLayout);
     else if(id==='creature')for(const info of plan.definitions.filter(info=>info.category==='Creature'))clear(state.typeDesigns.profiles[info.id].frontLayout);
     else if(!isType){
       const settings=state.typeDesigns.profiles[destination];

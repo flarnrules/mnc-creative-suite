@@ -132,6 +132,7 @@
       const gradient=MNC_LAYOUT.get(c,'border')?.gradient;
       $('frameColor').value=gradient?MNC_FRONT_EFFECTS.firstColor(gradient):palette.outer;
       if(palette.accent)$('gameAccent').value=palette.accent;
+      $('useTypeColor').checked=c.useTypeColor!==false;
     }
     const light=c.backgroundLightness??0;
     $('backgroundLightness').value=light;
@@ -234,7 +235,7 @@
     const eventType=['range','textarea','color'].includes(el.type)||['ruleTitle','roleBadgeText','roleBadgeIcon'].includes(id)?'input':'change';
     el.addEventListener(eventType,()=>{
       const c=current();
-      if(!game.isGameCard(c))return;
+      if(!game.isGameCard(c)&&!(c?.template==='Standard'&&['accent','useTypeColor'].includes(key)))return;
       const value=el.type==='checkbox'?el.checked:el.type==='range'?Number(el.value):key==='sidekickPartner'?el.value.trim():el.value;
       if(key==='sourceAssetId')setCardArtwork(c,value);
       else if(key==='releaseReady'){
@@ -262,7 +263,7 @@
         if(key==='surface')window.MNC_syncFrontStudio?.();
       }
       updateCatalogLabel(c);
-      persist();setInspectorStatus(c);drawStudioPreview();
+      persist();if(game.isGameCard(c))setInspectorStatus(c);drawStudioPreview();
       if(key==='sourceAssetId')refreshStudio();
       if(key==='sidekickPartner'){
         showPartner(c);
@@ -346,13 +347,8 @@
       const c=current();
       if(!c)return;
       const {target}=event;
-      c[key]=target.type==='range'?Number(target.value):target.value;
-      if(key==='mainColor')MNC_LAYOUT.backgroundStart(c,c.mainColor);
-      const gradient=key==='borderColor'&&MNC_LAYOUT.get(c,'border')?.gradient;
-      if(gradient){
-        const first=gradient.stops.reduce((left,stop)=>stop.at<left.at?stop:left);
-        first.color=c.borderColor;
-      }
+      if(target.type==='color')MNC_TYPE_DESIGN.setColor(c,key,target.value);
+      else c[key]=Number(target.value);
       syncColors(c);persist();drawStudioPreview();
     };
   }

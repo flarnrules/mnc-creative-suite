@@ -641,7 +641,7 @@
     }
     input(host,'Symbol size (px)',front.values(card)[size]??29,(c,value)=>{front.editable(c)[size]=value||0;},
       {type:'number',min:0,max:200});
-    action(host,'Edit shared symbol',()=>window.MNC_openTypeStandard(id));
+    action(host,'Edit shared symbol',()=>window.MNC_openTypeStandard(id,'glyphs'));
   }
 
   function borderFields(card){
@@ -915,6 +915,7 @@
     $('ldEmpty').hidden=!!card;
     $('ldWorkspace').hidden=$('ldStatusbar').hidden=$('ldQuickTools').hidden=!card;
     $('ldSave').disabled=$('ldExport').disabled=!card;
+    $('ldTypeDefault').disabled=!card||!MNC_TYPE_DESIGN.idFor(card);
     presetOptions(card);
     $('ldApply').disabled=true;
     if(!same){
@@ -1016,10 +1017,12 @@
     const card=current();
     if(!card)return;
     $('ldSaveName').value=state.templates.find(item=>item.id===preset.value)?.name||'';
-    const types=MNC_TYPE_DESIGN.profiles().filter(profile=>(profile.family||(profile.id==='creature'?'Character':''))===card.family);
-    dropDownOptions($('ldDefaultType'),[['','None'],...types.map(type=>[type.id,type.name])],'');
     dialog.showModal();
     $('ldSaveName').focus();
+  };
+  $('ldTypeDefault').onclick=()=>{
+    const card=current(),id=card&&MNC_TYPE_DESIGN.idFor(card);
+    if(id)window.MNC_openTypeStandard(id,'layout');
   };
   $('ldSaveCancel').onclick=()=>dialog.close();
   $('ldSaveForm').onsubmit=event=>{
@@ -1028,14 +1031,11 @@
     if(!card)return;
     const saved=saveDesignPreset(card,{name:$('ldSaveName').value});
     if(!saved)return;
-    const type=$('ldDefaultType').value;
-    if(type)state.visualLanguage.profiles[type].presetId=saved.id;
-    persist();
     dialog.close();
     presetOptions(card);
     preset.value=saved.id;
     $('ldApply').disabled=false;
-    message(type?'Saved '+saved.name+' as the default for '+MNC_SET_PLAN.profile(type).name+'.':'Saved '+saved.name+'.');
+    message('Saved '+saved.name+'.');
   };
 
   board.addEventListener('pointerdown',beginDrag);
