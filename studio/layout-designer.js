@@ -6,11 +6,16 @@
   const workspace=$('ldWorkspace'),setup=$('ldSetupToggle'),pan=$('ldPan'),zoom=$('ldZoom');
   const views=[['canvas',$('ldCanvasView')],['layers',$('ldLayersView')],['edit',$('ldEditView')]];
   const histories=new Map();
-  const current=()=>cardById(currentId);
+  const current=()=>typeDraft?.card||cardById(currentId);
   const json=value=>JSON.stringify(value);
   const defaultHint='Drag to move. Double-click text to edit.';
   let activeId='',selected='art',layers=[],listSignature='',drag=null,requested=0,queued=false;
   let mode='properties',lockRatio=true,lockArtRatio=false;
+  let typeDraft=null;
+
+  function saveCardEdit(card){
+    if(card!==typeDraft?.card)persist();
+  }
 
   const fonts=[['','Inherit'],['serif','Georgia'],['sans','Arial'],['system','System UI'],['mono','Courier New']];
   const weights=[['','Inherit'],['normal','Regular'],['bold','Bold'],['italic','Italic'],['bold-italic','Bold italic']];
@@ -59,7 +64,7 @@
     h.undo.push(edits);
     if(h.undo.length>40)h.undo.shift();
     h.redo.length=0;
-    persist();
+    saveCardEdit(card);
     showHistory();
   }
 
@@ -79,14 +84,14 @@
       restored.push([key,before,after]);
     }
     if(restored.length)h[undo?'redo':'undo'].push(restored);
-    persist();
+    saveCardEdit(card);
     showHistory();
     message(restored.length?(undo?'Layout edit undone.':'Layout edit redone.'):'This edit was superseded by later changes.');
     repaint(true);
   }
 
   function change(update,{sync=false,card=current()}={}) {
-    if(!card||cardById(card.id)!==card)return;
+    if(!card||card!==typeDraft?.card&&cardById(card.id)!==card)return;
     const before=deep(card);
     update(card);
     checkpoint(card,before);
@@ -106,10 +111,11 @@
   }
 
   function showSelected(scroll=false) {
-    const layer=currentLayer();
+    const layer=currentLayer(),shared=layer&&front.isSharedFooterLayer(current(),layer.id);
     selection.hidden=maskEditor.active()||!layer||layer.id==='background'||layer.hidden||layer.empty||!layer.rect.w||!layer.rect.h;
     if(!selection.hidden){
       selection.dataset.layer=layer.id;
+      selection.dataset.shared=String(!!shared);
       const {x,y,w,h}=layer.rect;
       Object.assign(selection.style,{left:x/CW*100+'%',top:y/CH*100+'%',width:w/CW*100+'%',height:h/CH*100+'%'});
     }
@@ -119,8 +125,8 @@
       if(active&&scroll)row.scrollIntoView({block:'nearest'});
     }
     const position=layers.indexOf(layer);
-    $('ldForward').disabled=position<1||position>=layers.length-1;
-    $('ldBackward').disabled=position<=1;
+    $('ldForward').disabled=!!shared||position<1||position>=layers.length-1;
+    $('ldBackward').disabled=!!shared||position<=1;
     for(const input of inspector.querySelectorAll('[data-coordinate]')){
       if(layer&&input!==document.activeElement)input.value=String(Math.round(layer.rect[input.dataset.coordinate]));
     }
@@ -130,7 +136,8 @@
   }
 
   function layerList(){
-    const signature=json(layers.map(({id,label,hidden,empty})=>[id,label,hidden,empty]));
+    const card=current();
+    const signature=json(layers.map(({id,label,hidden,empty})=>[id,label,hidden,empty,front.isSharedFooterLayer(card,id)]));
     if(signature===listSignature)return;
     listSignature=signature;
     const host=$('ldLayers'),top=host.scrollTop;
@@ -144,7 +151,7 @@
       open.title=layer.label||'Layer';
       open.onclick=()=>editLayer(layer.id);
       item.append(open);
-      if(layer.id!=='background'){
+      if(layer.id!=='background'&&!front.isSharedFooterLayer(card,layer.id)){
         const toggle=node('button',layer.hidden?'○':'●','ld-eye');
         toggle.type='button';
         toggle.ariaLabel=(layer.hidden?'Show ':'Hide ')+layer.label;
@@ -261,7 +268,7 @@
         if(!card)return;
         before??=deep(card);
         apply(card);
-        persist();
+        saveCardEdit(card);
         repaint();
       };
       control.onchange=commit;
@@ -640,7 +647,7 @@
       uploadField(host,'Upload glyph PNG','image/png,.png',async(file,c)=>{
         const asset=await symbols.storeGlyph(file,'card-'+place+'-glyph-'+Date.now()+'.png');
         change(card=>symbols.setCardSymbol(card,place,{assetId:asset.id,source:'image'}),{sync:true,card:c});
-        persist();
+        saveCardEdit(c);
         if(c===current())message('Glyph applied to '+c.title+'.');
       });
       const format=pair(host);
@@ -768,6 +775,19 @@
     $('ldLayerTitle').textContent=layer?.label||'Properties';
     inspector.scrollTop=0;
     if(!layer||!card)return;
+    if(front.isSharedFooterLayer(card,layer.id)){
+      for(const id of ['ldFillTab','ldEffectsTab','ldMaskTab'])$(id).hidden=true;
+      $('ldPropertiesTab').hidden=false;
+      $('ldPropertiesTab').setAttribute('aria-pressed','true');
+      const host=fields('Shared footer');
+      const description=node('p','This layer follows the shared layout in Current Designs.','ld-muted');
+      host.append(description);
+      action(host,'Edit shared footer',()=>window.MNC_openSharedFooter());
+      action(host,typeDraft?'Use a custom footer for this type':'Use a custom footer on this card',()=>{
+        change(c=>{c.collectionFooterMode='custom';},{sync:true});
+      });
+      return;
+    }
     const fill=fillInspector.allows(layer,card), artMask=['art','cutout'].includes(layer.id);
     const border=layer.id==='border', mask=artMask||border, styled=layer.id!=='background';
     $('ldFillTab').hidden=!fill;
@@ -790,6 +810,11 @@
       if(border)borderMaskFields(card);
       else maskEditor.render(fields('Artwork cutout'));
       return;
+    }
+    if(['footer','number','setIcon'].includes(layer.id)){
+      action(fields('Collection layout'),'Use shared footer',()=>{
+        change(c=>{c.collectionFooterMode='shared';},{sync:true});
+      });
     }
     if(layer.id==='art')artSizeFields(layer,card);
     if(layer.text)copyFields(layer,card);
@@ -846,6 +871,7 @@
     const start=point(event),layer=handle?currentLayer():hit(start);
     if(!layer){select('background');return;}
     if(selected!==layer.id)select(layer.id,{scroll:true});
+    if(front.isSharedFooterLayer(card,layer.id))return;
     if(event.pointerType==='touch')event.preventDefault();
     else canvas.focus({preventScroll:true});
     board.setPointerCapture(event.pointerId);
@@ -913,21 +939,29 @@
     }
     group('Starting layouts',model.starters(card).map(([id,name])=>['start:'+id,name]));
     group('Saved layouts',state.templates
-      .filter(item=>!['Game Frame','Game Full Art'].includes(item.template)||game.role(card))
+      .filter(item=>!item.typeDefaultFor&&(!['Game Frame','Game Full Art'].includes(item.template)||game.role(card)))
       .map(item=>[item.id,item.name]));
   }
 
   function refresh(){
     const card=current()||state.cards.find(inWorkingCatalog)||state.cards[0];
-    if(card)currentId=card.id;
+    if(card&&!typeDraft)currentId=card.id;
     const same=activeId===card?.id;
     activeId=card?.id||'';
     dropDownOptions(cards,state.cards.map(c=>[c.id,c.title+' · '+c.family+' · '+(c.catalogId||c.id)]),activeId);
-    cards.disabled=!card;
+    cards.disabled=!card||!!typeDraft;
+    $('ldCardChoice').hidden=!!typeDraft;
+    $('ldTypeActions').hidden=!typeDraft;
+    $('ldTitle').textContent=typeDraft?'Edit starting design':'Layout Designer';
+    $('ldEditScope').textContent=typeDraft?typeDraft.name+' · Save to use on new cards.':'Edits autosave to this card.';
+    $('ldSave').hidden=$('ldTypeDefault').hidden=$('ldExport').hidden=$('ldStatusLinks').hidden=!!typeDraft;
+    setup.textContent=typeDraft?'Layouts':'Card & layout';
     $('ldEmpty').hidden=!!card;
     workspace.hidden=$('ldStatusbar').hidden=$('ldQuickTools').hidden=$('ldMobilePanes').hidden=!card;
     $('ldSave').disabled=$('ldExport').disabled=!card;
-    $('ldTypeDefault').disabled=!card||!MNC_TYPE_DESIGN.idFor(card);
+    const type=card&&MNC_SET_PLAN.profile(MNC_TYPE_DESIGN.idFor(card));
+    $('ldTypeDefault').disabled=!type;
+    $('ldTypeDefault').textContent=type?'Use card for '+type.name:'Use as starting design';
     presetOptions(card);
     $('ldApply').disabled=true;
     if(!same){
@@ -972,10 +1006,31 @@
   };
   window.MNC_closeLayoutTrace=()=>{
     if(drag)finishDrag({pointerId:drag.id},true);
+    if(typeDraft&&typeDraft.initial!==json(typeDraft.card)&&!confirm('Discard unsaved edits to the '+typeDraft.name+' starting design?'))return false;
+    if(typeDraft)histories.delete(typeDraft.card.id);
+    typeDraft=null;
     maskEditor.cancel();
     showPane('canvas');
     setPan(false);
   };
+  window.MNC_editTypeStarter=id=>{
+    const profile=MNC_SET_PLAN.profile(id);
+    if(!profile||!state.typeDesigns.profiles[id])return;
+    const card=window.MNC_typePreviewCard(id);
+    histories.delete(card.id);
+    typeDraft={id,name:profile.name,card,initial:json(card)};
+    tab('layoutDesigner');
+  };
+  $('ldCommitType').onclick=()=>{
+    if(!typeDraft)return;
+    const {card,id}=typeDraft;
+    if(!captureTypeDesign(card,id))return;
+    histories.delete(card.id);
+    typeDraft=null;
+    window.MNC_finishTypeStarter(id);
+  };
+  $('ldCancelType').onclick=()=>{if(typeDraft)window.MNC_openTypeStandard(typeDraft.id,'layout');};
+  $('ldGuideHelp').onclick=()=>$('ldGuideDialog').showModal();
   function editLayer(id,options){
     showPane('edit');
     select(id,options);
@@ -1057,7 +1112,7 @@
   };
   $('ldTypeDefault').onclick=()=>{
     const card=current(),id=card&&MNC_TYPE_DESIGN.idFor(card);
-    if(id)window.MNC_openTypeStandard(id,'layout');
+    if(id&&!typeDraft)window.MNC_useCardAsTypeStarter(card,id);
   };
   $('ldSaveCancel').onclick=()=>dialog.close();
   $('ldSaveForm').onsubmit=event=>{
@@ -1102,7 +1157,7 @@
     const step=event.shiftKey?10:1;
     const layer=currentLayer();
     const movement={ArrowLeft:['x',-step],ArrowRight:['x',step],ArrowUp:['y',-step],ArrowDown:['y',step]}[event.key];
-    if(movement&&layer&&layer.id!=='background'){
+    if(movement&&layer&&layer.id!=='background'&&!front.isSharedFooterLayer(current(),layer.id)){
       event.preventDefault();
       const [axis,amount]=movement;
       change(c=>setGeometry(c,layer,{[axis]:layer.rect[axis]+amount}));

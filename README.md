@@ -1,6 +1,6 @@
 # MNC Creative Suite for GitHub Pages
 
-The v0.9.15 browser edition opens to **Artwork** with demo images ready to use. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+The v0.9.16 browser edition opens to **Artwork** with demo images ready to use. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
 
 ## Publish from your GitHub account
 
@@ -31,7 +31,7 @@ Use the same direct local release ZIP for both editions. Put the ZIP in the loca
 From this web checkout, pass the tested ZIP to the release script.
 
 ```bash
-mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_15_Release.zip"
+mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_16_Release.zip"
 python3 tools/stage_web_release.py "$mnc_release"
 python3 tools/stage_web_release.py "$mnc_release" --check
 git diff --stat
@@ -47,7 +47,7 @@ In **Card Designer**, set **Role / family** to **Item**. Choose **Meme items** (
 
 1. In **Artwork**, import or choose an image and click **New card with this art**.
 2. In **Current Designs**, choose a card type for its colors, glyph, border, and layout. Finish the title and details in **Card Designer**.
-3. Your edits save in this browser. Use **Saved cards** to reopen a design, **New card** to start fresh, or **Duplicate card** to copy the current design. Reusable layouts live under **Art & look → Layout presets**.
+3. Card edits save in this browser. **Current Designs → Starting design** opens a separate editor for the design new cards use. Use **Saved cards** to reopen a design, **New card** to start fresh, or **Duplicate card** to copy the current design. Named layouts live under **Reusable layouts**. **Current Designs → Shared footer** controls the collection code, mark, and number for participating cards.
 4. Use **Export PNG** for an image. To share editable cards and their artwork, send the file from **Project & Backup → Export project JSON**. Import the JSON into a separate review project so it can be opened alongside your main collection.
 
 ## Run a local preview

@@ -52,6 +52,15 @@ globalThis.MNC_FRONT = (() => {
   const hex = value => typeof value==='string' && /^#[\da-f]{6}$/i.test(value);
   const channels = color=>color.slice(1).match(/../g).map(value=>parseInt(value,16));
   const emojiFont = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+  const sharedFooterLayers=['footer','number','setIcon'];
+  const usesSharedFooter=card=>card?.collectionFooterMode==='shared';
+  const isSharedFooterLayer=(card,id)=>usesSharedFooter(card)&&sharedFooterLayers.includes(id);
+
+  function sharedFooterSettings(value){
+    const size=(key,fallback,min,max)=>Number.isFinite(value?.[key])?clampNumber(Math.round(value[key]),min,max):fallback;
+    return {position:value?.position==='right'?'right':'center',codeSize:size('codeSize',17,11,26),
+      numberSize:size('numberSize',28,14,36),markSize:size('markSize',34,12,56)};
+  }
 
   function mix(a,b,weight) {
     const from=channels(a),to=channels(b);
@@ -341,22 +350,28 @@ globalThis.MNC_FRONT = (() => {
       (game.isGameCard(c)?Math.max(0,...state.cards.filter(card=>card.set===c.set)
         .map(card=>Number(card.collectorNumber)||0)):0);
     const layout=values(c), parts=MNC_CARD_METADATA.collectionParts(promo?{...c,edition:state.setPlan.edition}:c,collection,total);
-    const centered=layout.footerPosition==='center';
-    const label=[layout.printCollectionCode===false?'':parts.code,centered?'':parts.number,layout.printEdition===false?'':parts.edition].filter(Boolean).join(' · ');
-    const size=layout.setIcon??29, right=x+delta.x, baseline=y+delta.y-footerReserve(c);
-    const active=MNC_SYMBOLS.cardSymbol(state,c,'collection').symbol.source!=='hidden';
+    const shared=usesSharedFooter(c),centered=layout.footerPosition==='center',separateNumber=centered||shared;
+    const label=[layout.printCollectionCode===false?'':parts.code,separateNumber?'':parts.number,layout.printEdition===false?'':parts.edition].filter(Boolean).join(' · ');
+    const size=layout.setIcon??29, right=shared?708:x+delta.x;
+    const baseline=shared?1002-(centered?0:state.sharedFooter.numberSize+5):y+delta.y-footerReserve(c);
+    const mark=MNC_SYMBOLS.cardSymbol(state,c,'collection'),active=mark.symbol.source!=='hidden';
     const symbol=collectionIconBox(c,{x,y});
-    scene.add('setIcon',symbol,ctx=>MNC_SYMBOLS.drawCard(ctx,c,symbol.x+size/2,symbol.y+size/2,size,glyphColor,'collection'),
+    scene.add('setIcon',symbol,ctx=>{
+      const mx=symbol.x+size/2,my=symbol.y+size/2;
+      if(!shared)return MNC_SYMBOLS.drawCard(ctx,c,mx,my,size,glyphColor,'collection');
+      return MNC_SYMBOLS.drawBadge(ctx,{...mark.symbol,color:''},mx,my,size,glyphColor,mark.id);
+    },
       {empty:!size||!active});
     const gap=size>0&&active?size+9:0;
     const editionStyle={size:17,weight:700,family:'system-ui',color:ink,align:'right',width:Math.max(40,309-gap)};
     scene.add('footer',MNC_LAYOUT.textBox(ctx,c,'edition',label,right-gap,baseline,editionStyle),
       ctx=>outlined(ctx,c,'edition',label,right-gap,baseline,editionStyle,outline),
       {empty:!label,text:{key:'edition',value:label,size:editionStyle.size,color:ink}});
-    if(centered){
+    if(separateNumber){
       const value=layout.numberFormat==='number'?parts.number.split('/')[0]:
         (layout.numberFormat==='label'?'CARD ':'')+parts.number;
       const r=numberBox(c),textStyle=style(c,'number',{size:36,weight:700,family:'Georgia, serif',color:ink});
+      const rightAligned=shared&&!centered;
       const badge=layout.numberBadge&&layout.numberBadge!=='none';
       const paintNumber=(ctx,textOnly)=>{
         if(badge&&!textOnly){
@@ -365,8 +380,8 @@ globalThis.MNC_FRONT = (() => {
           if(layout.numberBadge==='pill'){ctx.globalAlpha=.12;ctx.fill();}else ctx.stroke();
           ctx.restore();
         }
-        outlined(ctx,c,'number',value,r.x+r.w/2,r.y+r.h-9,
-          {...textStyle,align:'center',width:r.w-20},outline);
+        outlined(ctx,c,'number',value,rightAligned?r.x+r.w:r.x+r.w/2,r.y+r.h-9,
+          {...textStyle,align:rightAligned?'right':'center',width:r.w-20},outline);
       };
       scene.add('number',r,ctx=>paintNumber(ctx,false),{
         empty:!value,text:{key:'number',value,size:36,color:ink},foilText:badge?ctx=>paintNumber(ctx,true):true
@@ -379,13 +394,19 @@ globalThis.MNC_FRONT = (() => {
   }
 
   function numberBox(c) {
-    if(values(c).footerPosition!=='center')return null;
+    const centered=values(c).footerPosition==='center';
+    if(!centered&&!usesSharedFooter(c))return null;
     const size=style(c,'number',{size:36}).size;
+    if(usesSharedFooter(c)&&!centered){
+      const right=708-state.sharedFooter.markSize-9;
+      return {x:right-188,y:1002-size-7,w:188,h:size+16};
+    }
     return box(c,'number',{x:225,y:1004-size-7,w:300,h:size+16});
   }
 
   function collectionIconBox(c,{x=699,y=1007}={}) {
     const layout=values(c),delta=offset(c,'footer'),size=layout.setIcon??29;
+    if(usesSharedFooter(c))return {x:708-size,y:1009-size,w:size,h:size};
     return {x:x+delta.x-size+(layout.setIconX||0),y:y+delta.y-footerReserve(c)-size*.75+(layout.setIconY||0),w:size,h:size};
   }
 
@@ -426,5 +447,6 @@ globalThis.MNC_FRONT = (() => {
 
   return {groups,textFields,settings,editable,effective,offset,box,style,textOffset,draw,paintNameplate,drawCredit,creditLabel,
     addHeader,attributionBox,addCollection,footerReserve,numberBox,collectionIconBox,typeIconBox,drawTypeIcon,
+    usesSharedFooter,isSharedFooterLayer,sharedFooterSettings,
     episodeBadgeBox,drawEpisodeBadge,wrap,values,hex,mix,tone,surfaceText,emojiFont};
 })();

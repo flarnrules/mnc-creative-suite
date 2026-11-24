@@ -128,7 +128,7 @@ function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElemen
 function downloadText(text,name,mime='text/plain'){dl(new Blob([text],{type:mime}),name)}
 function canvasPNG(cv,name){cv.toBlob(blob=>{if(blob)dl(blob,name)},'image/png')}
 function tab(name,options){
-  if(activeTab==='layoutDesigner'&&name!=='layoutDesigner')window.MNC_closeLayoutTrace?.();
+  if(activeTab==='layoutDesigner'&&name!=='layoutDesigner'&&window.MNC_closeLayoutTrace?.()===false)return;
   activeTab=name;
   document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===name));
   document.querySelectorAll('.page').forEach(page=>page.classList.toggle('active',page.id===name));
@@ -183,7 +183,8 @@ const presetAppearanceFields=[
   'fit','zoom','panX','panY','accent','useTypeColor','surface','mainColor','backgroundLightness','frameColor','borderColor',
   'frameStyle','frameWidth','frameRadius','cutRadius','artHeight','artInset','filmTheme','nameplatePreset','fontId','glyphSeed','glyphVariantMode',
   'showIcons','showMatchupNames','showTiming','showPower','showQuote','showStats','episodeBadge','setGlyph','setGlyphAsset',
-  'typeIconGlyph','typeIconAsset','typeSymbol','collectionSymbol','typeSymbolMode','collectionSymbolMode','artworkProfile','overlayAssetId','overlayOpacity','foilRecipe','prismRecipe'
+  'typeIconGlyph','typeIconAsset','typeSymbol','collectionSymbol','typeSymbolMode','collectionSymbolMode','collectionFooterMode',
+  'artworkProfile','overlayAssetId','overlayOpacity','foilRecipe','prismRecipe'
 ];
 
 function designPreset(c,id,name,{typeDefaultFor}={}) {
@@ -191,6 +192,7 @@ function designPreset(c,id,name,{typeDefaultFor}={}) {
   appearance.setGlyph=c.setGlyph??collectionFor(c)?.glyph??(game.isGameCard(c)?'✦':'');
   appearance.setGlyphAsset=c.setGlyphAsset||'';
   appearance.typeIconGlyph=MNC_CARD_METADATA.customIcon(c)||null;
+  appearance.collectionFooterMode=front.usesSharedFooter(c)?'shared':'custom';
   return deep({
     id,name,template:c.template,typeDefaultFor,
     titlePosition:c.titlePosition||[.075,.075],creditPosition:c.creditPosition||[.07,.958],
@@ -198,7 +200,7 @@ function designPreset(c,id,name,{typeDefaultFor}={}) {
     artWindow:c.artWindow||{x:.07,y:.14,w:.86,h:.52},artShape:c.artShape||'rounded',
     artBorder:c.artBorder||'solid',artRadius:c.artRadius??24,nameplate:c.nameplate||'solid',
     artShapeId:c.artShapeId||'',nameplateShapeId:c.nameplateShapeId||'',
-    frontLayout:typeDefaultFor?front.settings(front.values(c)):c.frontLayout||null,
+    frontLayout:typeDefaultFor?front.settings(front.values({...c,collectionFooterMode:'custom'})):c.frontLayout||null,
     layoutDesign:c.layoutDesign||null,
     appearance
   });
@@ -293,6 +295,12 @@ function applyTypeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card),{followSymb
   return !!compatible||!!border||Object.keys(palette).length>0;
 }
 
+function applyStartingDesign(card,id){
+  card.collectionFooterMode='shared';
+  MNC_OUTER_BORDER.applyStartingBand(card);
+  applyTypeDesignPreset(card,id);
+}
+
 function captureTypeDesign(card,id){
   const setting=state.visualLanguage.profiles[id],type=MNC_SET_PLAN.profile(id);
   if(!setting||!type||!MNC_TYPE_DESIGN.matching(card,id))return null;
@@ -300,8 +308,8 @@ function captureTypeDesign(card,id){
   const template=designPreset(card,previous?.id||uniqueId('LAY-',state.templates),type.name+' · starting layout',{typeDefaultFor:id});
   const {symbol}=MNC_SYMBOLS.cardSymbol(state,card);
   const {symbol:mark}=MNC_SYMBOLS.cardSymbol(state,card,'collection');
-  setting.symbol=deep(symbol);
-  setting.setMark=deep(mark);
+  if(MNC_SYMBOLS.cardMode(card,'type')!=='standard')setting.symbol=deep(symbol);
+  if(MNC_SYMBOLS.cardMode(card,'collection')!=='standard')setting.setMark=deep(mark);
   setting.palette={};
   setting.border=null;
   setting.presetId=template.id;
@@ -513,7 +521,7 @@ function cardDraft(assetId,family='Character',profile) {
   if(profile)Object.assign(card,{
     characterCategory:profile.category||'',characterType:profile.type||'',roleSubtype:profile.subtype||''
   });
-  applyTypeDesignPreset(card,profile?.id);
+  applyStartingDesign(card,profile?.id);
   if(asset?.id===game.ashArt.id){
     for(const field of ['artist','artistFirst','artistLast','sourceRef','episode','picker','fit','zoom','panX','panY'])card[field]=game.ashman[field];
   }
@@ -582,7 +590,7 @@ function renderCardList() {
   if(!list.childElementCount)list.textContent='No cards match.';
 }
 function renderTemplateOptions(selected=$('layoutPresets').value){
- const presets=state.templates.map(t=>[t.id,t.name]);
+ const presets=state.templates.filter(t=>!t.typeDefaultFor).map(t=>[t.id,t.name]);
  const value=presets.some(([id])=>id===selected)?selected:'';
  dropDownOptions($('layoutPresets'),[['',presets.length?'Choose a saved layout':'No saved layouts yet'],...presets],value);
  $('layoutPresets').disabled=!presets.length;

@@ -7,6 +7,7 @@ globalThis.MNC_OUTER_BORDER=(()=>{
   const channels=[['alpha','Image transparency'],['light','Keep light areas'],['dark','Keep dark areas']];
   const mappings=[['stretch','Stretch to frame'],['cover','Crop to fill'],['tile','Tile']];
   const defaults={style:'classic',width:48,inset:0,shape:'match',opacity:1};
+  const startingBand={...defaults,style:'band',width:24};
   const maskDefaults={channel:'alpha',mapping:'stretch',scale:1,x:0,y:0};
   const converted=new Map();
   const number=(value,fallback,min,max)=>Number.isFinite(value)?clamp(value,min,max):fallback;
@@ -46,6 +47,10 @@ globalThis.MNC_OUTER_BORDER=(()=>{
       for(const key of ['x','y','w','h'])delete layer[key];
     }
     layer.frame=next;
+  }
+
+  function applyStartingBand(card){
+    if(card.template==='Standard'||card.template==='Game Frame')setFrame(card,startingBand);
   }
 
   function normalizeStandard(value){
@@ -287,6 +292,6 @@ globalThis.MNC_OUTER_BORDER=(()=>{
     }finally{ctx.restore();}
   }
 
-  return {styles,classicStyles,contours,channels,mappings,maskDefaults,normalize,normalizeMask,settings,setFrame,
+  return {styles,classicStyles,contours,channels,mappings,maskDefaults,normalize,normalizeMask,settings,setFrame,applyStartingBand,
     normalizeStandard,standard,applyStandard,maskSettings,visible,color,hitWidth,loadMask,addLayer,drawMask};
 })();

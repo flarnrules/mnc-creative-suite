@@ -8,7 +8,7 @@ globalThis.MNC_LAYOUT = (() => {
     shade:'Text shading', plate:'Nameplate', title:'Card title', match:'Matchups',
     typeRule:'Shared type rule', ruleTitle:'Power name', timing:'Power timing', rule:'Power text',
     quote:'Quote', copyRule:'Content divider', footerPanel:'Footer panel', footerLine:'Footer divider',
-    artist:'Credits & source', footer:'Collection text', setIcon:'Set symbol', number:'Centered card number',
+    artist:'Credits & source', footer:'Collection text', setIcon:'Set symbol', number:'Card number',
     foilImprint:'Foil pattern imprint',
     episodeBadge:'Cassette badge', symbols:'Legacy symbols', stats:'Legacy stats'
   };
@@ -16,7 +16,7 @@ globalThis.MNC_LAYOUT = (() => {
   const legal=id=>Object.hasOwn(labels,id)||/^extra:[\w-]{1,96}$/.test(id);
   const full=()=>({x:0,y:0,w:CW,h:CH});
   const bounded=(key,value)=>clamp(value,key==='x'?-CW:key==='y'?-CH:4,key==='y'||key==='h'?CH*2:CW*2);
-  const get=(card,id)=>card.layoutDesign?.layers?.[id];
+  const get=(card,id)=>MNC_FRONT.isSharedFooterLayer(card,id)?undefined:card.layoutDesign?.layers?.[id];
   const hidden=(card,id)=>get(card,id)?.hidden===true;
 
   function normalize(value) {
@@ -299,8 +299,7 @@ globalThis.MNC_LAYOUT = (() => {
       const rects={
         art:{x:57,y:140,w:636,h:416},
         plate:{x:56,y:576,w:638,h:94},
-        title:{x:76,y:594},
-        border:{x:24,y:24,w:702,h:1002}
+        title:{x:76,y:594}
       };
       layout.layers=rects;
       Object.assign(card,{mainColor:'#f7efe0',surface:'paper',borderColor:'#6d3f52',nameplate:'outline',
@@ -321,6 +320,7 @@ globalThis.MNC_LAYOUT = (() => {
     }else if(gameFrame){
       Object.assign(card,{artworkProfile:'standard',artHeight:52,artInset:6,artShape:'marquee',artBorder:'solid',nameplate:'solid'});
     }
+    MNC_OUTER_BORDER.applyStartingBand(card);
   }
 
   return {labels,normalize,editable,get,hidden,geometry,bounded,transform,full,background,linear,scene,
