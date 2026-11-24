@@ -87,6 +87,7 @@
   function previewCard(context,source,config) {
     const card=copy(source);
     if(context.saved)return card;
+    if(context.collection)card.collectionFooterMode='custom';
     // Layout Designer stores absolute positions. The standard is edited in template coordinates.
     clearGeometry(card,context.layer,{show:true});
     setPlacement(front.editable(card),context,config);
@@ -174,7 +175,7 @@
   }
 
   function description(context,layer,box) {
-    const scope=context.saved?'Card’s saved placement.':'Editing the selected standard.';
+    const scope=context.saved?'Card’s saved placement.':context.collection?'Placement for card-specific footers.':'Editing the selected standard.';
     const visibility=box?'':layer?.hidden||layer?.empty?' The glyph is hidden or has zero size.':' No glyph pixels are visible on the card.';
     const message=same(notice?.context,context)?' '+notice.message:'';
     return scope+visibility+message;
@@ -296,6 +297,7 @@
     const config=configFor(context,card),key=context.collection?'collectionSymbol':'typeSymbol';
     const follows=context.collection||context.id===model.idFor(card);
     editCardFields(card,{[key]:follows?null:standardSymbol(context),[key+'Mode']:follows?'standard':'custom'});
+    if(context.collection)card.collectionFooterMode='custom';
     setPlacement(front.editable(card),context,config);
     clearGeometry(card,context.layer,{show:true});
     applied(context,'Applied the glyph and placement to '+card.title+'.');
@@ -306,7 +308,7 @@
     if(!context)return;
     const source=sourceCard(context),{collection,typeMark,isType,id}=context;
     const destination=isType?id:model.idFor(source);
-    const targets=state.cards.filter(card=>collection&&!typeMark||model.matching(card,destination));
+    const targets=state.cards.filter(card=>(!collection||!front.usesSharedFooter(card))&&(collection&&!typeMark||model.matching(card,destination)));
     const clear=layout=>{
       if(!layout)return;
       if(collection){delete layout.setIcon;delete layout.setIconX;delete layout.setIconY;}

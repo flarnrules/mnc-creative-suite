@@ -26,6 +26,23 @@ main:has(#layoutDesigner.active) {
 }
 
 .ld-toolbar h2 {margin: 0; font-size: 22px; white-space: nowrap;}
+.ld-heading p {margin: 2px 0 0; font-size: 12px; color: #cbd4da;}
+.ld-layout-tools {position: relative;}
+.ld-layout-tools summary {cursor: pointer;white-space: nowrap;}
+.ld-layout-menu {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 8px;
+  width: min(285px, 88vw);
+  padding: 10px;
+  border: 1px solid var(--ld-edge);
+  border-radius: 7px;
+  background: var(--ld-shell);
+  box-shadow: 0 10px 28px #000a;
+}
 .ld-setup {display: contents;}
 .ld-mobile-control, .ld-mobile-panes, .ld-trace-tools {display: none;}
 .ld-toolbar .label {margin: 0;}
@@ -154,7 +171,7 @@ main:has(#layoutDesigner.active) {
 .ld-safe-area {
   position: absolute;
   pointer-events: none;
-  inset: 3.57% 5%;
+  inset: calc(100% / 28) 5%;
   border: 1px dashed #e6e0c072;
   border-radius: 2px;
 }
@@ -259,6 +276,7 @@ main:has(#layoutDesigner.active) {
   cursor: crosshair;
 }
 .ld-handle-edge {display: none;}
+.ld-selection[data-shared="true"] .ld-handle {display: none;}
 .ld-selection[data-layer="art"] .ld-handle-edge {display: block;}
 .ld-handle[data-handle="n"], .ld-handle[data-handle="s"] {
   left: 50%;

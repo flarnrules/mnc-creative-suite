@@ -96,7 +96,7 @@
     if(prepared.errors.length){showPlan(prepared,filename);return;}
     const next=catalog.nextProject(state,prepared,{useWorkbook:!retain.checked});
     const existing=new Set(state.cards.map(card=>card.id));
-    for(const card of next.cards)if(!existing.has(card.id))applyTypeDesignPreset(card);
+    for(const card of next.cards)if(!existing.has(card.id))applyStartingDesign(card);
     state={...next,catalogFileName:filename};
     selection=null;
     apply.disabled=true;

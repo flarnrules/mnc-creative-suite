@@ -21,7 +21,7 @@
       sourceAssetId:matches[0]?.sourceAssetId||state.assets.find(asset=>asset.id===game.ashArt.id)?.id||state.assets[0]?.id||'',
       set:game.release,collectionCode:'LX26',collectorNumber:'',typeSymbolMode:'standard',collectionSymbolMode:'standard',
       ruleTitle:'Preview power',ruleText:'Card-specific powers appear here.',quote:'Your quote appears here.'};
-    applyTypeDesignPreset(card,id);
+    applyStartingDesign(card,id);
     return card;
   }
   window.MNC_typePreviewCard=previewCard;
@@ -230,13 +230,23 @@
 
   function syncFooter(c) {
     const layout=front.values(c),styles=layout.text||{};
+    const shared=front.usesSharedFooter(c);
+    $('cardFooterMode').value=shared?'shared':'custom';
+    for(const id of ['footerPosition','footerNumberFormat','footerNumberBadge','footerNumberSize','footerNumberFont',
+      'footerCollectionSize','footerMarkSize','footerPrintCode','footerPrintEdition','footerCenterPreset','footerRightPreset','footerUseAll'])$(id).disabled=shared;
     for(const [id,key,fallback] of [['footerPosition','footerPosition','right'],['footerNumberFormat','numberFormat','fraction'],['footerNumberBadge','numberBadge','none'],
       ['footerCreditMode','creditMode','byline'],['footerCreditAlign','creditAlign','left'],['footerCreditWidth','creditWidth',265],['footerMarkSize','setIcon',29]])setValue(id,layout[key]??fallback);
     setValue('footerNumberSize',styles.number?.size??36);setValue('footerNumberFont',styles.number?.font||'serif');
     setValue('footerCreditSize',styles.artist?.size??16);setValue('footerCollectionSize',styles.edition?.size??17);setValue('footerCreditFont',styles.artist?.font||'sans');
     for(const [id,key] of [['footerPrintCode','printCollectionCode'],['footerPrintEdition','printEdition'],['footerSeparator','footerRule']])setValue(id,layout[key]!==false);
-    $('footerUseType').disabled=!state.typeDesigns.profiles[model.idFor(c)];
+    $('footerUseType').disabled=shared||!state.typeDesigns.profiles[model.idFor(c)];
   }
+  $('cardFooterMode').onchange=()=>{
+    const card=current();if(!card)return;
+    card.collectionFooterMode=$('cardFooterMode').value;
+    changed();syncFooter(card);
+  };
+  $('cardEditSharedFooter').onclick=()=>window.MNC_openSharedFooter();
   for(const [id,key] of [['footerPosition','footerPosition'],['footerNumberFormat','numberFormat'],['footerNumberBadge','numberBadge'],
     ['footerCreditMode','creditMode'],['footerCreditAlign','creditAlign'],['footerCreditWidth','creditWidth'],['footerMarkSize','setIcon'],
     ['footerPrintCode','printCollectionCode'],['footerPrintEdition','printEdition'],['footerSeparator','footerRule']]){
@@ -261,7 +271,7 @@
   $('footerRightPreset').onclick=()=>{if(current()){front.editable(current()).footerPosition='right';changed();syncFooter(current());}};
 
   function applyFooter(all) {
-    const c=current(),id=model.idFor(c),profile=state.typeDesigns.profiles[id];if(!c||!all&&!profile)return;
+    const c=current(),id=model.idFor(c),profile=state.typeDesigns.profiles[id];if(!c||front.usesSharedFooter(c)||!all&&!profile)return;
     const targets=state.cards.filter(card=>all||model.matching(card,id)),source=model.footer(front.effective(c));
     footerUndo={defaults:clone(state.footerDesign),profiles:Object.fromEntries(Object.entries(state.typeDesigns.profiles).map(([id,value])=>[id,model.footer(value.frontLayout)])),
       cards:targets.map(card=>[card.id,model.footer(card.frontLayout||{})])};

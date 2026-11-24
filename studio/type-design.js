@@ -57,6 +57,7 @@ globalThis.MNC_TYPE_DESIGN = (() => {
         ruleText:String(value.ruleText||'').slice(0,4000),frontLayout:MNC_FRONT.settings(value.frontLayout)}];
     }))};
     project.footerDesign=MNC_FRONT.settings(project.footerDesign);
+    project.sharedFooter=MNC_FRONT.sharedFooterSettings(project.sharedFooter);
   }
 
   function matching(card,id) {
@@ -82,7 +83,16 @@ globalThis.MNC_TYPE_DESIGN = (() => {
   }
 
   function layout(project,card) {
-    return merge(project.footerDesign,...chain(project,card).map(profile=>profile.frontLayout),card.frontLayout);
+    const result=merge(project.footerDesign,...chain(project,card).map(profile=>profile.frontLayout),card.frontLayout);
+    if(MNC_FRONT.usesSharedFooter(card)){
+      const shared=project.sharedFooter;
+      Object.assign(result,{footerPosition:shared.position,numberFormat:'fraction',numberBadge:'none',
+        setIcon:shared.markSize,printCollectionCode:true,printEdition:false});
+      delete result.offsets.number;
+      result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:'right'};
+      result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:shared.position};
+    }
+    return result;
   }
 
   function rule(project,card,fallback='') {

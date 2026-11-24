@@ -10,6 +10,7 @@
   const selectedProfile=()=>state.visualLanguage.profiles[$('symbolProfile').value];
   let previewRevision=0,chartRevision=0,cardRevision=0;
   let designArtwork='',standardsPane='colors',designPreviewRevision=0;
+  let footerPreviewRevision=0,footerUndo=null;
   const colorFields=[
     ['mainColor','Main','Card background'],
     ['borderColor','Secondary','Outer frame'],
@@ -96,7 +97,7 @@
     const art=catalog.namedArtwork(card,state.assets);
     if(art)card.sourceAssetId=art.id;
     state.cards.push(card);slot.cardId=card.id;
-    applyTypeDesignPreset(card,group.id);
+    applyStartingDesign(card,group.id);
     return card;
   }
 
@@ -261,9 +262,14 @@
     border.type='button';
     border.setAttribute('aria-label','Edit '+label+' border');
     border.onclick=()=>openProfile(profile.id,'border');
+    const starter=element('button','Starting design','design-border');
+    starter.type='button';starter.setAttribute('aria-label','Open '+label+' starting design');
+    starter.onclick=()=>openProfile(profile.id,'layout');
+    const actions=element('div',undefined,'design-style-actions');
+    actions.append(starter,border);
     const heading=element('div',undefined,'design-choice-heading');
     heading.append(glyph,element('strong',label),create);
-    tile.append(heading,colors,border);
+    tile.append(heading,colors,actions);
     const {symbol}=symbols.cardSymbol(state,card);
     paintSymbol(canvas,symbol,profile.id,62,palette.ink).catch(console.error);
     return tile;
@@ -428,7 +434,7 @@
     const cards=state.cards.filter(card=>!card.catalogUnlisted&&types.matching(card,id));
     const options=cards.length?cards.map(card=>[card.id,card.title||'Untitled']):[['','Create or open a card of this type']];
     for(const [select,buttons] of [
-      ['standardSource',['symbolSaveDesign','symbolApplyDesign','standardEditLayout','editSourceColors']],
+      ['standardSource',['symbolSaveDesign','editSourceColors']],
       ['typeBorderSource',['captureTypeBorder','applyTypeBorder']]
     ]){
       const selected=cards.find(card=>card.id===$(select).value)||cards.find(card=>card.id===currentId)||cards[0];
@@ -500,12 +506,61 @@
 
   function editStartingLayout() {
     const id=$('symbolProfile').value,setting=selectedProfile(),profile=playableProfile(id);
-    const entries=state.templates.filter(template=>
-      (!template.typeDefaultFor||template.typeDefaultFor===id||template.id===setting.presetId)&&
-      (!['Game Frame','Game Full Art'].includes(template.template)||game.roles[profile.family]));
-    const defaultLabel=profile.category==='Creature'&&id!=='creature'?'Inherit Creature layout':'Use built-in layout';
-    dropDownOptions($('symbolPreset'),[['',defaultLabel],...entries.map(template=>[template.id,template.name])],setting.presetId||'');
+    const preset=typeDesignPreset(draftFor(id),id),inherit=profile.category==='Creature'&&id!=='creature';
+    $('startingDesignSource').textContent=preset?(preset.typeDefaultFor===id?'Custom starting design':preset.name):
+      inherit?'Inherits the Creature starting layout':'Built-in starting layout';
+    $('resetStartingDesign').hidden=!setting.presetId;
+    $('resetStartingDesign').textContent=inherit?'Inherit Creature layout':'Use built-in layout';
   }
+
+  async function paintSharedFooter(){
+    const token=++footerPreviewRevision,id=$('sharedFooterPreviewType').value;
+    const card=window.MNC_typePreviewCard?.(id)||draftFor(id);
+    card.collectionFooterMode='shared';
+    const image=await cardCanvas(card,{rounded:true});
+    if(token!==footerPreviewRevision||$('sharedFooterPanel').hidden)return;
+    const canvas=$('sharedFooterPreview'),ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  }
+
+  const footerFields=[['sharedFooterPosition','position'],['sharedFooterCodeSize','codeSize'],
+    ['sharedFooterNumberSize','numberSize'],['sharedFooterMarkSize','markSize']];
+  function renderSharedFooter(){
+    const type=$('sharedFooterPreviewType');
+    dropDownOptions(type,types.profiles().map(profile=>[profile.id,profile.name]),type.value||'hero');
+    for(const [id,key] of footerFields)$(id).value=state.sharedFooter[key];
+    $('sharedFooterApplyAll').disabled=state.cards.every(front.usesSharedFooter);
+    $('sharedFooterUndo').disabled=footerUndo?.project!==state;
+    paintSharedFooter().catch(console.error);
+  }
+
+  function openSharedFooter(){tab('visualLanguage',{sharedFooter:true});}
+  for(const [id,key] of footerFields)$(id).onchange=()=>{
+    const field=$(id),value=key==='position'?field.value:field.valueAsNumber;
+    state.sharedFooter=front.sharedFooterSettings({...state.sharedFooter,[key]:value});
+    setStatus('sharedFooterStatus','Shared footer saved.');
+    persist();renderSharedFooter();
+  };
+  $('sharedFooterPreviewType').onchange=()=>paintSharedFooter().catch(console.error);
+  $('sharedFooterEditMark').onclick=()=>openProfile('collection','glyphs');
+  $('sharedFooterApplyAll').onclick=()=>{
+    const cards=state.cards.filter(card=>!front.usesSharedFooter(card));
+    if(!cards.length)return;
+    footerUndo={project:state,cards:cards.map(card=>[card,card.collectionFooterMode])};
+    cards.forEach(card=>{card.collectionFooterMode='shared';});
+    setStatus('sharedFooterStatus','Shared footer applied to '+cards.length+' saved cards.');
+    persist();renderSharedFooter();
+  };
+  $('sharedFooterUndo').onclick=()=>{
+    if(footerUndo?.project!==state)return;
+    for(const [card,mode] of footerUndo.cards){
+      if(!front.usesSharedFooter(card))continue;
+      if(mode===undefined)delete card.collectionFooterMode;
+      else card.collectionFooterMode=mode;
+    }
+    footerUndo=null;setStatus('sharedFooterStatus','Restored the previous footer choices.');
+    persist();renderSharedFooter();
+  };
 
   function editBorder() {
     const card=draftFor($('symbolProfile').value),frame=borders.settings(card),setting=selectedProfile();
@@ -565,20 +620,33 @@
     showPane(standardsPane);
   }
   function renderDesigns(){
-    if($('designStandards').hidden)renderGallery();
+    if(!$('sharedFooterPanel').hidden)renderSharedFooter();
+    else if($('designStandards').hidden)renderGallery();
     else renderStandards();
   }
   function showStandards(open) {
+    $('sharedFooterPanel').hidden=true;
+    $('openSharedFooter').setAttribute('aria-expanded','false');
+    $('openSharedFooter').textContent='Shared footer';
     $('designStandards').hidden=!open;
     $('designGallery').hidden=$('designsIntro').hidden=$('openSavedCards').hidden=open;
     const button=$('toggleDesignStandards');
+    button.hidden=false;
     button.setAttribute('aria-expanded',String(open));
     button.textContent=open?'Back to card types':'Edit type standards';
   }
-  function renderLanguage({assetId='',profileId,pane='glyphs'}={}) {
+  function renderLanguage({assetId='',profileId,pane='glyphs',sharedFooter=false}={}) {
     designArtwork=artById(assetId)?.id||'';
     showStandards(Boolean(profileId));
-    if(profileId){
+    if(sharedFooter){
+      $('designGallery').hidden=$('designsIntro').hidden=$('openSavedCards').hidden=true;
+      $('toggleDesignStandards').hidden=true;
+      $('sharedFooterPanel').hidden=false;
+      $('openSharedFooter').setAttribute('aria-expanded','true');
+      $('openSharedFooter').textContent='Back to card types';
+      setStatus('sharedFooterStatus','');
+      renderSharedFooter();
+    }else if(profileId){
       standardsPane=pane;
       $('symbolTarget').value='icon';
       $('standardSource').value=currentId||'';
@@ -588,6 +656,10 @@
       renderGallery();$('designGallery').scrollTop=0;window.MNC_refreshSymbolContext?.();
     }
   }
+  $('openSharedFooter').onclick=()=>{
+    if($('sharedFooterPanel').hidden)openSharedFooter();
+    else tab('visualLanguage');
+  };
 
   $('toggleDesignStandards').onclick=()=>{
     showStandards($('designStandards').hidden);
@@ -730,25 +802,23 @@
     card.borderColor=borders.color(example);
     persist();setStatus('typeBorderStatus','Applied the starting border to '+card.title+'.');
   };
-  $('symbolPreset').onchange=()=>{
-    selectedProfile().presetId=$('symbolPreset').value;
-    persist();previewStartingCard();setStatus('symbolDesignStatus','Starting layout saved for new cards.');
-  };
   $('standardSource').onchange=()=>setStatus('symbolDesignStatus','');
-  $('symbolApplyDesign').onclick=()=>{
-    const card=sourceCard();if(!card)return;
-    applyStandard(card,$('symbolProfile').value);
-    setStatus('symbolDesignStatus','Applied the type default to '+card.title+'.');
-  };
-  $('symbolSaveDesign').onclick=()=>{
-    const card=sourceCard(),id=$('symbolProfile').value;
-    if(!card||!captureTypeDesign(card,id))return;
-    editStartingLayout();previewStartingCard();
-    setStatus('symbolDesignStatus','Saved '+card.title+' as the starting layout for '+planModel.profile(id).name+'.');
-  };
-  $('standardEditLayout').onclick=()=>{
-    const card=sourceCard();if(!card)return;
-    currentId=card.id;tab('layoutDesigner');
+  function finishTypeStarter(id){
+    openProfile(id,'layout');
+    setStatus('symbolDesignStatus','Starting design saved for '+planModel.profile(id).name+'.');
+  }
+  function useCardAsStarter(card,id){
+    if(!card||!id)return;
+    const name=planModel.profile(id).name;
+    if(!confirm('Use “'+card.title+'” as the starting design for '+name+'?'))return;
+    if(captureTypeDesign(card,id))finishTypeStarter(id);
+  }
+  $('symbolSaveDesign').onclick=()=>useCardAsStarter(sourceCard(),$('symbolProfile').value);
+  $('standardEditLayout').onclick=()=>window.MNC_editTypeStarter($('symbolProfile').value);
+  $('resetStartingDesign').onclick=()=>{
+    selectedProfile().presetId='';
+    persist();editStartingLayout();previewStartingCard();
+    setStatus('symbolDesignStatus','Starting layout reset.');
   };
   $('symbolExportChart').onclick=async()=>{
     const profiles=symbolCanvases(),canvas=document.createElement('canvas');
@@ -832,7 +902,7 @@
     syncItemSetGroup(card);
     if(!card)return;
     const id=planModel.profileFor(card),name=planModel.profile(id)?.name||card.family;
-    $('cardStandardName').textContent=name+' standard';
+    $('cardStandardName').textContent=name+' starting design';
     $('cardApplyStandard').disabled=!id;$('cardEditStandard').disabled=!id;
     const {symbol}=symbols.cardSymbol(state,card);
     $('cardSymbolMode').value=symbols.cardMode(card,'type');
@@ -905,6 +975,9 @@
   window.MNC_refreshVisualLanguage=renderLanguage;
   window.MNC_refreshDesigns=renderDesigns;
   window.MNC_openTypeStandard=openProfile;
+  window.MNC_openSharedFooter=openSharedFooter;
+  window.MNC_useCardAsTypeStarter=useCardAsStarter;
+  window.MNC_finishTypeStarter=finishTypeStarter;
   window.MNC_editCardSection=editSection;
   window.MNC_applyCardStandard=applyStandard;
   editSection('content');
