@@ -13,13 +13,12 @@ const $=id=>document.getElementById(id),canvas=$('card'),fallback=$('fallback'),
 $('artwork').innerHTML=CATALOG.artworks.map(a=>`<option value="${a.id}">#${a.id.padStart(4,'0')} · ${a.title}</option>`).join('');$('scheme').innerHTML=CATALOG.schemes.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
 for(const [key,[min,max,step,label,target]] of Object.entries(ranges)){
  const wrap=document.createElement('div');wrap.className='field';wrap.dataset.control=key;wrap.innerHTML=`<label for="${key}">${label}<input class="numeric" id="${key}Value" type="number" min="${min}" max="${max}" step="${step}" aria-label="${label} value"></label><input id="${key}" type="range" min="${min}" max="${max}" step="${step}">`;$(target).appendChild(wrap);
- $(key).oninput=()=>{state[key]=Number($(key).value);$('preset').value='custom';sync(false);};
- $(key+'Value').onchange=()=>{const input=$(key+'Value');if(input.value.trim()===''||!Number.isFinite(input.valueAsNumber)){sync();return;}state[key]=Math.max(min,Math.min(max,input.valueAsNumber));if(key==='iterations')state[key]=Math.round(state[key]);$('preset').value='custom';sync();};
+ $(key).oninput=()=>{state[key]=Number($(key).value);sync(false);};
+ $(key+'Value').onchange=()=>{const input=$(key+'Value');if(input.value.trim()===''||!Number.isFinite(input.valueAsNumber)){sync();return;}state[key]=Math.max(min,Math.min(max,input.valueAsNumber));if(key==='iterations')state[key]=Math.round(state[key]);sync();};
 }
 function sync(fill=true){
  const layerMask=typeof mncCard!=='undefined'&&mncCard?.layers;
  if(!layerMask&&(state.region===4||state.region===5))state.region=1;
- if(typeof syncUserPreset==='function')syncUserPreset();
  for(const key of Object.keys(ranges)){if(fill)$(key).value=state[key];$(key+'Value').value=Number(state[key].toFixed(4));}
  for(const key of ['protect','orbit','motion','rotationHue','showArtStats'])$(key).checked=state[key];
  state.design=state.artwork+'--'+state.scheme;
@@ -42,16 +41,24 @@ out.design=out.artwork+'--'+out.scheme;if(Number.isInteger(data.pattern)&&data.p
 try{state=validate(JSON.parse(localStorage.getItem('mnc-prism-foil-lab-v011')||'null')||{});}catch{}
 const query=new URLSearchParams(location.search);if(CATALOG.artworks.some(a=>a.id===query.get('card')))state.artwork=query.get('card');if(['base','holo','reverse','gold'].includes(query.get('finish'))){state.region={base:3,holo:1,reverse:2,gold:0}[query.get('finish')];state.gold=query.get('finish')==='gold'?1:0;}
 if(query.get('fold')==='1'){try{const transferred=JSON.parse(localStorage.getItem('daily-fold-transfer-v1')||'null');if(transferred&&transferred.version===1&&(transferred.transferId?localStorage.getItem('daily-fold-consumed-v1')!==transferred.transferId:state.pattern!==8)){const picked={};for(const key of ['foldX','foldY','foldGain','foldTrap','foldRadius','foldPhase','foldPanX','foldPanY','iterations','zoom','twist','scale','contrast'])if(Number.isFinite(transferred[key]))picked[key]=transferred[key];state=validate({...state,...picked,pattern:transferred.patternMap?17:8,patternMap:transferred.patternMap||"",foil:transferred.presetName&&state.foil<.05?.65:state.foil,region:transferred.region===2?2:1});if(transferred.transferId)localStorage.setItem('daily-fold-consumed-v1',transferred.transferId);}}catch{status.textContent='Could not load the transferred pattern.';}}
-sync();$('preset').value='custom';
-$('preset').onchange=()=>{if(presets[$('preset').value])Object.assign(state,presets[$('preset').value]);sync();};for(const key of ['artwork','scheme','edge','pattern','region','gold','paletteMode','numberLayout'])$(key).onchange=()=>{state[key]=['pattern','region','gold'].includes(key)?Number($(key).value):$(key).value;if(key==='pattern'||key==='gold')$('preset').value='custom';sync();};for(const key of ['protect','orbit','motion','rotationHue','showArtStats'])$(key).onchange=()=>{state[key]=$(key).checked;sync();};
-$('foilTint').oninput=()=>{state.foilTint=$('foilTint').value;$('preset').value='custom';sync();};
+sync();
+for(const key of ['artwork','scheme','edge','pattern','region','gold','paletteMode','numberLayout']){
+ $(key).onchange=()=>{
+  state[key]=['pattern','region','gold'].includes(key)?Number($(key).value):$(key).value;
+  sync();
+ };
+}
+for(const key of ['protect','orbit','motion','rotationHue','showArtStats']){
+ $(key).onchange=()=>{state[key]=$(key).checked;sync();};
+}
+$('foilTint').oninput=()=>{state.foilTint=$('foilTint').value;sync();};
 function setCapture(enabled){document.body.classList.toggle('capture',enabled);if(enabled)canvas.focus();else $('capture').focus();if(ready)requestAnimationFrame(draw);}
 $('capture').onclick=()=>setCapture(true);$('exitCapture').onclick=()=>setCapture(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('capture'))setCapture(false);});
 $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{status.textContent='Fullscreen is unavailable here. Use Clean view or your browser’s fullscreen command.';}};
 document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
 function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-$('save').onclick=()=>saveBlob(new Blob([JSON.stringify({version:'prism-foil-lab-0.11',...state},null,2)],{type:'application/json'}),'daily-card-finish.json');$('load').onclick=()=>$('file').click();$('file').onchange=async()=>{try{const file=$('file').files[0];if(!file)return;if(file.size>2000000)throw Error();state=validate(JSON.parse(await file.text()));$('preset').value='custom';sync();status.textContent='Settings imported. Use Save preset to add this finish to your dropdown.';}catch{status.textContent='Could not read those settings. Choose a finish JSON file.'}$('file').value='';};
+$('save').onclick=()=>saveBlob(new Blob([JSON.stringify({version:'prism-foil-lab-0.11',...state},null,2)],{type:'application/json'}),'daily-card-finish.json');$('load').onclick=()=>$('file').click();$('file').onchange=async()=>{try{const file=$('file').files[0];if(!file)return;if(file.size>2000000)throw Error();state=validate(JSON.parse(await file.text()));sync();status.textContent='Settings imported. Use Save finish to give this finish a name.';}catch{status.textContent='Could not read those settings. Choose a finish JSON file.'}$('file').value='';};
 $('front').onclick=()=>{rx=0;ry=0;panX=0;panY=0;state.orbit=false;sync();};$('flip').onclick=()=>{ry+=Math.PI;};$('pose').onclick=()=>{rx=-.10;ry=-.30;panX=0;panY=0;state.distance=4.7;state.orbit=false;sync();};$('snapshot').onclick=()=>{if(!ready)return;draw();canvas.toBlob(blob=>{if(blob)saveBlob(blob,(typeof mncCard!=='undefined'&&mncCard?mncCard.id:'daily-meditations-card')+'.png');});};
 canvas.oncontextmenu=event=>event.preventDefault();
 canvas.onpointerdown=event=>{
@@ -222,8 +229,8 @@ function randomizedCard(current,rng=Math.random){
  next.showArtStats=true;next.thickness=.008;return next;
 }
 let beforeRandom=null;
-$('randomCard').onclick=()=>{if(showcase)return;beforeRandom={...state};state=randomizedCard(state);$('preset').value='custom';$('undoRandom').disabled=false;sync();status.textContent='Randomized. Undo returns to your previous settings.';};
-$('undoRandom').onclick=()=>{if(showcase||!beforeRandom)return;state={...beforeRandom,thickness:.008};beforeRandom=null;$('undoRandom').disabled=true;$('preset').value='custom';sync();};
+$('randomCard').onclick=()=>{if(showcase)return;beforeRandom={...state};state=randomizedCard(state);$('undoRandom').disabled=false;sync();status.textContent='Randomized. Undo returns to your previous settings.';};
+$('undoRandom').onclick=()=>{if(showcase||!beforeRandom)return;state={...beforeRandom,thickness:.008};beforeRandom=null;$('undoRandom').disabled=true;sync();};
 
 // Card information is composited into the GPU texture, so it follows rotation and export.
 function textureKey(){const card=typeof mncTextureKey==='function'?mncTextureKey():null;if(card)return card;return [state.design,state.paletteMode,state.showArtStats?'stats':'quiet',state.numberLayout].join('|');}
@@ -338,17 +345,82 @@ $('previewClip').onclick=()=>startShowcase(false);$('exportClip').onclick=()=>st
 const finishKeys=['patternMap','pattern','gold','foilTint','edge','iterations','zoom','twist','juliaX','juliaY','contrast','foil','gloss','sparkle','emboss','hue','rotationHue','rotationStrength','scale','roughness','light','power','speed','protect','orbit','motion','foldX','foldY','foldGain','foldTrap','foldRadius','foldPhase','foldPanX','foldPanY'];
 function finishSettings(value){const checked=validate(value);return Object.fromEntries(finishKeys.map(key=>[key,checked[key]]));}
 function readUserPresets(){try{const data=JSON.parse(localStorage.getItem('mnc-foil-presets-v1')||'[]');return Array.isArray(data)?data.filter(p=>p&&typeof p.id==='string'&&typeof p.name==='string'&&p.settings&&typeof p.settings==='object').slice(0,100).map(p=>({id:p.id,name:p.name.slice(0,60),settings:finishSettings(p.settings)})):[];}catch{return [];}}
-var userPresets=readUserPresets();
-function refreshUserPresets(){let group=$('myPresets');if(!group){group=document.createElement('optgroup');group.id='myPresets';group.label='My saved finishes';$('preset').append(group);}group.replaceChildren();for(const p of userPresets)group.append(new Option(p.name,'saved:'+p.id));}
-function syncUserPreset(){if(!userPresets)return;const p=userPresets.find(p=>'saved:'+p.id===$('preset').value);if(p&&finishKeys.some(key=>state[key]!==p.settings[key]))$('preset').value='custom';}
-const builtinPresetChange=$('preset').onchange;
-$('preset').onchange=()=>{const p=userPresets.find(p=>'saved:'+p.id===$('preset').value);if(p){Object.assign(state,p.settings);sync();status.textContent='Loaded “'+p.name+'”. Current artwork and foil coverage retained.';}else builtinPresetChange();};
-$('savePreset').onclick=()=>{if(showcase)return;$('presetMessage').textContent='Saves all fold, foil, light and motion settings. Artwork and coverage stay independent.';$('presetName').value='';$('presetDialog').showModal();$('presetName').focus();};
+let userPresets=readUserPresets();
+
+function refreshUserPresets(){
+ const group=$('myPresets');
+ group.replaceChildren(...userPresets.map(p=>new Option(p.name,'saved:'+p.id)));
+ group.hidden=!userPresets.length;
+}
+
+function storeFinish(name){
+ const saved={id:crypto.randomUUID(),name,settings:finishSettings(state)};
+ const next=[...userPresets,saved];
+ localStorage.setItem('mnc-foil-presets-v1',JSON.stringify(next));
+ userPresets=next;
+ refreshUserPresets();
+}
+
+$('loadFinish').onclick=()=>{
+ if(showcase)return;
+ $('preset').value='';
+ $('loadFinishDialog').showModal();
+ $('preset').focus();
+};
+$('closeLoadFinish').onclick=()=>$('loadFinishDialog').close();
+$('loadFinishForm').onsubmit=event=>{
+ event.preventDefault();
+ const selected=$('preset');
+ const saved=userPresets.find(p=>'saved:'+p.id===selected.value);
+ const settings=saved?.settings||(Object.hasOwn(presets,selected.value)?presets[selected.value]:null);
+ if(!settings)return;
+ Object.assign(state,settings);
+ sync();
+ $('loadFinishDialog').close();
+ status.textContent='Loaded “'+selected.selectedOptions[0].textContent+'”.';
+};
+
+$('savePreset').onclick=()=>{
+ if(showcase)return;
+ $('presetMessage').textContent='Save the pattern, color, lighting, and motion as a named finish.';
+ $('presetName').value='';
+ $('presetDialog').showModal();
+ $('presetName').focus();
+};
 $('closePreset').onclick=()=>$('presetDialog').close();
-$('presetForm').onsubmit=e=>{e.preventDefault();const name=$('presetName').value.trim();if(!name){$('presetName').focus();return;}if(userPresets.length>=100){$('presetMessage').textContent='100 presets saved. Export settings for a portable copy.';return;}const preset={id:crypto.randomUUID(),name,settings:finishSettings(state)},next=[...userPresets,preset];try{localStorage.setItem('mnc-foil-presets-v1',JSON.stringify(next));userPresets=next;refreshUserPresets();$('preset').value='saved:'+preset.id;$('presetDialog').close();status.textContent='Saved “'+name+'”. Find it under Finish preset → My saved finishes.';}catch{$('presetMessage').textContent='Browser storage could not save this preset. Close this window and use Export JSON to keep your settings.';}};
+$('presetForm').onsubmit=event=>{
+ event.preventDefault();
+ const name=$('presetName').value.trim();
+ if(!name){$('presetName').focus();return;}
+ if(userPresets.length>=100){
+  $('presetMessage').textContent='100 finishes saved. Export JSON for a portable copy.';
+  return;
+ }
+ try{
+  storeFinish(name);
+  $('presetDialog').close();
+  status.textContent='Saved “'+name+'”. Find it under Load finish.';
+ }catch{
+  $('presetMessage').textContent='Browser storage could not save this finish. Use Export JSON to keep your settings.';
+ }
+};
 refreshUserPresets();
 // Named discoveries from Fractal Lab become saved finishes immediately.
-if(query.get('fold')==='1'){try{const incoming=JSON.parse(localStorage.getItem('daily-fold-transfer-v1')||'null');if(incoming?.presetName&&incoming.transferId&&localStorage.getItem('daily-fold-consumed-v1')===incoming.transferId&&localStorage.getItem('daily-fold-preset-saved-v1')!==incoming.transferId){if(userPresets.length>=100){status.textContent='Pattern loaded. Preset storage is full; Export JSON to keep this finish.';}else{const preset={id:crypto.randomUUID(),name:String(incoming.presetName).slice(0,60),settings:finishSettings(state)};localStorage.setItem('mnc-foil-presets-v1',JSON.stringify([...userPresets,preset]));userPresets.push(preset);localStorage.setItem('daily-fold-preset-saved-v1',incoming.transferId);refreshUserPresets();$('preset').value='saved:'+preset.id;status.textContent='Saved “'+preset.name+'” under My saved finishes. Ready to try on any card.';}}}catch{status.textContent='Pattern loaded, but automatic preset saving failed. Use Save preset or Export JSON.';}}
+if(query.get('fold')==='1'){
+ try{
+  const incoming=JSON.parse(localStorage.getItem('daily-fold-transfer-v1')||'null');
+  if(incoming?.presetName&&incoming.transferId&&localStorage.getItem('daily-fold-consumed-v1')===incoming.transferId&&
+    localStorage.getItem('daily-fold-preset-saved-v1')!==incoming.transferId){
+   if(userPresets.length>=100)status.textContent='Pattern loaded. Export JSON to keep this finish.';
+   else{
+    const name=String(incoming.presetName).slice(0,60);
+    storeFinish(name);
+    localStorage.setItem('daily-fold-preset-saved-v1',incoming.transferId);
+    status.textContent='Saved “'+name+'”. Find it under Load finish.';
+   }
+  }
+ }catch{status.textContent='Pattern loaded. Choose Save finish or Export JSON to keep it.';}
+}
 // A Fractal Lab transfer is a one-time import, not a refresh-time reset.
 if(query.get('fold')==='1'){const url=new URL(location.href);url.searchParams.delete('fold');history.replaceState(null,'',url);}
 

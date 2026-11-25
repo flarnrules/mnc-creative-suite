@@ -37,16 +37,12 @@ function mncApplyPattern(transfer) {
   for(const key of fields)if(Number.isFinite(transfer[key]))next[key]=transfer[key];
   state=validate({...state,...next,pattern:transfer.patternMap?17:8,patternMap:transfer.patternMap||'',
     foil:state.foil<.05?.65:state.foil,region:transfer.region===2?2:1});
-  $('preset').value='custom';
   sync();
 }
 function mncSavePatternPreset(transfer) {
   if(!transfer.presetName||userPresets.length>=100)return;
   try{
-    const preset={id:crypto.randomUUID(),name:String(transfer.presetName).slice(0,60),settings:finishSettings(state)};
-    const next=[...userPresets,preset];
-    localStorage.setItem('mnc-foil-presets-v1',JSON.stringify(next));
-    userPresets=next;refreshUserPresets();$('preset').value='saved:'+preset.id;
+    storeFinish(String(transfer.presetName).slice(0,60));
   }catch{
     status.textContent='Pattern loaded. Use Export JSON to keep this finish.';
   }
@@ -93,7 +89,6 @@ if (mncEmbedded) {
     if(showcase)finishShowcase(true,'Card changed.');
     mncCard=payload;
     state=validate(payload.recipe ? {...state,...payload.recipe} : {...state,region:payload.defaultRegion??1});
-    $('preset').value='custom';
     sync();
     const rev=++mncBackVersion;
     try {
