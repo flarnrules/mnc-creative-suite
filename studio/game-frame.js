@@ -117,6 +117,8 @@
   }
 
   function ruleLayout(ctx,c,start,paper,{width=656,x=47,footerTop=front.attributionBox(c).y-8}={}) {
+    const divider=front.characterDivider(c);
+    if(divider)footerTop=Math.min(footerTop,divider.rect.y-8);
     const active=c.showPower!==false;
     const ruleTitle=active?(c.ruleTitle||'').trim():'',rule=active?(c.ruleText||c.effectText||'').trim():'';
     const timing=c.showTiming===false||!rule?'':game.timingLabel(c.timing)||'';
@@ -236,10 +238,13 @@
   }
 
   function addFooter(scene,ctx,c,paper) {
-    const footer=front.offset(c,'footer');
-    const y=Math.min(956+footer.y,front.attributionBox(c).y-7);
-    scene.add('footerLine',{x:43,y:y-3,w:664,h:6},ctx=>line(ctx,43,y,707,y,paper.line,1.5),
-      {empty:front.values(c).footerRule===false});
+    const divider=front.characterDivider(c);
+    if(divider)front.addFooterDivider(scene,c,{...divider,color:paper.line});
+    else{
+      const y=Math.min(956+front.offset(c,'footer').y,front.attributionBox(c).y-7);
+      scene.add('footerLine',{x:43,y:y-3,w:664,h:6},ctx=>line(ctx,43,y,707,y,paper.line,1.5),
+        {empty:front.values(c).footerRule===false});
+    }
     MNC_LAYOUT.addCredits(scene,c,{ink:paper.ink,muted:paper.quiet});
     front.addCollection(scene,ctx,c,{ink:paper.ink,glyphColor:paper.trim});
     MNC_LAYOUT.addEpisodeBadge(scene,c,paper.trim);

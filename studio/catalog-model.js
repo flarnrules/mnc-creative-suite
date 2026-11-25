@@ -299,7 +299,7 @@ globalThis.MNC_CATALOG = (() => {
     for(const {record,current,asset} of prepared.changes){
       const collection=prepared.collections[record.collectionId];
       const view=current?{...current}:newDesign(record);
-      if(!current)view.collectionFooterMode='shared';
+      if(!current)view.collectionFooterMode=MNC_FRONT.startingFooterMode(project,view);
       let id=current?.id||record.id;
       if(!current){
         let suffix=2;

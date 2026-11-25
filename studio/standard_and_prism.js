@@ -37,7 +37,8 @@
  function content(ctx,c,paper={ink:'#fff',quiet:'#ddd'}){
   const {plateHeight}=front.values(c), anchor=c.layoutDesign?.contentTop;
   const y=Number.isFinite(anchor)?anchor+MNC_LAYOUT.artFlow(c):bodyStart(c)+plateHeight+30;
-  return window.MNC_contentLayout(ctx,c,y,paper,{width:634,x:58});
+  const divider=front.characterDivider(c,{x:57,y:1008});
+  return window.MNC_contentLayout(ctx,c,y,paper,{width:634,x:58,footerTop:divider?divider.rect.y-8:undefined});
  }
  function standardBoxes(c,ctx){
   const copy=content(ctx,c);
@@ -103,7 +104,8 @@
    const contentTop=bodyStart(c)+layout.plateHeight+39;
    const footer=front.offset(c,'footer');
    const creditTop=front.attributionBox(c,{x:57,y:1008}).y;
-   const footerTop=Math.min(967+footer.y,creditTop-8);
+   const divider=front.characterDivider(c,{x:57,y:1008});
+   const footerTop=divider?.rect.y??Math.min(967+footer.y,creditTop-8);
    scene.add('copyRule',{x:52,y:contentTop-18,w:644,h:6},ctx=>{
      ctx.strokeStyle=trim;ctx.globalAlpha=.62;ctx.lineWidth=2;
      ctx.beginPath();ctx.moveTo(52,contentTop-18);ctx.lineTo(696,contentTop-18);ctx.stroke();
@@ -112,7 +114,8 @@
    window.MNC_addContentLayers(scene,ctx,c,content(ctx,c,paper),paper);
    const panel={x:43+footer.x,y:footerTop,w:664,h:1024+footer.y-footerTop};
    scene.add('footerPanel',panel,ctx=>{ctx.fillStyle=footerColor;ctx.fillRect(panel.x,panel.y,panel.w,panel.h);});
-   scene.add('footerLine',{x:52,y:footerTop-3,w:644,h:6},ctx=>{
+   if(divider)front.addFooterDivider(scene,c,{...divider,color:trim});
+   else scene.add('footerLine',{x:52,y:footerTop-3,w:644,h:6},ctx=>{
      ctx.strokeStyle=trim;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(52,footerTop);ctx.lineTo(696,footerTop);ctx.stroke();
    },{empty:layout.footerRule===false});
    design.addCredits(scene,c,{x:57,y:1008,ink});

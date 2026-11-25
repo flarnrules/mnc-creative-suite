@@ -603,10 +603,13 @@
     setStatus('symbolDesignStatus',design.name+(assignment==='default'?' is now the default.':' was added as a variant.'));
   }
 
+  const selectedFooterLayout=()=>$('sharedFooterLayout').value||'character';
+  const footerScopeMatches=(mode,card)=>!!card&&(mode==='shared'||card.family==='Character');
+
   async function paintSharedFooter(){
     const token=++footerPreviewRevision,id=$('sharedFooterPreviewType').value;
     const card=window.MNC_typePreviewCard?.(id)||draftFor(id);
-    card.collectionFooterMode='shared';
+    card.collectionFooterMode=selectedFooterLayout();
     const image=await cardCanvas(card,{rounded:true});
     if(token!==footerPreviewRevision||$('sharedFooterPanel').hidden)return;
     const canvas=$('sharedFooterPreview'),ctx=canvas.getContext('2d');
@@ -620,25 +623,36 @@
     const card=sharedFooterTarget();
     $('sharedFooterCardRow').hidden=$('sharedFooterScope').value!=='card';
     $('sharedFooterLink').disabled=$('sharedFooterOpenLayout').disabled=!card;
-    $('sharedFooterLink').checked=front.usesSharedFooter(card);
+    $('sharedFooterLink').checked=front.footerMode(card)===selectedFooterLayout();
   }
   function renderSharedFooter(){
-    const type=$('sharedFooterPreviewType');
-    dropDownOptions(type,types.profiles().map(profile=>[profile.id,profile.name]),type.value||'hero');
-    const card=$('sharedFooterCard'),chosen=cardById(card.value)||current()||state.cards[0];
-    dropDownOptions(card,state.cards.map(item=>[item.id,item.title]),chosen?.id);
+    const mode=selectedFooterLayout(),character=mode==='character';
+    const type=$('sharedFooterPreviewType'),profiles=types.profiles().filter(profile=>footerScopeMatches(mode,profile));
+    dropDownOptions(type,profiles.map(profile=>[profile.id,profile.name]),profiles.some(p=>p.id===type.value)?type.value:'hero');
+    const cards=state.cards.filter(card=>footerScopeMatches(mode,card));
+    const menu=$('sharedFooterCard'),chosen=cards.find(card=>card.id===menu.value)||cards.find(card=>card.id===currentId)||cards[0];
+    dropDownOptions(menu,cards.map(item=>[item.id,item.title]),chosen?.id);
     syncFooterConnection();
-    const linked=state.cards.filter(front.usesSharedFooter).length;
-    const allNew=state.sharedFooter.useForNewCards;
-    $('sharedFooterSummary').textContent=`${linked} of ${state.cards.length} saved cards use this layout. `+
-      (allNew?'All new cards use it.':'New cards follow their starting design’s footer.');
-    $('sharedFooterApplyAll').disabled=allNew&&linked===state.cards.length;
+    const linked=cards.filter(card=>front.footerMode(card)===mode).length;
+    const allNew=character?state.characterFooter.useForNewCards:state.sharedFooter.useForNewCards&&!state.characterFooter.useForNewCards;
+    $('sharedFooterTitle').textContent=character?'Character footer':'Project-wide footer';
+    $('sharedFooterSummary').textContent=`${linked} of ${cards.length} saved ${character?'Character ':''}cards use this layout. `+
+      (allNew?(character?'All new Character cards use it.':'All new cards use it.'):
+        character?'Save this layout to make it the default for every new Character.':'Link all cards to make this the project-wide default.');
+    $('sharedFooterEditLayout').textContent=character?'Edit Character footer':'Edit shared footer layout';
+    $('sharedFooterApplyAll').textContent=character?'Use on saved Character cards':'Use shared footer on all cards';
+    $('sharedFooterApplyAll').disabled=allNew&&linked===cards.length;
+    $('sharedFooterEditMark').hidden=character;
     $('sharedFooterUndo').hidden=footerUndo?.project!==state;
     paintSharedFooter().catch(console.error);
   }
 
-  function openSharedFooter({footerScope,previewType}={}){
+  function openSharedFooter({footerScope,previewType,footerLayout}={}){
     $('sharedFooterExceptions').open=!!footerScope;
+    if(footerLayout||footerScope==='card'||previewType){
+      const reference=previewType?MNC_SET_PLAN.profile(previewType):current();
+      $('sharedFooterLayout').value=footerLayout||(reference?.family==='Character'?'character':'shared');
+    }
     if(footerScope){
       $('sharedFooterScope').value=footerScope;
       if(footerScope==='card')$('sharedFooterCard').value=currentId;
@@ -658,32 +672,35 @@
   }
   $('sharedFooterScope').onchange=$('sharedFooterCard').onchange=syncFooterConnection;
   $('sharedFooterOpenLayout').onclick=()=>editFooterInLayout();
-  $('sharedFooterEditLayout').onclick=()=>window.MNC_editSharedFooter($('sharedFooterPreviewType').value);
+  $('sharedFooterEditLayout').onclick=()=>window.MNC_editSharedFooter($('sharedFooterPreviewType').value,'footer',null,selectedFooterLayout());
   $('sharedFooterLink').onchange=()=>{
-    const mode=$('sharedFooterLink').checked?'shared':'custom';
-    if(mode==='shared'&&$('sharedFooterScope').value==='card'){
+    const mode=$('sharedFooterLink').checked?selectedFooterLayout():'custom';
+    if(mode!=='custom'&&$('sharedFooterScope').value==='card'){
       const card=sharedFooterTarget();if(!card)return;
       front.setFooterMode(card,mode);persist();syncFooterConnection();
       setStatus('sharedFooterStatus','Shared footer enabled for '+card.title+'.');
     }else editFooterInLayout(mode);
   };
+  $('sharedFooterLayout').onchange=()=>{setStatus('sharedFooterStatus','');renderSharedFooter();};
   $('sharedFooterPreviewType').onchange=()=>{syncFooterConnection();paintSharedFooter().catch(console.error);};
   $('sharedFooterEditMark').onclick=()=>openProfile('collection','glyphs');
   $('sharedFooterApplyAll').onclick=()=>{
-    const cards=state.cards.filter(card=>!front.usesSharedFooter(card));
-    if(!cards.length&&state.sharedFooter.useForNewCards)return;
-    footerUndo={project:state,useForNewCards:state.sharedFooter.useForNewCards,
+    const mode=selectedFooterLayout();
+    const cards=state.cards.filter(card=>footerScopeMatches(mode,card)&&front.footerMode(card)!==mode);
+    footerUndo={project:state,mode,useForNewCards:state.sharedFooter.useForNewCards,characterDefault:state.characterFooter.useForNewCards,
       cards:cards.map(card=>[card.id,card.collectionFooterMode,card.catalogEdits?.collectionFooterMode])};
-    cards.forEach(card=>front.setFooterMode(card,'shared'));
-    state.sharedFooter.useForNewCards=true;
-    setStatus('sharedFooterStatus','Shared footer applied to saved and future cards.');
+    cards.forEach(card=>front.setFooterMode(card,mode));
+    if(mode==='shared')state.sharedFooter.useForNewCards=true;
+    state.characterFooter.useForNewCards=mode==='character';
+    setStatus('sharedFooterStatus',mode==='character'?'Character footer applied to saved and future Character cards.':
+      'Project-wide footer applied to saved and future cards.');
     persist();renderSharedFooter();
   };
   $('sharedFooterUndo').onclick=()=>{
     if(footerUndo?.project!==state)return;
     for(const [id,mode,catalogMode] of footerUndo.cards){
       const card=cardById(id);
-      if(!front.usesSharedFooter(card))continue;
+      if(front.footerMode(card)!==footerUndo.mode)continue;
       if(mode===undefined)delete card.collectionFooterMode;
       else card.collectionFooterMode=mode;
       if(card.catalogEdits){
@@ -692,6 +709,7 @@
       }
     }
     state.sharedFooter.useForNewCards=footerUndo.useForNewCards;
+    state.characterFooter.useForNewCards=footerUndo.characterDefault;
     footerUndo=null;setStatus('sharedFooterStatus','Restored the previous footer choices.');
     persist();renderSharedFooter();
   };
@@ -1065,7 +1083,10 @@
     $('cardSymbolFont').value=symbol.font;$('cardSymbolPresentation').value=symbol.presentation;
     $('cardSymbolImageMode').value=symbol.imageMode;
     const collection= symbols.cardSymbol(state,card,'collection').symbol;
-    $('cardCollectionSymbolMode').value=symbols.cardMode(card,'collection');
+    const characterMark=front.footerMode(card)==='character'&&MNC_CARD_METADATA.isPromo(card,collectionFor(card));
+    $('cardCharacterMark').hidden=!characterMark;
+    $('cardCollectionSymbolMode').disabled=characterMark;
+    $('cardCollectionSymbolMode').value=characterMark?'character':symbols.cardMode(card,'collection');
     $('footerSetIcons').hidden=$('cardCollectionSymbolMode').value!=='custom';
     $('setGlyph').value=collection.glyph;populateAssets($('setGlyphAsset'),collection.assetId);
     $('artworkProfile').value=card.artworkProfile||'custom';

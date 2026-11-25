@@ -16,7 +16,8 @@ globalThis.MNC_LAYOUT = (() => {
   const legal=id=>Object.hasOwn(labels,id)||/^extra:[\w-]{1,96}$/.test(id);
   const full=()=>({x:0,y:0,w:CW,h:CH});
   const bounded=(key,value)=>clamp(value,key==='x'?-CW:key==='y'?-CH:4,key==='y'||key==='h'?CH*2:CW*2);
-  const get=(card,id)=>MNC_FRONT.isSharedFooterLayer(card,id)?state.sharedFooter.layers[id]:card.layoutDesign?.layers?.[id];
+  const get=(card,id)=>MNC_FRONT.isSharedFooterLayer(card,id)?
+    MNC_FRONT.footerSettingsFor(state,MNC_FRONT.footerMode(card)).layers[id]:card.layoutDesign?.layers?.[id];
   const hidden=(card,id)=>get(card,id)?.hidden===true;
 
   function normalize(value) {
@@ -146,7 +147,7 @@ globalThis.MNC_LAYOUT = (() => {
     const layers=[];
     function add(id,base,paint,options={}) {
       const {label=labels[id],adjustBox=false,empty=false,hit='inside',text=null,internal=false,foilText=!!text}=options;
-      const rect=id==='background'||internal?base:geometry(card,id,base);
+      const rect=options.rect??(id==='background'||internal?base:geometry(card,id,base));
       layers.push({id,label,base,rect,paint,adjustBox,hidden:hidden(card,id),empty,hit,text,internal,foilText});
     }
     function ordered() {

@@ -235,7 +235,7 @@ function designPreset(c,id,name,{typeDefaultFor}={}) {
   appearance.setGlyph=c.setGlyph??collectionFor(c)?.glyph??(game.isGameCard(c)?'✦':'');
   appearance.setGlyphAsset=c.setGlyphAsset||'';
   appearance.typeIconGlyph=MNC_CARD_METADATA.customIcon(c)||null;
-  appearance.collectionFooterMode=front.usesSharedFooter(c)?'shared':'custom';
+  appearance.collectionFooterMode=front.footerMode(c);
   for(const [place,key] of [['type','typeSymbol'],['collection','collectionSymbol']]){
     const mode=MNC_SYMBOLS.cardMode(c,place);
     appearance[key+'Mode']=mode;
@@ -285,7 +285,8 @@ function saveDesignPreset(c,{defaultName,name:enteredName,id}={}) {
 function applyDesignPreset(c,t,{refresh=true}={}) {
   const gameTemplate=['Game Frame','Game Full Art'].includes(t.template);
   if(gameTemplate&&!game.role(c)){alert('Choose Character, Critic, or Item to use this layout.');return false;}
-  const keepSharedFooter=state.sharedFooter.useForNewCards&&front.usesSharedFooter(c);
+  const footerMode=front.footerMode(c);
+  const keepSharedFooter=footerMode==='character'||footerMode==='shared'&&state.sharedFooter.useForNewCards;
   if(gameTemplate&&!game.isGameCard(c))window.MNC_enableGameFrame?.(c);
   Object.assign(c,{
     template:t.template,titlePosition:deep(t.titlePosition||[.075,.075]),
@@ -402,10 +403,11 @@ function applyTypeDesignPreset(card,id=MNC_SET_PLAN.profileFor(card),{followSymb
 }
 
 function applyStartingDesign(card,id,designId){
+  const mode=front.startingFooterMode(state,card);
   card.collectionFooterMode='shared';
   MNC_OUTER_BORDER.applyStartingBand(card);
   applyTypeDesignPreset(card,id,{designId});
-  if(state.sharedFooter.useForNewCards)card.collectionFooterMode='shared';
+  if(front.footerMode(card)!=='custom'||front.footerSettingsFor(state,mode).useForNewCards)card.collectionFooterMode=mode;
 }
 
 const cardTypeDefaultLayout=['template','titlePosition','creditPosition','microPosition','layers','useHandGlyphs',
@@ -996,10 +998,14 @@ function addLegacyLayers(scene,ctx,c,{foil,recipe}={}){
    ctx.font='26px sans-serif';ctx.fillText(String(c.symbols).slice(0,30),CW-55,CH-132);
  },{empty:!c.symbols});
  layout.addCredits(scene,c,credit);
- const top=front.attributionBox(c,credit).y-8;
- scene.add('footerLine',{x:46,y:top-3,w:658,h:6},ctx=>{
-   ctx.strokeStyle='#ffffff70';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(46,top);ctx.lineTo(704,top);ctx.stroke();
- },{empty:front.values(c).footerRule===false});
+ const divider=front.characterDivider(c,credit);
+ if(divider)front.addFooterDivider(scene,c,{...divider,color:'#ffffff70'});
+ else{
+   const top=front.attributionBox(c,credit).y-8;
+   scene.add('footerLine',{x:46,y:top-3,w:658,h:6},ctx=>{
+     ctx.strokeStyle='#ffffff70';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(46,top);ctx.lineTo(704,top);ctx.stroke();
+   },{empty:front.values(c).footerRule===false});
+ }
  front.addCollection(scene,ctx,c,{x:CW*mp[0],y:CH*mp[1],ink:'#ffffff',outline:true});
  layout.addEpisodeBadge(scene,c,'#eedcb9');
  if(c.showStats){
@@ -1016,7 +1022,9 @@ function addLegacyLayers(scene,ctx,c,{foil,recipe}={}){
 
 function legacyCopyLayout(ctx,c) {
  const colors={ink:'#fff',quiet:'#f8f5e9'},credit=c.creditPosition||[.07,.958];
- const footerTop=front.attributionBox(c,{x:750*credit[0],y:1050*credit[1]}).y-18;
+ const creditAt={x:750*credit[0],y:1050*credit[1]};
+ const divider=front.characterDivider(c,creditAt);
+ const footerTop=divider?divider.rect.y-8:front.attributionBox(c,creditAt).y-18;
  const measure=window.MNC_contentLayout(ctx,c,0,colors,{x:55,width:632,footerTop:10000});
  const height=Math.max(0,...[measure.typeRuleBox,measure.ruleBox,measure.quoteBox].filter(box=>box.h).map(box=>box.y+box.h));
  return window.MNC_contentLayout(ctx,c,Math.max(180,Math.min(913,footerTop-height)),colors,{x:55,width:632,footerTop});
