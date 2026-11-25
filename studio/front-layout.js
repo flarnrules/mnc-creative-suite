@@ -37,7 +37,7 @@ globalThis.MNC_FRONT = (() => {
     film: ['Film title','artist',15],
     episode: ['Episode / picker','artist',14],
     edition: ['Collection / edition / card number','footer',17],
-    number: ['Centered card number','number',36],
+    number: ['Card number','number',36],
     source: ['Episode / picker (previous layout)','footer',15],
     rarityGlyph: ['Rarity glyph','type',28]
   };
@@ -55,11 +55,21 @@ globalThis.MNC_FRONT = (() => {
   const sharedFooterLayers=['footer','number','setIcon'];
   const usesSharedFooter=card=>card?.collectionFooterMode==='shared';
   const isSharedFooterLayer=(card,id)=>usesSharedFooter(card)&&sharedFooterLayers.includes(id);
+  const cornerFooter={codeSize:23,numberSize:19,markSize:42};
 
   function sharedFooterSettings(value){
     const size=(key,fallback,min,max)=>Number.isFinite(value?.[key])?clampNumber(Math.round(value[key]),min,max):fallback;
-    return {position:value?.position==='right'?'right':'center',codeSize:size('codeSize',17,11,26),
-      numberSize:size('numberSize',28,14,36),markSize:size('markSize',34,12,56)};
+    const text=settings({text:{edition:value?.text?.edition,number:value?.text?.number}}).text;
+    for(const style of Object.values(text)){
+      for(const key of ['size','color','x','y'])delete style[key];
+    }
+    const layers=MNC_LAYOUT.normalize({version:1,layers:Object.fromEntries(
+      sharedFooterLayers.map(id=>[id,value?.layers?.[id]])
+    )}).layers;
+    for(const layer of Object.values(layers))delete layer.hidden;
+    return {position:value?.position==='center'?'center':'right',codeSize:size('codeSize',cornerFooter.codeSize,7,144),
+      numberSize:size('numberSize',cornerFooter.numberSize,7,144),markSize:size('markSize',cornerFooter.markSize,0,200),
+      autoContrast:value?.autoContrast!==false,useForNewCards:value?.useForNewCards===true,text,layers};
   }
 
   function mix(a,b,weight) {
@@ -72,12 +82,16 @@ globalThis.MNC_FRONT = (() => {
     return mix(color,strength<0?'#000000':'#fffaf0',Math.abs(strength));
   }
 
-  function surfaceText(color) {
-    const [r,g,b]=channels(color).map(value=>{
+  function luminance(r,g,b) {
+    const linear=value=>{
       const s=value/255;
       return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;
-    });
-    const ink=.2126*r+.7152*g+.0722*b>.183?'#171b1b':'#fff8eb';
+    };
+    return .2126*linear(r)+.7152*linear(g)+.0722*linear(b);
+  }
+
+  function surfaceText(color) {
+    const ink=luminance(...channels(color))>.183?'#171b1b':'#fff8eb';
     return {ink,quiet:mix(color,ink,.83)};
   }
 
@@ -123,6 +137,10 @@ globalThis.MNC_FRONT = (() => {
     if(Number.isFinite(independent?.markSpace)&&Number.isFinite(independent?.numberSpace)){
       next.independentFooter={markSpace:clampNumber(independent.markSpace,0,209),numberSpace:clampNumber(independent.numberSpace,0,149)};
       if(independent.copiedShared===true)next.independentFooter.copiedShared=true;
+      if(independent.fixedBoxes===true){
+        next.independentFooter.fixedBoxes=true;
+        next.independentFooter.autoContrast=independent.autoContrast!==false;
+      }
     }
     if (['number','fraction','label'].includes(value?.numberFormat)) next.numberFormat=value.numberFormat;
     if (['none','outline','pill'].includes(value?.numberBadge)) next.numberBadge=value.numberBadge;
@@ -159,14 +177,20 @@ globalThis.MNC_FRONT = (() => {
 
   function copySharedFooter(card,layout,from){
     const {symbol}=collectionMark(card);
+    const shared=state.sharedFooter;
     Object.assign(layout,{footerPosition:from.footerPosition,numberFormat:from.numberFormat,numberBadge:from.numberBadge,
       printCollectionCode:from.printCollectionCode,printEdition:from.printEdition,setIcon:from.setIcon,setIconX:0,setIconY:0,
-      independentFooter:{markSpace:from.setIcon+9,numberSpace:from.text.number.size+5,copiedShared:true}});
+      independentFooter:{markSpace:from.setIcon+9,numberSpace:from.text.number.size+5,copiedShared:true,
+        fixedBoxes:true,autoContrast:shared.autoContrast}});
     const offsets=layout.offsets??={},text=layout.text??={};
     offsets.number={x:0,y:0};
     text.edition={...from.text.edition};
     text.number={...from.text.number};
-    for(const id of sharedFooterLayers)delete card.layoutDesign?.layers?.[id];
+    for(const id of sharedFooterLayers){
+      delete card.layoutDesign?.layers?.[id];
+      const layer=shared.layers[id];
+      if(layer)Object.assign(MNC_LAYOUT.layerEdit(card,id),deep(layer));
+    }
     editCardFields(card,{collectionSymbol:symbol,collectionSymbolMode:symbol.source==='hidden'?'hidden':'custom'});
   }
 
@@ -177,7 +201,7 @@ globalThis.MNC_FRONT = (() => {
       else if(!layout.independentFooter)layout.independentFooter={markSpace:(from.setIcon??29)+9,
         numberSpace:(from.text?.number?.size??36)+5};
     }
-    card.collectionFooterMode=mode;
+    editCardFields(card,{collectionFooterMode:mode});
   }
 
   function effective(card) {
@@ -376,6 +400,106 @@ globalThis.MNC_FRONT = (() => {
     await MNC_SYMBOLS.drawCard(ctx,c,r.x+r.w/2,r.y+r.h/2,r.w,color);
   }
 
+  function hasAlignedFooter(card,layout=values(card)) {
+    return usesSharedFooter(card)||layout.independentFooter?.fixedBoxes===true;
+  }
+
+  function alignedFooterBox(layout,id) {
+    const centered=layout.footerPosition==='center',right=708,bottom=1002;
+    const markSize=layout.setIcon??cornerFooter.markSize;
+    const codeSize=layout.text?.edition?.size??cornerFooter.codeSize;
+    const numberSize=layout.text?.number?.size??cornerFooter.numberSize;
+    const codeBaseline=bottom-(centered?0:numberSize+7);
+    if(id==='setIcon'){
+      const y=centered?1009-markSize:(codeBaseline-codeSize+bottom+3-markSize)/2;
+      return {x:right-markSize,y,w:markSize,h:markSize};
+    }
+    const textRight=right-(markSize?markSize+10:0), width=144;
+    if(id==='footer')return {x:textRight-width,y:codeBaseline-codeSize,w:width,h:codeSize+5};
+    return {x:centered?225:textRight-width,y:bottom-numberSize,w:centered?300:width,h:numberSize+5};
+  }
+
+  let contrastSampler;
+  function footerInk(ctx,rect,fallback) {
+    const {a,d,e,f}=ctx.getTransform();
+    const {width,height}=ctx.canvas;
+    const left=clampNumber(Math.floor(rect.x*a+e),0,width),top=clampNumber(Math.floor(rect.y*d+f),0,height);
+    const right=clampNumber(Math.ceil((rect.x+rect.w)*a+e),0,width),bottom=clampNumber(Math.ceil((rect.y+rect.h)*d+f),0,height);
+    if(right<=left||bottom<=top)return {ink:fallback};
+    try{
+      if(!contrastSampler){
+        contrastSampler=MNC_FRONT_EFFECTS.canvas(21,9).getContext('2d',{willReadFrequently:true});
+        contrastSampler.imageSmoothingEnabled=false;
+      }
+      const sample=contrastSampler;
+      sample.clearRect(0,0,21,9);
+      sample.drawImage(ctx.canvas,left,top,right-left,bottom-top,0,0,21,9);
+      const pixels=sample.getImageData(0,0,21,9).data;
+      let darkest=1,lightest=0,count=0;
+      for(let i=0;i<pixels.length;i+=4){
+        if(pixels[i+3]<128)continue;
+        const level=luminance(pixels[i],pixels[i+1],pixels[i+2]);
+        darkest=Math.min(darkest,level);
+        lightest=Math.max(lightest,level);
+        count++;
+      }
+      if(!count)return {ink:fallback};
+      const white=1.05/(lightest+.05),black=(darkest+.05)/.05;
+      const light=white>=black;
+      return {ink:light?'#ffffff':'#000000',halo:Math.max(white,black)<4.5?(light?'#000000':'#ffffff'):null};
+    }catch{
+      // An imported image can prevent reading back canvas pixels.
+      contrastSampler=null;
+      return {ink:fallback};
+    }
+  }
+
+  function addAlignedFooter(scene,ctx,c,layout,parts,{ink,glyphColor,outline}) {
+    const auto=usesSharedFooter(c)?state.sharedFooter.autoContrast:layout.independentFooter.autoContrast;
+    const contrast=(rect,color,override)=>auto&&!override?footerInk(ctx,rect,color):{ink:override||color};
+    const mark=collectionMark(c),symbol=alignedFooterBox(layout,'setIcon');
+    scene.add('setIcon',symbol,async (paint,rect)=>{
+      const colors=contrast(rect,glyphColor,mark.symbol.color);
+      MNC_LAYOUT.transform(paint,symbol,rect);
+      if(colors.halo){paint.shadowColor=colors.halo;paint.shadowBlur=3;}
+      await MNC_SYMBOLS.drawBadge(paint,mark.symbol,symbol.x+symbol.w/2,symbol.y+symbol.h/2,symbol.w,colors.ink,mark.id);
+    },{adjustBox:true,empty:!symbol.w||mark.symbol.source==='hidden'});
+
+    const abbrev=[layout.printCollectionCode===false?'':parts.code,layout.printEdition===false?'':parts.edition].filter(Boolean).join(' · ');
+    const number=layout.numberFormat==='number'?parts.number.split('/')[0]:
+      (layout.numberFormat==='label'&&parts.number?'CARD ':'')+parts.number;
+    for(const [id,key,value,options] of [
+      ['footer','edition',abbrev,{size:cornerFooter.codeSize,family:'system-ui',align:'right'}],
+      ['number','number',number,{size:cornerFooter.numberSize,family:'Georgia, serif',align:layout.footerPosition}]
+    ]){
+      const base=alignedFooterBox(layout,id);
+      const text=style(c,key,{...options,weight:700,color:ink,width:base.w});
+      const badge=id==='number'&&layout.numberBadge&&layout.numberBadge!=='none';
+      const paintText=(paint,rect,showBadge=true)=>{
+        const colors=contrast(rect,ink,layout.text?.[key]?.color);
+        MNC_LAYOUT.transform(paint,base,rect);
+        if(badge&&showBadge){
+          paint.save();paint.fillStyle=paint.strokeStyle=colors.ink;paint.lineWidth=1.5;
+          paint.beginPath();paint.roundRect(base.x,base.y,base.w,base.h,Math.min(12,base.h/2));
+          if(layout.numberBadge==='pill'){paint.globalAlpha=.12;paint.fill();}else paint.stroke();
+          paint.restore();
+        }
+        const {x:dx,y:dy}=textOffset(c,key);
+        const x=base.x+(text.align==='left'?0:text.align==='center'?base.w/2:base.w)+dx;
+        const y=base.y+text.size+dy;
+        paint.font=text.font;paint.textAlign=text.align;paint.textBaseline='alphabetic';
+        const halo=colors.halo||(!auto&&outline?'#11131b':null);
+        if(halo){
+          paint.lineJoin='round';paint.lineWidth=3;paint.strokeStyle=halo;
+          paint.strokeText(value,x,y,text.width);
+        }
+        paint.fillStyle=colors.ink;paint.fillText(value,x,y,text.width);
+      };
+      scene.add(id,base,paintText,{adjustBox:true,empty:!value,text:{key,value,size:text.size,color:text.color},
+        foilText:badge?(paint,rect)=>paintText(paint,rect,false):true});
+    }
+  }
+
   function addCollection(scene,ctx,c,{x=699,y=1007,ink,glyphColor=ink,outline=false}) {
     const collection=collectionFor(c);
     const promo=MNC_CARD_METADATA.isPromo(c,collection);
@@ -383,13 +507,16 @@ globalThis.MNC_FRONT = (() => {
       (game.isGameCard(c)?Math.max(0,...state.cards.filter(card=>card.set===c.set)
         .map(card=>Number(card.collectorNumber)||0)):0);
     const layout=values(c), parts=MNC_CARD_METADATA.collectionParts(promo?{...c,edition:state.setPlan.edition}:c,collection,total);
+    if(hasAlignedFooter(c,layout)){
+      addAlignedFooter(scene,ctx,c,layout,parts,{ink,glyphColor,outline});
+      return;
+    }
     const delta=layout.independentFooter?.copiedShared?{x:0,y:0}:offset(c,'footer');
-    const shared=usesSharedFooter(c),centered=layout.footerPosition==='center';
-    const independent=shared||!!layout.independentFooter,separateNumber=centered||independent;
+    const centered=layout.footerPosition==='center';
+    const independent=!!layout.independentFooter,separateNumber=centered||independent;
     const label=[layout.printCollectionCode===false?'':parts.code,separateNumber?'':parts.number,layout.printEdition===false?'':parts.edition].filter(Boolean).join(' · ');
-    const size=layout.setIcon??29, right=shared?708:independent?708+delta.x:x+delta.x;
-    const numberSpace=shared?state.sharedFooter.numberSize+5:layout.independentFooter?.numberSpace;
-    const baseline=independent?1002-(centered?0:numberSpace)+(shared?0:delta.y):y+delta.y-footerReserve(c);
+    const size=layout.setIcon??29,right=(independent?708:x)+delta.x;
+    const baseline=independent?1002-(centered?0:layout.independentFooter.numberSpace)+delta.y:y+delta.y-footerReserve(c);
     const mark=collectionMark(c),active=mark.symbol.source!=='hidden';
     const symbol=collectionIconBox(c,{x,y});
     scene.add('setIcon',symbol,ctx=>{
@@ -397,7 +524,7 @@ globalThis.MNC_FRONT = (() => {
       return MNC_SYMBOLS.drawBadge(ctx,mark.symbol,mx,my,size,glyphColor,mark.id);
     },
       {empty:!size||!active});
-    const gap=size>0&&active?(shared?size+9:layout.independentFooter?.markSpace??size+9):0;
+    const gap=size>0&&active?(layout.independentFooter?.markSpace??size+9):0;
     const editionStyle={size:17,weight:700,family:'system-ui',color:ink,align:'right',width:Math.max(40,309-gap)};
     scene.add('footer',MNC_LAYOUT.textBox(ctx,c,'edition',label,right-gap,baseline,editionStyle),
       ctx=>outlined(ctx,c,'edition',label,right-gap,baseline,editionStyle,outline),
@@ -429,21 +556,22 @@ globalThis.MNC_FRONT = (() => {
   }
 
   function numberBox(c) {
-    const layout=values(c),centered=layout.footerPosition==='center',shared=usesSharedFooter(c);
-    if(!centered&&!shared&&!layout.independentFooter)return null;
+    const layout=values(c),centered=layout.footerPosition==='center';
+    if(hasAlignedFooter(c,layout))return alignedFooterBox(layout,'number');
+    if(!centered&&!layout.independentFooter)return null;
     const size=style(c,'number',{size:36}).size;
     if(!centered){
-      const right=708-(shared?state.sharedFooter.markSize+9:layout.independentFooter.markSpace);
+      const right=708-layout.independentFooter.markSpace;
       const rect={x:right-188,y:1002-size-7,w:188,h:size+16};
-      return shared?rect:box(c,'number',rect);
+      return box(c,'number',rect);
     }
     return box(c,'number',{x:225,y:1004-size-7,w:300,h:size+16});
   }
 
   function collectionIconBox(c,{x=699,y=1007}={}) {
     const layout=values(c),size=layout.setIcon??29;
+    if(hasAlignedFooter(c,layout))return alignedFooterBox(layout,'setIcon');
     const delta=layout.independentFooter?.copiedShared?{x:0,y:0}:offset(c,'footer');
-    if(usesSharedFooter(c))return {x:708-size,y:1009-size,w:size,h:size};
     if(layout.independentFooter)return {x:708-size+delta.x+(layout.setIconX||0),
       y:1009-size+delta.y+(layout.setIconY||0),w:size,h:size};
     return {x:x+delta.x-size+(layout.setIconX||0),y:y+delta.y-footerReserve(c)-size*.75+(layout.setIconY||0),w:size,h:size};
@@ -486,6 +614,6 @@ globalThis.MNC_FRONT = (() => {
 
   return {groups,textFields,settings,editable,effective,offset,box,style,textOffset,draw,paintNameplate,drawCredit,creditLabel,
     addHeader,attributionBox,addCollection,footerReserve,numberBox,collectionIconBox,typeIconBox,drawTypeIcon,
-    usesSharedFooter,isSharedFooterLayer,sharedFooterSettings,setFooterMode,
+    usesSharedFooter,isSharedFooterLayer,hasAlignedFooter,sharedFooterSettings,setFooterMode,
     episodeBadgeBox,drawEpisodeBadge,wrap,values,hex,mix,tone,surfaceText,emojiFont};
 })();

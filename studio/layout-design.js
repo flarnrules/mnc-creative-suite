@@ -16,7 +16,7 @@ globalThis.MNC_LAYOUT = (() => {
   const legal=id=>Object.hasOwn(labels,id)||/^extra:[\w-]{1,96}$/.test(id);
   const full=()=>({x:0,y:0,w:CW,h:CH});
   const bounded=(key,value)=>clamp(value,key==='x'?-CW:key==='y'?-CH:4,key==='y'||key==='h'?CH*2:CW*2);
-  const get=(card,id)=>MNC_FRONT.isSharedFooterLayer(card,id)?undefined:card.layoutDesign?.layers?.[id];
+  const get=(card,id)=>MNC_FRONT.isSharedFooterLayer(card,id)?state.sharedFooter.layers[id]:card.layoutDesign?.layers?.[id];
   const hidden=(card,id)=>get(card,id)?.hidden===true;
 
   function normalize(value) {
