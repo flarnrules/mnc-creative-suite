@@ -5,26 +5,28 @@
   const choice=$('shapeCard'), target=$('shapeTarget'), title=$('shapeName'), list=$('shapeList');
   const notice=$('shapeStatus');
   const undo=[], redo=[];
-  let draft, selected=-1, mode='move', pointer=null, previewStamp=0, previewFrame=0, project, returnTab='studio';
+  let draft, selected=-1, mode='move', outlineOpen=false, pointer=null;
+  let previewStamp=0, previewFrame=0, project, returnTab='studio';
   const card=()=>cardById(choice.value);
   const canUse=(c,part)=>c&&(c.template==='Standard'||game.isGameCard(c)&&(part==='plate'||c.template!=='Game Full Art'));
   const saved=()=>state.cardShapes.find(item=>item.id===list.value);
   const usable=()=>draft.kind==='svg'||shapes.validPoints(draft.points);
-  const bounds=()=>target.value==='plate'?{x:23,y:109,w:board.width-46,h:63}:{x:23,y:24,w:board.width-46,h:board.height-48};
-  const ready=()=>usable()&&mode!=='draw';
+  const bounds=()=>target.value==='plate'?{x:23,y:80,w:board.width-46,h:280}:{x:23,y:24,w:board.width-46,h:board.height-48};
+  const ready=()=>usable()&&!outlineOpen;
+  const snapshot=()=>({draft:deep(draft),selected,mode,outlineOpen});
 
   function addUndo() {
-    undo.push({draft:deep(draft),selected,mode});
+    undo.push(snapshot());
     if(undo.length>60)undo.shift();
     redo.length=0;
   }
 
   function restoreHistory(from,to) {
     if(!from.length)return;
-    to.push({draft:deep(draft),selected,mode});
-    const snapshot=from.pop();
-    draft=snapshot.draft;selected=snapshot.selected;
-    setMode(snapshot.mode);
+    to.push(snapshot());
+    const previous=from.pop();
+    ({draft,selected,outlineOpen}=previous);
+    setMode(previous.mode);
     title.value=draft.name;
     update();
   }
@@ -47,9 +49,13 @@
     draft=deep(value);
     selected=-1; undo.length=redo.length=0;
     title.value=draft.name||'';
-    if(draft.kind==='svg')setMode('move');
-    else setMode(draft.points.length?'move':'draw');
+    outlineOpen=draft.kind==='points'&&!draft.points.length;
+    setMode(outlineOpen?'add':'move');
     update();
+  }
+
+  function revealOutline() {
+    if(window.matchMedia?.('(max-width: 850px)').matches)board.scrollIntoView({block:'nearest'});
   }
 
   function fromCard() {
@@ -86,15 +92,28 @@
       $('shapeStarter').value=starterId||'blank';
       updateCatalog();
       begin({name:'',kind:'points',points:shapes.start(starterId)});
-      if(blank)title.focus();
     }else fromCard();
+    revealOutline();
+  }
+
+  function clearPointer() {
+    if(!pointer)return;
+    const {id}=pointer;
+    pointer=null;
+    if(board.hasPointerCapture?.(id))board.releasePointerCapture(id);
   }
 
   function setMode(next) {
+    clearPointer();
     mode=next;
-    $('shapeAddMode').setAttribute('aria-pressed',String(mode!=='move'));
+    $('shapeAddMode').setAttribute('aria-pressed',String(mode==='add'));
+    $('shapeFreehandMode').setAttribute('aria-pressed',String(mode==='freehand'));
     $('shapeMoveMode').setAttribute('aria-pressed',String(mode==='move'));
     board.classList.toggle('shape-add-mode',mode!=='move');
+    const hint=$('shapeDrawHint');
+    hint.hidden=mode!=='freehand';
+    hint.textContent=ready()?'Trace a new outline to replace this one. It closes when you release.':
+      'Trace the outline in one stroke. It closes when you release.';
   }
 
   function draw() {
@@ -108,8 +127,15 @@
       ctx.moveTo(rect.x,y);ctx.lineTo(rect.x+rect.w,y);ctx.stroke();
     }
     if(target.value==='plate'){
-      ctx.fillStyle='#aaa48a';ctx.font='600 12px system-ui';ctx.textAlign='center';
-      ctx.fillText('Title area',board.width/2,rect.y+rect.h+22);
+      ctx.fillStyle='#aaa48a';ctx.font='600 18px system-ui';ctx.textAlign='center';
+      ctx.fillText('Nameplate enlarged for editing',board.width/2,rect.y+rect.h+35);
+    }
+    if(pointer?.samples){
+      ctx.beginPath();
+      pointer.samples.forEach((p,index)=>ctx[index?'lineTo':'moveTo'](rect.x+p.x*rect.w,rect.y+p.y*rect.h));
+      ctx.strokeStyle='#e5d09d';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+      ctx.restore();
+      return;
     }
     const points=draft.kind==='points'?draft.points:[];
     if(ready()){
@@ -170,8 +196,8 @@
       $('shapeSmooth').value=Math.round(node.smooth*100);
     }
     $('shapeAddMode').disabled=draft.kind==='svg'||points.length>=shapes.anchors;
-    $('shapeMoveMode').disabled=draft.kind==='svg'||mode==='draw';
-    $('shapeClose').hidden=mode!=='draw';
+    $('shapeMoveMode').disabled=draft.kind==='svg'||!points.length;
+    $('shapeClose').hidden=!outlineOpen||mode==='freehand';
     $('shapeClose').disabled=!usable();
   }
 
@@ -185,9 +211,13 @@
     draw();queuePreview();
   }
 
-  function translated(event) {
-    const element=board.getBoundingClientRect(), rect=bounds();
-    const x=(event.clientX-element.left)*board.width/element.width, y=(event.clientY-element.top)*board.height/element.height;
+  function boardView() {
+    const box=board.getBoundingClientRect();
+    return {left:box.left,top:box.top,scaleX:board.width/box.width,scaleY:board.height/box.height,rect:bounds()};
+  }
+
+  function translated(event,{left,top,scaleX,scaleY,rect}) {
+    const x=(event.clientX-left)*scaleX, y=(event.clientY-top)*scaleY;
     return {x,y,px:clamp((x-rect.x)/rect.w,0,1),py:clamp((y-rect.y)/rect.h,0,1),rect};
   }
 
@@ -204,21 +234,44 @@
     return edge;
   }
 
+  function recordStroke(stroke,p) {
+    const {samples,width,height}=stroke, previous=samples.at(-1);
+    if(previous && Math.hypot((p.px-previous.x)*width,(p.py-previous.y)*height)<2)return;
+    if(samples.length>=2048)stroke.samples=samples.filter((_,index)=>index%2===0);
+    stroke.samples.push({x:p.px,y:p.py});
+  }
+
+  function closeOutline() {
+    if(!usable())return;
+    outlineOpen=false;
+    setMode('move');
+    update();
+  }
+
   board.addEventListener('pointerdown',event=>{
-    if(event.button!==0 || draft.kind!=='points' || pointer)return;
-    const p=translated(event), {points}=draft;
-    const scale=board.width/board.getBoundingClientRect().width;
-    let hit=-1, nearest=Math.max(9,9*scale);
+    if(event.button!==0 || event.isPrimary===false || draft.kind!=='points' || pointer)return;
+    const view=boardView(), p=translated(event,view), {points}=draft;
+    const inside=p.x>=p.rect.x-3&&p.x<=p.rect.x+p.rect.w+3&&p.y>=p.rect.y-3&&p.y<=p.rect.y+p.rect.h+3;
+    event.preventDefault();
+    if(document.activeElement!==board)board.focus({preventScroll:true});
+    if(mode==='freehand'){
+      if(!inside)return;
+      pointer={id:event.pointerId,samples:[],width:p.rect.w/view.scaleX,height:p.rect.h/view.scaleY,frame:0};
+      recordStroke(pointer,p);
+      board.setPointerCapture(event.pointerId);
+      draw();
+      return;
+    }
+    let hit=-1, nearest=Math.max(9,9*view.scaleX);
     points.forEach((node,index)=>{
       const distance=Math.hypot(p.rect.x+node.x*p.rect.w-p.x,p.rect.y+node.y*p.rect.h-p.y);
       if(distance<nearest){nearest=distance;hit=index;}
     });
-    const inside=p.x>=p.rect.x-3&&p.x<=p.rect.x+p.rect.w+3&&p.y>=p.rect.y-3&&p.y<=p.rect.y+p.rect.h+3;
-    if(mode==='draw'&&hit===0&&usable()){
-      setMode('move');update();
-    }else if(mode!=='move' && hit<0 && inside && points.length<shapes.anchors){
+    if(mode==='add'&&outlineOpen&&hit===0&&usable()){
+      closeOutline();
+    }else if(mode==='add' && hit<0 && inside && points.length<shapes.anchors){
       addUndo();
-      selected=mode==='draw'||points.length<3?points.length:closestEdge(points,p)+1;
+      selected=outlineOpen||points.length<3?points.length:closestEdge(points,p)+1;
       points.splice(selected,0,shapes.point(p.px,p.py));
       update();
     }else if(hit>=0){
@@ -227,17 +280,47 @@
       board.setPointerCapture(event.pointerId);
       updatePointFields();draw();
     }
-    event.preventDefault();
   });
   board.addEventListener('pointermove',event=>{
     if(pointer?.id!==event.pointerId)return;
-    const p=translated(event);
+    const view=boardView(), p=translated(event,view);
+    if(pointer.samples){
+      const stroke=pointer;
+      for(const sample of event.getCoalescedEvents?.()||[])recordStroke(stroke,translated(sample,view));
+      recordStroke(stroke,p);
+      if(!stroke.frame)stroke.frame=requestAnimationFrame(()=>{
+        stroke.frame=0;
+        if(pointer===stroke)draw();
+      });
+      return;
+    }
     if(!pointer.moved){ addUndo(); pointer.moved=true; }
     Object.assign(draft.points[selected],{x:p.px,y:p.py});
     update();
   });
-  for(const type of ['pointerup','pointercancel','lostpointercapture']){
-    board.addEventListener(type,event=>{if(pointer?.id===event.pointerId)pointer=null;});
+  board.addEventListener('pointerup',event=>{
+    if(pointer?.id!==event.pointerId)return;
+    const stroke=pointer;
+    if(stroke.samples)recordStroke(stroke,translated(event,boardView()));
+    clearPointer();
+    if(!stroke.samples)return;
+    const points=shapes.fromStroke(stroke.samples,stroke.width,stroke.height);
+    if(!points.length){
+      $('shapeDrawHint').textContent='Draw a loop with some space inside.';
+      draw();
+      return;
+    }
+    addUndo();
+    draft.points=points;
+    selected=0;
+    closeOutline();
+  });
+  for(const type of ['pointercancel','lostpointercapture']){
+    board.addEventListener(type,event=>{
+      if(pointer?.id!==event.pointerId)return;
+      setMode(mode);
+      draw();
+    });
   }
 
   function use(saveToCard) {
@@ -261,31 +344,39 @@
       update();
       notice.textContent=saveToCard&&c?next.name+' applied to '+c.title+'.':'Saved '+next.name+'.';
       if(saveToCard&&c)tab(returnTab);
-    }catch(error){notice.textContent=error.message;title.focus();}
+    }catch(error){notice.textContent=error.message;if(!title.value.trim())title.focus();}
   }
 
   function chooseStarter() {
     addUndo();
     draft={id:draft.id,name:title.value,kind:'points',points:shapes.start($('shapeStarter').value)};
     selected=-1;
-    setMode(draft.points.length?'move':'draw');
+    outlineOpen=!draft.points.length;
+    setMode(outlineOpen?'add':'move');
     notice.textContent='';
     update();
+    revealOutline();
   }
 
   $('shapeStarterApply').onclick=chooseStarter;
   $('shapeNew').onclick=()=>{
+    $('shapeStarter').value='blank';
     updateCatalog();
     begin({name:'',kind:'points',points:[]});
-    title.focus();
+    revealOutline();
   };
   $('shapeCopy').onclick=()=>{
     if(!usable())return;
     const copy=deep(draft);delete copy.id;
     copy.name=copy.name?copy.name.slice(0,75)+' copy':'';
-    updateCatalog();begin(copy);title.focus();
+    updateCatalog();begin(copy);
   };
-  $('shapeLoad').onclick=()=>{const item=saved();if(item)begin(item);};
+  $('shapeLoad').onclick=()=>{
+    const item=saved();
+    if(!item)return;
+    begin(item);
+    revealOutline();
+  };
   list.onchange=()=>{$('shapeLoad').disabled=$('shapeDelete').disabled=!saved();};
   $('shapeDelete').onclick=()=>{
     const item=saved();
@@ -299,12 +390,13 @@
     updateCatalog(); persist();
     notice.textContent='Shape deleted.';
   };
-  target.onchange=()=>{setCards(choice.value);update();};
+  target.onchange=()=>{setMode(mode);setCards(choice.value);update();};
   choice.onchange=()=>update();
   title.oninput=()=>{draft.name=title.value;};
-  $('shapeAddMode').onclick=()=>{if(mode!=='draw')setMode('add');update();};
+  $('shapeAddMode').onclick=()=>{setMode('add');update();};
+  $('shapeFreehandMode').onclick=()=>{setMode('freehand');update();};
   $('shapeMoveMode').onclick=()=>{setMode('move');update();};
-  $('shapeClose').onclick=()=>{if(usable()){setMode('move');update();}};
+  $('shapeClose').onclick=closeOutline;
   $('shapeUndo').onclick=()=>restoreHistory(undo,redo);
   $('shapeRedo').onclick=()=>restoreHistory(redo,undo);
   $('shapePrevious').onclick=()=>{
@@ -335,7 +427,7 @@
       if(previous!==draft)return;
       addUndo();
       draft={id:previous.kind==='svg'?previous.id:undefined,name:file.name.replace(/\.svg$/i,'').slice(0,80),kind:'svg',svg};
-      selected=-1;title.value=draft.name;setMode('move');update();
+      selected=-1;outlineOpen=false;title.value=draft.name;setMode('move');update();
       notice.textContent='SVG outline loaded.';
     }catch(error){notice.textContent=error.message;}
     finally {input.value='';}

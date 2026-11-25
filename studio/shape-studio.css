@@ -20,6 +20,8 @@
 }
 .shape-editor #shapeCanvas.shape-add-mode {cursor:crosshair;}
 .shape-editor #shapeCanvas:active {cursor:grabbing;}
+.shape-editor #shapeCanvas.shape-add-mode:active {cursor:crosshair;}
+#shapeDrawHint {margin:6px 0;line-height:1.4;}
 .shape-point-fields {display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:9px;}
 .shape-proof {position:sticky;top:62px;}
 #shapeCardPreview {display:block;width:min(100%,285px);height:auto;margin:12px auto 0;border-radius:5px;box-shadow:0 12px 23px #0007;}
@@ -35,8 +37,11 @@
 @media(max-width:850px){
   .shape-workspace {grid-template-columns:minmax(0,1fr) minmax(220px,315px);}
   .shape-library {grid-column:1/-1;}
+  .shape-editor #shapeCanvas {scroll-margin-block:100px;}
 }
 @media(max-width:605px){
   .shape-workspace {grid-template-columns:minmax(0,1fr);}
+  .shape-editor .buttonbar button,.shape-library .buttonbar button {min-height:40px;}
+  #shapeDrawHint {font-size:.8125rem;}
   .shape-proof {position:static;}
 }

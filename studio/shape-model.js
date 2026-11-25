@@ -19,9 +19,15 @@ globalThis.MNC_SHAPES = (() => {
       [.098,.83,.3],[.06,1,.8],[.026,.87,.6]],
     ribbon:[[0,.16],[.14,.24],[.14,.06],[.86,.06],[.86,.24],[1,.16],[.957,.5],
       [1,.86],[.86,.78],[.86,.94],[.14,.94],[.14,.78],[0,.86],[.043,.5]],
+    wave:[[0,.21],[.13,.32,.9],[.33,.21,1],[.54,.06,1],[.74,.14,1],[.88,.28,.9],[1,.2],
+      [.966,.56],[1,.89],[.88,.98,.9],[.74,.84,1],[.54,.76,1],[.33,.91,1],[.13,1,.9],[0,.89],[.034,.55]],
+    pennant:[[0,.04],[.86,.04],[1,.5],[.86,.96],[0,.96],[.047,.5]],
+    decoPlaque:[[.085,0],[.915,0],[.915,.13],[.96,.13],[.96,.31],[1,.31],[1,.69],[.96,.69],
+      [.96,.87],[.915,.87],[.915,1],[.085,1],[.085,.87],[.04,.87],[.04,.69],[0,.69],[0,.31],[.04,.31],[.04,.13],[.085,.13]],
     shield:[[.02,.10],[.15,0],[.85,0],[.98,.10],[.96,.64],[.85,.84],[.5,1],[.15,.84],[.04,.64]]
   };
   const platePresets=[['rounded','Rounded'],['pill','Pill'],['scroll','Scroll'],['ribbon','Ribbon'],
+    ['wave','Wavy banner'],['pennant','Pennant'],['decoPlaque','Art Deco plaque'],
     ['ticket','Ticket'],['shield','Shield'],['clipped','Cut corners'],['oval','Oval']];
 
   function start(name) {
@@ -63,6 +69,56 @@ globalThis.MNC_SHAPES = (() => {
       return sum+p.x*next.y-next.x*p.y;
     },0);
     return Math.abs(area) >= .005;
+  }
+
+  function simplifyStroke(points, tolerance) {
+    // Keep the samples that depart from the straight line between retained points.
+    const last = points.length-1;
+    const keep = new Set([0,last]);
+    const segments = [[0,last]];
+    while (segments.length) {
+      const [start,end] = segments.pop();
+      const a = points[start], b = points[end];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const lengthSquared = dx*dx+dy*dy || 1;
+      let furthest = -1, error = tolerance*tolerance;
+      for (let i=start+1; i<end; i++) {
+        const x = points[i].x-a.x, y = points[i].y-a.y;
+        const t = range((x*dx+y*dy)/lengthSquared,0,1);
+        const distanceSquared = (x-t*dx)**2+(y-t*dy)**2;
+        if (distanceSquared>error) {furthest=i;error=distanceSquared;}
+      }
+      if (furthest>=0) {
+        keep.add(furthest);
+        segments.push([start,furthest],[furthest,end]);
+      }
+    }
+    return points.filter((_,i)=>keep.has(i));
+  }
+
+  function fromStroke(samples, width, height) {
+    if (samples.length<3 || !(width>0 && height>0)) return [];
+    const pixels = samples.map(({x,y})=>({x:x*width,y:y*height}));
+    const first = pixels[0], last = pixels.at(-1);
+    const joinsStart = Math.hypot(last.x-first.x,last.y-first.y)<=6;
+    if (joinsStart) pixels[pixels.length-1]=first;
+    let tolerance = Math.max(1.6,Math.min(width,height)*.006);
+    let nodes = simplifyStroke(pixels,tolerance);
+    while (nodes.length>anchors+(joinsStart?1:0)) {
+      tolerance *= 1.35;
+      nodes = simplifyStroke(pixels,tolerance);
+    }
+    if (joinsStart) nodes.pop();
+    const points = normalizePoints(nodes.map((node,i)=>{
+      const prior=nodes[(i+nodes.length-1)%nodes.length], next=nodes[(i+1)%nodes.length];
+      const incomingX=node.x-prior.x, incomingY=node.y-prior.y;
+      const outgoingX=next.x-node.x, outgoingY=next.y-node.y;
+      const lengths=Math.hypot(incomingX,incomingY)*Math.hypot(outgoingX,outgoingY);
+      const cosine=(incomingX*outgoingX+incomingY*outgoingY)/(lengths||1);
+      const smooth=.85*range((cosine-.3)/.6,0,1);
+      return {x:node.x/width,y:node.y/height,smooth};
+    }));
+    return validPoints(points)?points:[];
   }
 
   const svgCommands = /[MmZzLlHhVvCcSsQqTtAa]/g;
@@ -205,5 +261,5 @@ globalThis.MNC_SHAPES = (() => {
     return Object.hasOwn(starters,preset)?polygonPath(start(preset),rect):null;
   }
 
-  return {anchors,fields,point,start,validPoints,polygonPath,path,make,importedPath,restore,forCard,platePresets,platePath};
+  return {anchors,fields,point,start,validPoints,polygonPath,path,make,importedPath,restore,forCard,platePresets,platePath,fromStroke};
 })();
