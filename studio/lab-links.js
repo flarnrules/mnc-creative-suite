@@ -214,7 +214,7 @@
     }else{
       dropDownOptions(controls.prism,state.cards.map(c=>[c.id,c.title]),currentId);
       pickMask();
-      if(!fullFoil.hasAttribute('src'))fullFoil.src='labs/foil-lab.html?mnc=1&v=0.9.19';
+      if(!fullFoil.hasAttribute('src'))fullFoil.src='labs/foil-lab.html?mnc=1&v=0.9.22';
       else if(foilReady){post(fullFoil,'mnc:foil-pause',{active:true});sendCard();}
     }
   }
