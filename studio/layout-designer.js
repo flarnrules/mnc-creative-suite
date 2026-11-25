@@ -13,6 +13,7 @@
   let activeId='',selected='art',layers=[],listSignature='',drag=null,requested=0,queued=false;
   let mode='properties',lockRatio=true,lockArtRatio=false;
   let typeDraft=null;
+  const editingSharedFooter=()=>typeDraft?.kind==='footer';
 
   function saveCardEdit(card){
     if(card!==typeDraft?.card)persist();
@@ -127,8 +128,8 @@
       if(active&&scroll)row.scrollIntoView({block:'nearest'});
     }
     const position=layers.indexOf(layer);
-    $('ldForward').disabled=!!shared||position<1||position>=layers.length-1;
-    $('ldBackward').disabled=!!shared||position<=1;
+    $('ldForward').disabled=editingSharedFooter()||!!shared||position<1||position>=layers.length-1;
+    $('ldBackward').disabled=editingSharedFooter()||!!shared||position<=1;
     for(const input of inspector.querySelectorAll('[data-coordinate]')){
       if(layer&&input!==document.activeElement)input.value=String(Math.round(layer.rect[input.dataset.coordinate]));
     }
@@ -166,7 +167,7 @@
       open.title=layer.label||'Layer';
       open.onclick=()=>editLayer(layer.id);
       item.append(open);
-      if(layer.id!=='background'&&!front.isSharedFooterLayer(card,layer.id)){
+      if(!editingSharedFooter()&&layer.id!=='background'&&!front.isSharedFooterLayer(card,layer.id)){
         const toggle=node('button',layer.hidden?'○':'●','ld-eye');
         toggle.type='button';
         toggle.ariaLabel=(layer.hidden?'Show ':'Hide ')+layer.label;
@@ -198,8 +199,8 @@
       try{
         const preview=await cardCanvas(deep(card),{rounded:true,onLayout:result=>{
           if(token!==requested)return;
-          layers=result;
-          if(!currentLayer())selected=layers.find(layer=>layer.id==='art')?.id||'background';
+          layers=editingSharedFooter()?result.filter(layer=>footerParts.includes(layer.id)):result;
+          if(!currentLayer())selected=layers.find(layer=>layer.id==='art')?.id||layers[0]?.id||'background';
           layerList();
           showSelected();
           if(refreshInspector)renderInspector();
@@ -353,7 +354,7 @@
     if(!Object.keys(style).length)delete typography[id];
   }
 
-  function typography(host,card,{key,size=19,color='#f1ecde'},align=false) {
+  function typography(host,card,{key,size=19,color='#f1ecde'},align=false,{pickColor=true}={}) {
     const style=front.effective(card).text?.[key]||{};
     const theme=palette(card);
     const inheritFont=key==='title'&&card.fontId&&card.fontId!=='system'&&!style.font?'png:'+card.fontId:'';
@@ -374,7 +375,7 @@
     const measure=pair(host);
     input(measure,'Font size (px)',style.size??'',(c,value)=>setStyle(c,key,'size',value),
       {type:'number',min:7,max:144,placeholder:String(Math.round(size))});
-    input(measure,'Text color',style.color||color||theme.ink,(c,value)=>setStyle(c,key,'color',value),{type:'color',live:true});
+    if(pickColor)input(measure,'Text color',style.color||color||theme.ink,(c,value)=>setStyle(c,key,'color',value),{type:'color',live:true});
     if(align)input(host,'Align',style.align||'',(c,value)=>setStyle(c,key,'align',value),
       {choices:[['','Inherit'],['left','Left'],['center','Center'],['right','Right']]});
     action(host,'Reset text formatting',()=>change(c=>{
@@ -491,8 +492,12 @@
         break;
       }
     }
-    const style=fields('Typography');
-    typography(style,card,details,['title','typeRule','rule','quote'].includes(layer.id));
+    const style=fields('Typography'),adaptive=footerParts.includes(layer.id)&&front.hasAlignedFooter(card);
+    typography(style,card,details,adaptive||['title','typeRule','rule','quote'].includes(layer.id));
+    if(adaptive)action(style,'Use automatic ink',()=>change(c=>{
+      front.editable(c).independentFooter.autoContrast=true;
+      setStyle(c,details.key,'color','');
+    },{sync:true}));
   }
 
   function assetChoices(){
@@ -804,25 +809,68 @@
   const maskEditor=MNC_CUTOUT_EDITOR({current,change,choose:select,selectionChanged:showSelected,message,addForeground,
     showCanvas:()=>{setPan(false);showPane('canvas');}});
 
+  function resetSharedFooterDraft(card) {
+    const standard=front.sharedFooterSettings(),layout=front.editable(card);
+    layout.footerPosition=standard.position;
+    layout.setIcon=standard.markSize;
+    layout.independentFooter.autoContrast=standard.autoContrast;
+    for(const key of ['edition','number'])delete layout.text[key];
+    for(const id of footerParts)delete card.layoutDesign?.layers?.[id];
+  }
+
+  function sharedFooterFields(layer,card) {
+    for(const id of ['ldFillTab','ldMaskTab'])$(id).hidden=true;
+    for(const [id,view] of [['ldPropertiesTab','properties'],['ldEffectsTab','effects']]){
+      $(id).hidden=false;
+      $(id).setAttribute('aria-pressed',String(mode===view));
+    }
+    if(mode==='effects'){effectFields(layer,card);return;}
+    const layout=front.values(card), options=fields('Shared footer');
+    input(options,'Footer ink',layout.independentFooter.autoContrast?'auto':'palette',
+      (c,value)=>{front.editable(c).independentFooter.autoContrast=value==='auto';},
+      {choices:[['auto','Auto contrast'],['palette','Card palette']]});
+    input(options,'Card number position',layout.footerPosition,(c,value)=>{
+      const ed=front.editable(c);
+      ed.footerPosition=value;
+      delete ed.text.number?.align;
+      for(const id of footerParts){
+        const layer=MNC_LAYOUT.get(c,id);
+        if(layer){delete layer.x;delete layer.y;MNC_LAYOUT.cleanLayer(c,id);}
+      }
+    },{choices:[['right','Bottom right'],['center','Bottom center']],refresh:true});
+    if(layer.text&&layout.footerPosition==='right')action(options,'Align number with Set Abbrev',()=>change(c=>{
+      const code=layers.find(item=>item.id==='footer'),number=layers.find(item=>item.id==='number');
+      const abbrev=model.geometry(c,code.id,code.base),count=model.geometry(c,number.id,number.base);
+      setGeometry(c,number,{x:abbrev.x+abbrev.w-count.w});
+      for(const key of ['edition','number'])setStyle(c,key,'align','right');
+    },{sync:true}));
+    action(options,'Restore corner defaults',()=>change(resetSharedFooterDraft,{sync:true}));
+    geometryFields(layer);
+    if(layer.text)typography(fields('Typography'),card,layer.text,true,{pickColor:false});
+    else input(fields('Set Symbol'),'Symbol size (px)',layout.setIcon,(c,value)=>{front.editable(c).setIcon=value===''?42:value;},
+      {type:'number',min:0,max:200});
+  }
+
   function renderInspector(){
     const layer=currentLayer(),card=current();
     inspector.replaceChildren();
     $('ldLayerTitle').textContent=layer?.label||'Properties';
     inspector.scrollTop=0;
     if(!layer||!card)return;
+    if(editingSharedFooter()){sharedFooterFields(layer,card);return;}
     if(front.isSharedFooterLayer(card,layer.id)){
       for(const id of ['ldFillTab','ldEffectsTab','ldMaskTab'])$(id).hidden=true;
       $('ldPropertiesTab').hidden=false;
       $('ldPropertiesTab').setAttribute('aria-pressed','true');
       const host=fields('Shared footer');
-      const description=node('p','Copy the visible footer to edit its three layers '+(typeDraft?'for this design.':'on this card.'),'ld-muted');
+      const description=node('p','This footer follows the shared layout.','ld-muted');
       host.append(description);
+      if(!typeDraft)action(host,'Edit shared footer layout',()=>window.MNC_editSharedFooter(MNC_TYPE_DESIGN.idFor(card),layer.id,card));
       action(host,'Customize footer here',()=>{
         change(c=>front.setFooterMode(c,'custom',{copyShared:true}),{sync:true});
         message('Footer copied. Edits apply to '+(typeDraft?'this design.':'this card.'));
       });
       if(card.frontLayout?.independentFooter)action(host,'Resume custom footer',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
-      if(!typeDraft)action(host,'Edit shared footer settings',()=>window.MNC_openSharedFooter({footerScope:'card'}));
       return;
     }
     const fill=fillInspector.allows(layer,card), artMask=['art','cutout'].includes(layer.id);
@@ -911,18 +959,25 @@
     if(front.isSharedFooterLayer(card,layer.id))return;
     if(event.pointerType==='touch')event.preventDefault();
     else canvas.focus({preventScroll:true});
+    const rect=canvas.getBoundingClientRect();
     board.setPointerCapture(event.pointerId);
-    drag={id:event.pointerId,card,layer,handle,start,clientX:event.clientX,clientY:event.clientY,before:deep(card),changed:false};
+    drag={id:event.pointerId,card,layer,handle,clientX:event.clientX,clientY:event.clientY,scaleX:CW/rect.width,scaleY:CH/rect.height,
+      before:deep(card),changed:false};
   }
 
   function resize({rect},handle,dx,dy,locked){
     const west=handle.includes('w'),north=handle.includes('n');
     const horizontal=west||handle.includes('e'), vertical=north||handle.includes('s');
     const right=rect.x+rect.w,bottom=rect.y+rect.h;
-    let w=horizontal?Math.max(10,rect.w+dx*(west?-1:1)):rect.w;
-    let h=vertical?Math.max(10,rect.h+dy*(north?-1:1)):rect.h;
+    const dw=west?-dx:dx,dh=north?-dy:dy;
+    let w=horizontal?model.bounded('w',rect.w+dw):rect.w;
+    let h=vertical?model.bounded('h',rect.h+dh):rect.h;
     if(locked&&horizontal&&vertical){
-      const scale=Math.abs(w/rect.w-1)>Math.abs(h/rect.h-1)?w/rect.w:h/rect.h;
+      // Project onto the corner's resize axis so crossing it cannot switch the dominant dimension.
+      const startScale=1+(rect.w*dw+rect.h*dh)/(rect.w**2+rect.h**2);
+      const min=Math.max(model.bounded('w',0)/rect.w,model.bounded('h',0)/rect.h);
+      const max=Math.min(model.bounded('w',Infinity)/rect.w,model.bounded('h',Infinity)/rect.h);
+      const scale=clamp(startScale,min,max);
       w=rect.w*scale;
       h=rect.h*scale;
     }
@@ -931,9 +986,10 @@
 
   function moveDrag(event){
     if(drag?.id!==event.pointerId)return;
-    const p=point(event), dx=p.x-drag.start.x,dy=p.y-drag.start.y;
-    const nearStart=event.pointerType==='touch'?Math.hypot(event.clientX-drag.clientX,event.clientY-drag.clientY)<5:
-      Math.hypot(dx,dy)<3;
+    const clientX=event.clientX-drag.clientX,clientY=event.clientY-drag.clientY;
+    const dx=clientX*drag.scaleX,dy=clientY*drag.scaleY;
+    const nearStart=drag.handle?Math.abs(dx)+Math.abs(dy)<.5:
+      event.pointerType==='touch'?Math.hypot(clientX,clientY)<5:Math.hypot(dx,dy)<3;
     if(!drag.changed&&nearStart)return;
     const {layer,handle,card}=drag;
     const ratio=layer.id==='art'?lockArtRatio:lockRatio;
@@ -989,11 +1045,13 @@
     cards.disabled=!card||!!typeDraft;
     $('ldCardChoice').hidden=!!typeDraft;
     $('ldTypeActions').hidden=!typeDraft;
-    const reusable=typeDraft?.kind==='design';
-    $('ldTitle').textContent=reusable?'Edit reusable design':typeDraft?'Edit type default':'Layout Designer';
-    $('ldEditScope').textContent=reusable?typeDraft.name+' · Choose where to use it when you save.':
+    const reusable=typeDraft?.kind==='design',shared=editingSharedFooter();
+    $('layoutDesigner').dataset.editingFooter=String(shared);
+    $('ldSetup').hidden=setup.hidden=shared;
+    $('ldTitle').textContent=shared?'Edit shared footer':reusable?'Edit reusable design':typeDraft?'Edit type default':'Layout Designer';
+    $('ldEditScope').textContent=shared?'Save to update every linked card.':reusable?typeDraft.name+' · Choose where to use it when you save.':
       typeDraft?typeDraft.name+' · Save to use on new cards.':card?'Edits autosave to this card.':'Create a reusable design.';
-    $('ldCommitType').textContent=reusable?'Save design':'Save default';
+    $('ldCommitType').textContent=shared?'Save shared footer':reusable?'Save design':'Save default';
     $('ldNewDesign').hidden=!!typeDraft;
     $('ldSave').hidden=$('ldTypeDefault').hidden=$('ldExport').hidden=$('ldStatusLinks').hidden=!!typeDraft;
     setup.textContent=typeDraft?'Layouts':'Card & layout';
@@ -1071,6 +1129,18 @@
     if(footerMode)change(c=>front.setFooterMode(c,footerMode,{copyShared:true}),{sync:true});
     editLayer('footer',{scroll:true});
   };
+  window.MNC_editSharedFooter=(id='hero',layer='footer',reference)=>{
+    if(typeDraft&&window.MNC_closeLayoutTrace()===false)return;
+    const card=deep(reference||window.MNC_typePreviewCard(id));
+    card.collectionCode=MNC_CARD_METADATA.collectionCode(card,collectionFor(card));
+    card.id='SHARED-FOOTER-PREVIEW';
+    card.collectionFooterMode='shared';
+    front.setFooterMode(card,'custom',{copyShared:true});
+    histories.delete(card.id);
+    typeDraft={kind:'footer',id,name:'shared footer',card,initial:json(card)};
+    tab('layoutDesigner');
+    editLayer(layer,{scroll:true});
+  };
   window.MNC_editReusableDesign=(designId='',previewType,assignment='other')=>{
     const saved=state.templates.find(design=>design.id===designId);
     if(designId&&!saved)return;
@@ -1089,6 +1159,18 @@
     if(!typeDraft)return;
     if(typeDraft.kind==='design'){openSaveDialog();return;}
     const {card,id,fromSharedFooter}=typeDraft;
+    if(editingSharedFooter()){
+      const layout=front.values(card);
+      state.sharedFooter=front.sharedFooterSettings({...state.sharedFooter,position:layout.footerPosition,
+        codeSize:layout.text.edition?.size,numberSize:layout.text.number?.size,markSize:layout.setIcon,
+        text:layout.text,layers:card.layoutDesign?.layers,autoContrast:layout.independentFooter.autoContrast});
+      histories.delete(card.id);
+      typeDraft=null;
+      persist();
+      window.MNC_openSharedFooter({previewType:id});
+      $('sharedFooterStatus').textContent='Shared layout saved for linked cards.';
+      return;
+    }
     if(!captureTypeDesign(card,id))return;
     histories.delete(card.id);
     typeDraft=null;
@@ -1098,7 +1180,8 @@
     }else window.MNC_finishTypeStarter(id);
   };
   $('ldCancelType').onclick=()=>{
-    if(typeDraft?.kind==='design')tab('visualLanguage',{otherDesigns:true});
+    if(editingSharedFooter())window.MNC_openSharedFooter({previewType:typeDraft.id});
+    else if(typeDraft?.kind==='design')tab('visualLanguage',{otherDesigns:true});
     else if(typeDraft?.fromSharedFooter)window.MNC_openSharedFooter({footerScope:'type'});
     else if(typeDraft)window.MNC_openTypeStandard(typeDraft.id,'layout');
   };

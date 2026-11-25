@@ -613,8 +613,6 @@
     ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
   }
 
-  const footerFields=[['sharedFooterPosition','position'],['sharedFooterCodeSize','codeSize'],
-    ['sharedFooterNumberSize','numberSize'],['sharedFooterMarkSize','markSize']];
   function sharedFooterTarget(){
     return $('sharedFooterScope').value==='card'?cardById($('sharedFooterCard').value):draftFor($('sharedFooterPreviewType').value);
   }
@@ -630,18 +628,27 @@
     const card=$('sharedFooterCard'),chosen=cardById(card.value)||current()||state.cards[0];
     dropDownOptions(card,state.cards.map(item=>[item.id,item.title]),chosen?.id);
     syncFooterConnection();
-    for(const [id,key] of footerFields)$(id).value=state.sharedFooter[key];
-    $('sharedFooterApplyAll').disabled=state.cards.every(front.usesSharedFooter);
-    $('sharedFooterUndo').disabled=footerUndo?.project!==state;
+    const linked=state.cards.filter(front.usesSharedFooter).length;
+    const allNew=state.sharedFooter.useForNewCards;
+    $('sharedFooterSummary').textContent=`${linked} of ${state.cards.length} saved cards use this layout. `+
+      (allNew?'All new cards use it.':'New cards follow their starting design’s footer.');
+    $('sharedFooterApplyAll').disabled=allNew&&linked===state.cards.length;
+    $('sharedFooterUndo').hidden=footerUndo?.project!==state;
     paintSharedFooter().catch(console.error);
   }
 
-  function openSharedFooter({footerScope}={}){
+  function openSharedFooter({footerScope,previewType}={}){
+    $('sharedFooterExceptions').open=!!footerScope;
     if(footerScope){
       $('sharedFooterScope').value=footerScope;
       if(footerScope==='card')$('sharedFooterCard').value=currentId;
     }
     tab('visualLanguage',{sharedFooter:true});
+    if(previewType&&activeTab==='visualLanguage'){
+      const type=$('sharedFooterPreviewType');
+      type.value=previewType;
+      type.onchange();
+    }
   }
   function editFooterInLayout(mode){
     const card=sharedFooterTarget();
@@ -651,6 +658,7 @@
   }
   $('sharedFooterScope').onchange=$('sharedFooterCard').onchange=syncFooterConnection;
   $('sharedFooterOpenLayout').onclick=()=>editFooterInLayout();
+  $('sharedFooterEditLayout').onclick=()=>window.MNC_editSharedFooter($('sharedFooterPreviewType').value);
   $('sharedFooterLink').onchange=()=>{
     const mode=$('sharedFooterLink').checked?'shared':'custom';
     if(mode==='shared'&&$('sharedFooterScope').value==='card'){
@@ -659,29 +667,31 @@
       setStatus('sharedFooterStatus','Shared footer enabled for '+card.title+'.');
     }else editFooterInLayout(mode);
   };
-  for(const [id,key] of footerFields)$(id).onchange=()=>{
-    const field=$(id),value=key==='position'?field.value:field.valueAsNumber;
-    state.sharedFooter=front.sharedFooterSettings({...state.sharedFooter,[key]:value});
-    setStatus('sharedFooterStatus','Shared footer saved.');
-    persist();renderSharedFooter();
-  };
   $('sharedFooterPreviewType').onchange=()=>{syncFooterConnection();paintSharedFooter().catch(console.error);};
   $('sharedFooterEditMark').onclick=()=>openProfile('collection','glyphs');
   $('sharedFooterApplyAll').onclick=()=>{
     const cards=state.cards.filter(card=>!front.usesSharedFooter(card));
-    if(!cards.length)return;
-    footerUndo={project:state,cards:cards.map(card=>[card,card.collectionFooterMode])};
-    cards.forEach(card=>{card.collectionFooterMode='shared';});
-    setStatus('sharedFooterStatus','Shared footer applied to '+cards.length+' saved cards.');
+    if(!cards.length&&state.sharedFooter.useForNewCards)return;
+    footerUndo={project:state,useForNewCards:state.sharedFooter.useForNewCards,
+      cards:cards.map(card=>[card.id,card.collectionFooterMode,card.catalogEdits?.collectionFooterMode])};
+    cards.forEach(card=>front.setFooterMode(card,'shared'));
+    state.sharedFooter.useForNewCards=true;
+    setStatus('sharedFooterStatus','Shared footer applied to saved and future cards.');
     persist();renderSharedFooter();
   };
   $('sharedFooterUndo').onclick=()=>{
     if(footerUndo?.project!==state)return;
-    for(const [card,mode] of footerUndo.cards){
+    for(const [id,mode,catalogMode] of footerUndo.cards){
+      const card=cardById(id);
       if(!front.usesSharedFooter(card))continue;
       if(mode===undefined)delete card.collectionFooterMode;
       else card.collectionFooterMode=mode;
+      if(card.catalogEdits){
+        if(catalogMode===undefined)delete card.catalogEdits.collectionFooterMode;
+        else card.catalogEdits.collectionFooterMode=catalogMode;
+      }
     }
+    state.sharedFooter.useForNewCards=footerUndo.useForNewCards;
     footerUndo=null;setStatus('sharedFooterStatus','Restored the previous footer choices.');
     persist();renderSharedFooter();
   };

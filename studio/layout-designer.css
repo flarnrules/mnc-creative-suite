@@ -181,6 +181,7 @@ main:has(#layoutDesigner.active) {
   box-shadow: 0 0 0 2px #201424b0;
   pointer-events: none;
   z-index: 2;
+  container: layout-selection / size;
 }
 .ld-handle {
   position: absolute;
@@ -196,6 +197,14 @@ main:has(#layoutDesigner.active) {
 .ld-handle[data-handle="ne"] {right: -5px; top: -5px; cursor: nesw-resize;}
 .ld-handle[data-handle="sw"] {left: -5px; bottom: -5px; cursor: nesw-resize;}
 .ld-handle[data-handle="se"] {right: -5px; bottom: -5px; cursor: nwse-resize;}
+@container layout-selection (max-width: 22px) or (max-height: 22px) {
+  .ld-handle[data-handle="nw"] {transform: translate(-50%, -50%);}
+  .ld-handle[data-handle="ne"] {transform: translate(50%, -50%);}
+  .ld-handle[data-handle="sw"] {transform: translate(-50%, 50%);}
+  .ld-handle[data-handle="se"] {transform: translate(50%, 50%);}
+}
+
+#layoutDesigner[data-editing-footer="true"] :is(.ld-layer-tools, #ldQuickTools) {display: none;}
 
 .ld-statusbar {
   justify-content: space-between;

@@ -285,6 +285,7 @@ function saveDesignPreset(c,{defaultName,name:enteredName,id}={}) {
 function applyDesignPreset(c,t,{refresh=true}={}) {
   const gameTemplate=['Game Frame','Game Full Art'].includes(t.template);
   if(gameTemplate&&!game.role(c)){alert('Choose Character, Critic, or Item to use this layout.');return false;}
+  const keepSharedFooter=state.sharedFooter.useForNewCards&&front.usesSharedFooter(c);
   if(gameTemplate&&!game.isGameCard(c))window.MNC_enableGameFrame?.(c);
   Object.assign(c,{
     template:t.template,titlePosition:deep(t.titlePosition||[.075,.075]),
@@ -301,6 +302,7 @@ function applyDesignPreset(c,t,{refresh=true}={}) {
   if(t.appearance){
     for(const key of presetAppearanceFields){
       if(!Object.hasOwn(t.appearance,key))continue;
+      if(key==='collectionFooterMode'&&keepSharedFooter)continue;
       const value=t.appearance[key];
       if(['typeIconGlyph','typeIconAsset','typeSymbol','collectionSymbol','typeSymbolMode','collectionSymbolMode'].includes(key)){
         if(value!==null||t.symbolSnapshot&&['typeSymbol','collectionSymbol'].includes(key))editCardFields(c,{[key]:value});
@@ -403,6 +405,7 @@ function applyStartingDesign(card,id,designId){
   card.collectionFooterMode='shared';
   MNC_OUTER_BORDER.applyStartingBand(card);
   applyTypeDesignPreset(card,id,{designId});
+  if(state.sharedFooter.useForNewCards)card.collectionFooterMode='shared';
 }
 
 const cardTypeDefaultLayout=['template','titlePosition','creditPosition','microPosition','layers','useHandGlyphs',

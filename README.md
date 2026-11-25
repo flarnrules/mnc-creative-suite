@@ -1,10 +1,10 @@
 # MNC Creative Suite for GitHub Pages
 
-The v0.9.20 browser edition opens to **Current Designs**. Pick a type and design, click **New card**, and pick an image in **Artwork**. Write the card in **Card Designer** and open **Foil Lab** from its preview. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+The v0.9.21 browser edition opens to **Current Designs**. Pick a type and design, click **New card**, and pick an image in **Artwork**. Write the card in **Card Designer** and open **Foil Lab** from its preview. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
 
-In **Layout Designer**, choose **New design** or open a saved card. **Save design** can add a design to **Other designs** or assign it as a card type default or variant. **Current Designs** also opens **Shapes & components** and **Shared footer**. Under **Footer connection**, clear **Use shared footer** to move, size, and style Card number, Set Abbrev, and Set Symbol in Layout Designer.
+In **Layout Designer**, choose **New design** or open a saved card. **Save design** can add a design to **Other designs** or assign it as a card type default or variant. **Current Designs → Shared footer → Edit shared footer layout** lets you place and size Set Abbrev, Card number, and Set Symbol for the project. Save to update linked cards. **Use shared footer on all cards** also links saved cards and makes new cards from every design use that layout. **Restore corner defaults** aligns the abbreviation and number beside the mark and turns on automatic contrast.
 
-**Customize footer here** in Layout Designer copies the visible shared footer for local editing. In **Card View → Select cards**, choose cards and **Apply type defaults** to update their layouts, colors, and symbols. Card content, artwork, and foil stay with each card. The last batch has an undo action while the project is open.
+**Customize footer here** in Layout Designer copies the visible shared footer for one card. **Auto contrast** adapts to the area behind footer text and monochrome marks. In **Card View → Select cards**, choose cards and **Apply type defaults** to update their layouts, colors, and symbols. Card content, artwork, and foil stay with each card. The last batch has an undo action while the project is open.
 
 On a phone, the **Tool** menu opens any workspace. Card Designer opens new cards with the keyboard closed. The preview keeps more room while you type on a short screen. In Layout Designer, **Footer** opens the collection layers alongside the live card. Zoom keeps the selected layer in view for close editing.
 
@@ -39,7 +39,7 @@ Use the same direct local release ZIP for both editions. Put the ZIP in the loca
 From this web checkout, pass the tested ZIP to the release script.
 
 ```bash
-mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_20_Release.zip"
+mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_21_Release.zip"
 python3 tools/stage_web_release.py "$mnc_release"
 python3 tools/stage_web_release.py "$mnc_release" --check
 git diff --stat

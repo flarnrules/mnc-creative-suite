@@ -89,8 +89,8 @@ globalThis.MNC_TYPE_DESIGN = (() => {
       Object.assign(result,{footerPosition:shared.position,numberFormat:'fraction',numberBadge:'none',
         setIcon:shared.markSize,printCollectionCode:true,printEdition:false});
       delete result.offsets.number;
-      result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:'right'};
-      result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:shared.position};
+      result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:'right',...shared.text.edition};
+      result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:shared.position,...shared.text.number};
     }else if(card.frontLayout?.independentFooter?.copiedShared){
       // These layers start from the shown shared footer. Older inherited text styles stay out of the copy.
       result.text.edition={...card.frontLayout.text?.edition};
