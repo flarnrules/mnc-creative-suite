@@ -1,6 +1,6 @@
 # MNC Creative Suite for GitHub Pages
 
-The v0.9.23 browser edition opens to **Current Designs**. Pick a type and design, click **New card**, and pick an image in **Artwork**. Write the card in **Card Designer** and open **Foil Lab** from its preview. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
+The v0.9.24 browser edition opens to **Current Designs**. Pick a type and design, click **New card**, and pick an image in **Artwork**. Write the card in **Card Designer** and open **Foil Lab** from its preview. The landing page links to [MNCDB](https://flarnrules.github.io/mnc-db/).
 
 In **Layout Designer**, choose **New design** or open a saved card. **Save design** can add a design to **Other designs** or assign it as a card type default or variant. **Current Designs → Shared footer → Character cards → Edit Character footer** lets you place and size Card number, Set Abbrev, Set Symbol, and Footer divider. **Save Character default** applies to new and linked Characters. **Use on saved Character cards** links existing Characters. **All card types** opens the project-wide layout.
 
@@ -9,6 +9,8 @@ In **Layout Designer**, choose **New design** or open a saved card. **Save desig
 On a phone, the **Tool** menu opens any workspace. Card Designer opens new cards with the keyboard closed. The preview keeps more room while you type on a short screen. In Layout Designer, **Footer** opens the collection layers alongside the live card. Zoom keeps the selected layer in view for close editing.
 
 The standard MNC back stacks Movie, Night, and Club above Trading, Card, and Game. Open **Back Designer → Edit a copy of the MNC back** to make a variant.
+
+From **Current Designs → Shapes & components**, choose **Draw a shape** or open a nameplate such as **Wavy banner**. In Shape Designer, **Draw freehand** turns one stroke into editable points. **Add points** still lets you place them individually.
 
 In Foil Lab, choose **Foil pattern → Fractals → Kaleidoscope folds** and adjust its geometry in **Pattern settings**. Use **Load finish** for built-in and saved finishes and **Save finish** to name your own.
 
@@ -41,7 +43,7 @@ Use the same direct local release ZIP for both editions. Put the ZIP in the loca
 From this web checkout, pass the tested ZIP to the release script.
 
 ```bash
-mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_23_Release.zip"
+mnc_release="$HOME/repos/frogs/collections/47-mnc-tcg/updates/MNC_Creative_Suite_v0_9_24_Release.zip"
 python3 tools/stage_web_release.py "$mnc_release"
 python3 tools/stage_web_release.py "$mnc_release" --check
 git diff --stat
