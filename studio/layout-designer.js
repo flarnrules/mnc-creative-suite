@@ -5,7 +5,7 @@
   const inspector=$('ldInspector'), selection=$('ldSelection'), cards=$('ldCard'), status=$('ldStatus');
   const workspace=$('ldWorkspace'),setup=$('ldSetupToggle'),pan=$('ldPan'),zoom=$('ldZoom');
   const views=[['canvas',$('ldCanvasView')],['layers',$('ldLayersView')],['edit',$('ldEditView')]];
-  const footerParts=['footer','number','setIcon'];
+  const footerParts=front.footerLayers('character');
   const histories=new Map();
   const current=()=>typeDraft?.card||cardById(currentId);
   const json=value=>JSON.stringify(value);
@@ -14,6 +14,7 @@
   let mode='properties',lockRatio=true,lockArtRatio=false;
   let typeDraft=null;
   const editingSharedFooter=()=>typeDraft?.kind==='footer';
+  const editingCharacterFooter=()=>editingSharedFooter()&&typeDraft.footerMode==='character';
 
   function saveCardEdit(card){
     if(card!==typeDraft?.card)persist();
@@ -199,7 +200,7 @@
       try{
         const preview=await cardCanvas(deep(card),{rounded:true,onLayout:result=>{
           if(token!==requested)return;
-          layers=editingSharedFooter()?result.filter(layer=>footerParts.includes(layer.id)):result;
+          layers=editingSharedFooter()?result.filter(layer=>front.footerLayers(typeDraft.footerMode).includes(layer.id)):result;
           if(!currentLayer())selected=layers.find(layer=>layer.id==='art')?.id||layers[0]?.id||'background';
           layerList();
           showSelected();
@@ -810,12 +811,12 @@
     showCanvas:()=>{setPan(false);showPane('canvas');}});
 
   function resetSharedFooterDraft(card) {
-    const standard=front.sharedFooterSettings(),layout=front.editable(card);
+    const standard=front.sharedFooterSettings(null,typeDraft.footerMode),layout=front.editable(card);
     layout.footerPosition=standard.position;
     layout.setIcon=standard.markSize;
     layout.independentFooter.autoContrast=standard.autoContrast;
     for(const key of ['edition','number'])delete layout.text[key];
-    for(const id of footerParts)delete card.layoutDesign?.layers?.[id];
+    for(const id of front.footerLayers(typeDraft.footerMode))delete card.layoutDesign?.layers?.[id];
   }
 
   function sharedFooterFields(layer,card) {
@@ -825,15 +826,15 @@
       $(id).setAttribute('aria-pressed',String(mode===view));
     }
     if(mode==='effects'){effectFields(layer,card);return;}
-    const layout=front.values(card), options=fields('Shared footer');
+    const character=editingCharacterFooter(),layout=front.values(card),options=fields(character?'Character footer':'Shared footer');
     input(options,'Footer ink',layout.independentFooter.autoContrast?'auto':'palette',
       (c,value)=>{front.editable(c).independentFooter.autoContrast=value==='auto';},
       {choices:[['auto','Auto contrast'],['palette','Card palette']]});
-    input(options,'Card number position',layout.footerPosition,(c,value)=>{
+    if(!character)input(options,'Card number position',layout.footerPosition,(c,value)=>{
       const ed=front.editable(c);
       ed.footerPosition=value;
       delete ed.text.number?.align;
-      for(const id of footerParts){
+      for(const id of front.footerLayers(typeDraft.footerMode)){
         const layer=MNC_LAYOUT.get(c,id);
         if(layer){delete layer.x;delete layer.y;MNC_LAYOUT.cleanLayer(c,id);}
       }
@@ -841,14 +842,24 @@
     if(layer.text&&layout.footerPosition==='right')action(options,'Align number with Set Abbrev',()=>change(c=>{
       const code=layers.find(item=>item.id==='footer'),number=layers.find(item=>item.id==='number');
       const abbrev=model.geometry(c,code.id,code.base),count=model.geometry(c,number.id,number.base);
-      setGeometry(c,number,{x:abbrev.x+abbrev.w-count.w});
-      for(const key of ['edition','number'])setStyle(c,key,'align','right');
+      const align=front.values(c).text?.edition?.align||(character?'left':'right');
+      const anchor=align==='left'?0:align==='center'?.5:1;
+      setGeometry(c,number,{x:abbrev.x+(abbrev.w-count.w)*anchor});
+      setStyle(c,'number','align',align);
     },{sync:true}));
-    action(options,'Restore corner defaults',()=>change(resetSharedFooterDraft,{sync:true}));
+    action(options,character?'Restore Character defaults':'Restore corner defaults',()=>change(resetSharedFooterDraft,{sync:true}));
     geometryFields(layer);
     if(layer.text)typography(fields('Typography'),card,layer.text,true,{pickColor:false});
-    else input(fields('Set Symbol'),'Symbol size (px)',layout.setIcon,(c,value)=>{front.editable(c).setIcon=value===''?42:value;},
+    else if(layer.id==='setIcon')input(fields('Set Symbol'),'Symbol size (px)',layout.setIcon,(c,value)=>{
+      front.editable(c).setIcon=value===''?front.sharedFooterSettings(null,typeDraft.footerMode).markSize:value;
+    },
       {type:'number',min:0,max:200});
+    else input(fields('Footer divider'),'Show divider',!layer.hidden,(c,value)=>{
+      const edit=model.layerEdit(c,'footerLine');
+      if(value)delete edit.hidden;
+      else edit.hidden=true;
+      model.cleanLayer(c,'footerLine');
+    },{type:'checkbox',refresh:true});
   }
 
   function renderInspector(){
@@ -862,15 +873,18 @@
       for(const id of ['ldFillTab','ldEffectsTab','ldMaskTab'])$(id).hidden=true;
       $('ldPropertiesTab').hidden=false;
       $('ldPropertiesTab').setAttribute('aria-pressed','true');
-      const host=fields('Shared footer');
-      const description=node('p','This footer follows the shared layout.','ld-muted');
+      const character=front.footerMode(card)==='character';
+      const host=fields(character?'Character footer':'Shared footer');
+      const description=node('p',character?'This card uses the Character footer.':'This footer follows the shared layout.','ld-muted');
       host.append(description);
-      if(!typeDraft)action(host,'Edit shared footer layout',()=>window.MNC_editSharedFooter(MNC_TYPE_DESIGN.idFor(card),layer.id,card));
+      if(!typeDraft)action(host,character?'Edit Character footer':'Edit shared footer layout',()=>window.MNC_editSharedFooter(MNC_TYPE_DESIGN.idFor(card),layer.id,card));
       action(host,'Customize footer here',()=>{
         change(c=>front.setFooterMode(c,'custom',{copyShared:true}),{sync:true});
         message('Footer copied. Edits apply to '+(typeDraft?'this design.':'this card.'));
       });
       if(card.frontLayout?.independentFooter)action(host,'Resume custom footer',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
+      if(character)action(host,'Use project-wide footer',()=>change(c=>front.setFooterMode(c,'shared'),{sync:true}));
+      else if(card.family==='Character')action(host,'Use Character footer',()=>change(c=>front.setFooterMode(c,'character'),{sync:true}));
       return;
     }
     const fill=fillInspector.allows(layer,card), artMask=['art','cutout'].includes(layer.id);
@@ -896,10 +910,13 @@
       else maskEditor.render(fields('Artwork cutout'));
       return;
     }
-    if(['footer','number','setIcon'].includes(layer.id)){
+    if(footerParts.includes(layer.id)&&!front.usesSharedFooter(card)){
       const host=fields(typeDraft?'Footer for this design':'Footer for this card');
+      if(card.family==='Character'&&front.footerMode(card)!=='character'){
+        action(host,'Use Character footer',()=>change(c=>front.setFooterMode(c,'character'),{sync:true}));
+      }
       action(host,'Use shared footer',()=>change(c=>front.setFooterMode(c,'shared'),{sync:true}));
-      if(!front.effective(card).independentFooter)action(host,'Edit footer pieces separately',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
+      if(layer.id!=='footerLine'&&!front.effective(card).independentFooter)action(host,'Edit footer pieces separately',()=>change(c=>front.setFooterMode(c,'custom'),{sync:true}));
     }
     if(layer.id==='art')artSizeFields(layer,card);
     if(layer.text)copyFields(layer,card);
@@ -1048,10 +1065,11 @@
     const reusable=typeDraft?.kind==='design',shared=editingSharedFooter();
     $('layoutDesigner').dataset.editingFooter=String(shared);
     $('ldSetup').hidden=setup.hidden=shared;
-    $('ldTitle').textContent=shared?'Edit shared footer':reusable?'Edit reusable design':typeDraft?'Edit type default':'Layout Designer';
-    $('ldEditScope').textContent=shared?'Save to update every linked card.':reusable?typeDraft.name+' · Choose where to use it when you save.':
+    const character=editingCharacterFooter();
+    $('ldTitle').textContent=character?'Edit Character footer':shared?'Edit shared footer':reusable?'Edit reusable design':typeDraft?'Edit type default':'Layout Designer';
+    $('ldEditScope').textContent=character?'Save for new and linked Character cards.':shared?'Save to update every linked card.':reusable?typeDraft.name+' · Choose where to use it when you save.':
       typeDraft?typeDraft.name+' · Save to use on new cards.':card?'Edits autosave to this card.':'Create a reusable design.';
-    $('ldCommitType').textContent=shared?'Save shared footer':reusable?'Save design':'Save default';
+    $('ldCommitType').textContent=character?'Save Character default':shared?'Save shared footer':reusable?'Save design':'Save default';
     $('ldNewDesign').hidden=!!typeDraft;
     $('ldSave').hidden=$('ldTypeDefault').hidden=$('ldExport').hidden=$('ldStatusLinks').hidden=!!typeDraft;
     setup.textContent=typeDraft?'Layouts':'Card & layout';
@@ -1129,15 +1147,16 @@
     if(footerMode)change(c=>front.setFooterMode(c,footerMode,{copyShared:true}),{sync:true});
     editLayer('footer',{scroll:true});
   };
-  window.MNC_editSharedFooter=(id='hero',layer='footer',reference)=>{
+  window.MNC_editSharedFooter=(id='hero',layer='footer',reference,scope=front.footerMode(reference))=>{
     if(typeDraft&&window.MNC_closeLayoutTrace()===false)return;
     const card=deep(reference||window.MNC_typePreviewCard(id));
     card.collectionCode=MNC_CARD_METADATA.collectionCode(card,collectionFor(card));
     card.id='SHARED-FOOTER-PREVIEW';
-    card.collectionFooterMode='shared';
+    const footerMode=scope==='character'?'character':'shared';
+    card.collectionFooterMode=footerMode;
     front.setFooterMode(card,'custom',{copyShared:true});
     histories.delete(card.id);
-    typeDraft={kind:'footer',id,name:'shared footer',card,initial:json(card)};
+    typeDraft={kind:'footer',id,footerMode,name:footerMode==='character'?'Character footer':'shared footer',card,initial:json(card)};
     tab('layoutDesigner');
     editLayer(layer,{scroll:true});
   };
@@ -1160,15 +1179,16 @@
     if(typeDraft.kind==='design'){openSaveDialog();return;}
     const {card,id,fromSharedFooter}=typeDraft;
     if(editingSharedFooter()){
-      const layout=front.values(card);
-      state.sharedFooter=front.sharedFooterSettings({...state.sharedFooter,position:layout.footerPosition,
+      const layout=front.values(card),footerLayout=typeDraft.footerMode,character=editingCharacterFooter();
+      const key=character?'characterFooter':'sharedFooter';
+      state[key]=front.sharedFooterSettings({...state[key],position:layout.footerPosition,useForNewCards:character||state[key].useForNewCards,
         codeSize:layout.text.edition?.size,numberSize:layout.text.number?.size,markSize:layout.setIcon,
-        text:layout.text,layers:card.layoutDesign?.layers,autoContrast:layout.independentFooter.autoContrast});
+        text:layout.text,layers:card.layoutDesign?.layers,autoContrast:layout.independentFooter.autoContrast},footerLayout);
       histories.delete(card.id);
       typeDraft=null;
       persist();
-      window.MNC_openSharedFooter({previewType:id});
-      $('sharedFooterStatus').textContent='Shared layout saved for linked cards.';
+      window.MNC_openSharedFooter({previewType:id,footerLayout});
+      $('sharedFooterStatus').textContent=character?'Footer saved for new and linked Character cards.':'Shared layout saved for linked cards.';
       return;
     }
     if(!captureTypeDesign(card,id))return;
@@ -1180,7 +1200,7 @@
     }else window.MNC_finishTypeStarter(id);
   };
   $('ldCancelType').onclick=()=>{
-    if(editingSharedFooter())window.MNC_openSharedFooter({previewType:typeDraft.id});
+    if(editingSharedFooter())window.MNC_openSharedFooter({previewType:typeDraft.id,footerLayout:typeDraft.footerMode});
     else if(typeDraft?.kind==='design')tab('visualLanguage',{otherDesigns:true});
     else if(typeDraft?.fromSharedFooter)window.MNC_openSharedFooter({footerScope:'type'});
     else if(typeDraft)window.MNC_openTypeStandard(typeDraft.id,'layout');

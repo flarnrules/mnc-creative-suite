@@ -53,23 +53,35 @@ globalThis.MNC_FRONT = (() => {
   const channels = color=>color.slice(1).match(/../g).map(value=>parseInt(value,16));
   const emojiFont = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
   const sharedFooterLayers=['footer','number','setIcon'];
-  const usesSharedFooter=card=>card?.collectionFooterMode==='shared';
-  const isSharedFooterLayer=(card,id)=>usesSharedFooter(card)&&sharedFooterLayers.includes(id);
+  const characterFooterLayers=[...sharedFooterLayers,'footerLine'];
+  const footerMode=card=>card?.collectionFooterMode==='character'&&card.family==='Character'?'character':
+    card?.collectionFooterMode==='shared'?'shared':'custom';
+  const usesSharedFooter=card=>footerMode(card)!=='custom';
+  const footerLayers=mode=>mode==='character'?characterFooterLayers:sharedFooterLayers;
+  const isSharedFooterLayer=(card,id)=>usesSharedFooter(card)&&footerLayers(footerMode(card)).includes(id);
+  const footerSettingsFor=(project,mode)=>mode==='character'?project.characterFooter:project.sharedFooter;
   const cornerFooter={codeSize:23,numberSize:19,markSize:42};
+  const characterCorner={codeSize:30,numberSize:21,markSize:52};
 
-  function sharedFooterSettings(value){
+  function sharedFooterSettings(value,mode='shared'){
+    const corner=mode==='character'?characterCorner:cornerFooter;
     const size=(key,fallback,min,max)=>Number.isFinite(value?.[key])?clampNumber(Math.round(value[key]),min,max):fallback;
     const text=settings({text:{edition:value?.text?.edition,number:value?.text?.number}}).text;
     for(const style of Object.values(text)){
       for(const key of ['size','color','x','y'])delete style[key];
     }
     const layers=MNC_LAYOUT.normalize({version:1,layers:Object.fromEntries(
-      sharedFooterLayers.map(id=>[id,value?.layers?.[id]])
+      footerLayers(mode).map(id=>[id,value?.layers?.[id]])
     )}).layers;
-    for(const layer of Object.values(layers))delete layer.hidden;
-    return {position:value?.position==='center'?'center':'right',codeSize:size('codeSize',cornerFooter.codeSize,7,144),
-      numberSize:size('numberSize',cornerFooter.numberSize,7,144),markSize:size('markSize',cornerFooter.markSize,0,200),
+    for(const [id,layer] of Object.entries(layers))if(id!=='footerLine')delete layer.hidden;
+    return {position:mode!=='character'&&value?.position==='center'?'center':'right',codeSize:size('codeSize',corner.codeSize,7,144),
+      numberSize:size('numberSize',corner.numberSize,7,144),markSize:size('markSize',corner.markSize,0,200),
       autoContrast:value?.autoContrast!==false,useForNewCards:value?.useForNewCards===true,text,layers};
+  }
+
+  function startingFooterMode(project,card){
+    if(card.family!=='Character')return 'shared';
+    return !project.characterFooter?.useForNewCards&&project.sharedFooter?.useForNewCards?'shared':'character';
   }
 
   function mix(a,b,weight) {
@@ -140,6 +152,7 @@ globalThis.MNC_FRONT = (() => {
       if(independent.fixedBoxes===true){
         next.independentFooter.fixedBoxes=true;
         next.independentFooter.autoContrast=independent.autoContrast!==false;
+        if(independent.character===true)next.independentFooter.character=true;
       }
     }
     if (['number','fraction','label'].includes(value?.numberFormat)) next.numberFormat=value.numberFormat;
@@ -177,16 +190,20 @@ globalThis.MNC_FRONT = (() => {
 
   function copySharedFooter(card,layout,from){
     const {symbol}=collectionMark(card);
-    const shared=state.sharedFooter;
+    const mode=footerMode(card),shared=footerSettingsFor(state,mode);
     Object.assign(layout,{footerPosition:from.footerPosition,numberFormat:from.numberFormat,numberBadge:from.numberBadge,
       printCollectionCode:from.printCollectionCode,printEdition:from.printEdition,setIcon:from.setIcon,setIconX:0,setIconY:0,
       independentFooter:{markSpace:from.setIcon+9,numberSpace:from.text.number.size+5,copiedShared:true,
         fixedBoxes:true,autoContrast:shared.autoContrast}});
+    if(mode==='character'){
+      layout.independentFooter.character=true;
+      layout.footerRule=from.footerRule;
+    }
     const offsets=layout.offsets??={},text=layout.text??={};
     offsets.number={x:0,y:0};
     text.edition={...from.text.edition};
     text.number={...from.text.number};
-    for(const id of sharedFooterLayers){
+    for(const id of footerLayers(mode)){
       delete card.layoutDesign?.layers?.[id];
       const layer=shared.layers[id];
       if(layer)Object.assign(MNC_LAYOUT.layerEdit(card,id),deep(layer));
@@ -404,6 +421,10 @@ globalThis.MNC_FRONT = (() => {
     return usesSharedFooter(card)||layout.independentFooter?.fixedBoxes===true;
   }
 
+  function hasCharacterFooter(card,layout){
+    return footerMode(card)==='character'||layout.independentFooter?.character===true&&!usesSharedFooter(card);
+  }
+
   function alignedFooterBox(layout,id) {
     const centered=layout.footerPosition==='center',right=708,bottom=1002;
     const markSize=layout.setIcon??cornerFooter.markSize;
@@ -417,6 +438,37 @@ globalThis.MNC_FRONT = (() => {
     const textRight=right-(markSize?markSize+10:0), width=144;
     if(id==='footer')return {x:textRight-width,y:codeBaseline-codeSize,w:width,h:codeSize+5};
     return {x:centered?225:textRight-width,y:bottom-numberSize,w:centered?300:width,h:numberSize+5};
+  }
+
+  function alignedBox(card,layout,id){
+    if(!hasCharacterFooter(card,layout)||layout.footerPosition==='center')return alignedFooterBox(layout,id);
+    const {codeSize,numberSize,markSize}=characterCorner;
+    const code=layout.text?.edition?.size??codeSize,number=layout.text?.number?.size??numberSize;
+    const mark=layout.setIcon??markSize,right=706,bottom=995,width=87;
+    const numberY=bottom-code-number-4;
+    if(id==='setIcon')return {x:right-mark,y:(numberY+bottom+3-mark)/2,w:mark,h:mark};
+    const x=right-mark-(mark?6:0)-width;
+    return id==='number'?{x,y:numberY,w:width,h:number+5}:{x,y:bottom-code,w:width,h:code+5};
+  }
+
+  function characterDivider(card,creditAt){
+    const layout=values(card);
+    if(!hasCharacterFooter(card,layout))return null;
+    const base={x:43,y:917,w:664,h:6};
+    const rect=MNC_LAYOUT.geometry(card,'footerLine',base);
+    const tops=sharedFooterLayers.map(id=>MNC_LAYOUT.geometry(card,id,alignedBox(card,layout,id)).y);
+    const credit=MNC_LAYOUT.geometry(card,'artist',attributionBox(card,creditAt));
+    const badge=episodeBadgeBox(card);
+    const top=Math.min(...tops,credit.y,badge?MNC_LAYOUT.geometry(card,'episodeBadge',badge).y:CH);
+    return {base,rect:{...rect,y:Math.min(rect.y,top-12-rect.h)}};
+  }
+
+  function addFooterDivider(scene,card,{base,rect=base,color}){
+    scene.add('footerLine',base,paint=>{
+      const y=base.y+base.h/2;
+      paint.strokeStyle=color;paint.lineWidth=1.5;
+      paint.beginPath();paint.moveTo(base.x,y);paint.lineTo(base.x+base.w,y);paint.stroke();
+    },{rect,empty:values(card).footerRule===false});
   }
 
   let contrastSampler;
@@ -455,9 +507,10 @@ globalThis.MNC_FRONT = (() => {
   }
 
   function addAlignedFooter(scene,ctx,c,layout,parts,{ink,glyphColor,outline}) {
-    const auto=usesSharedFooter(c)?state.sharedFooter.autoContrast:layout.independentFooter.autoContrast;
+    const activeMode=footerMode(c),character=hasCharacterFooter(c,layout)&&layout.footerPosition==='right';
+    const auto=usesSharedFooter(c)?footerSettingsFor(state,activeMode).autoContrast:layout.independentFooter.autoContrast;
     const contrast=(rect,color,override)=>auto&&!override?footerInk(ctx,rect,color):{ink:override||color};
-    const mark=collectionMark(c),symbol=alignedFooterBox(layout,'setIcon');
+    const mark=collectionMark(c),symbol=alignedBox(c,layout,'setIcon');
     scene.add('setIcon',symbol,async (paint,rect)=>{
       const colors=contrast(rect,glyphColor,mark.symbol.color);
       MNC_LAYOUT.transform(paint,symbol,rect);
@@ -469,10 +522,10 @@ globalThis.MNC_FRONT = (() => {
     const number=layout.numberFormat==='number'?parts.number.split('/')[0]:
       (layout.numberFormat==='label'&&parts.number?'CARD ':'')+parts.number;
     for(const [id,key,value,options] of [
-      ['footer','edition',abbrev,{size:cornerFooter.codeSize,family:'system-ui',align:'right'}],
-      ['number','number',number,{size:cornerFooter.numberSize,family:'Georgia, serif',align:layout.footerPosition}]
+      ['footer','edition',abbrev,{size:character?characterCorner.codeSize:cornerFooter.codeSize,family:'system-ui',align:character?'left':'right'}],
+      ['number','number',number,{size:character?characterCorner.numberSize:cornerFooter.numberSize,family:'Georgia, serif',align:character?'left':layout.footerPosition}]
     ]){
-      const base=alignedFooterBox(layout,id);
+      const base=alignedBox(c,layout,id);
       const text=style(c,key,{...options,weight:700,color:ink,width:base.w});
       const badge=id==='number'&&layout.numberBadge&&layout.numberBadge!=='none';
       const paintText=(paint,rect,showBadge=true)=>{
@@ -557,7 +610,7 @@ globalThis.MNC_FRONT = (() => {
 
   function numberBox(c) {
     const layout=values(c),centered=layout.footerPosition==='center';
-    if(hasAlignedFooter(c,layout))return alignedFooterBox(layout,'number');
+    if(hasAlignedFooter(c,layout))return alignedBox(c,layout,'number');
     if(!centered&&!layout.independentFooter)return null;
     const size=style(c,'number',{size:36}).size;
     if(!centered){
@@ -570,7 +623,7 @@ globalThis.MNC_FRONT = (() => {
 
   function collectionIconBox(c,{x=699,y=1007}={}) {
     const layout=values(c),size=layout.setIcon??29;
-    if(hasAlignedFooter(c,layout))return alignedFooterBox(layout,'setIcon');
+    if(hasAlignedFooter(c,layout))return alignedBox(c,layout,'setIcon');
     const delta=layout.independentFooter?.copiedShared?{x:0,y:0}:offset(c,'footer');
     if(layout.independentFooter)return {x:708-size+delta.x+(layout.setIconX||0),
       y:1009-size+delta.y+(layout.setIconY||0),w:size,h:size};
@@ -614,6 +667,7 @@ globalThis.MNC_FRONT = (() => {
 
   return {groups,textFields,settings,editable,effective,offset,box,style,textOffset,draw,paintNameplate,drawCredit,creditLabel,
     addHeader,attributionBox,addCollection,footerReserve,numberBox,collectionIconBox,typeIconBox,drawTypeIcon,
-    usesSharedFooter,isSharedFooterLayer,hasAlignedFooter,sharedFooterSettings,setFooterMode,
+    footerMode,usesSharedFooter,isSharedFooterLayer,hasAlignedFooter,sharedFooterSettings,footerSettingsFor,startingFooterMode,
+    setFooterMode,footerLayers,characterDivider,addFooterDivider,
     episodeBadgeBox,drawEpisodeBadge,wrap,values,hex,mix,tone,surfaceText,emojiFont};
 })();

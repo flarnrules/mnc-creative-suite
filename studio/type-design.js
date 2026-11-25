@@ -58,6 +58,7 @@ globalThis.MNC_TYPE_DESIGN = (() => {
     }))};
     project.footerDesign=MNC_FRONT.settings(project.footerDesign);
     project.sharedFooter=MNC_FRONT.sharedFooterSettings(project.sharedFooter);
+    project.characterFooter=MNC_FRONT.sharedFooterSettings(project.characterFooter,'character');
   }
 
   function matching(card,id) {
@@ -84,13 +85,16 @@ globalThis.MNC_TYPE_DESIGN = (() => {
 
   function layout(project,card) {
     const result=merge(project.footerDesign,...chain(project,card).map(profile=>profile.frontLayout),card.frontLayout);
-    if(MNC_FRONT.usesSharedFooter(card)){
-      const shared=project.sharedFooter;
+    const mode=MNC_FRONT.footerMode(card);
+    if(mode!=='custom'){
+      const shared=MNC_FRONT.footerSettingsFor(project,mode);
       Object.assign(result,{footerPosition:shared.position,numberFormat:'fraction',numberBadge:'none',
         setIcon:shared.markSize,printCollectionCode:true,printEdition:false});
+      const character=mode==='character';
+      if(character)result.footerRule=true;
       delete result.offsets.number;
-      result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:'right',...shared.text.edition};
-      result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:shared.position,...shared.text.number};
+      result.text.edition={size:shared.codeSize,font:'system',style:'bold',align:character?'left':'right',...shared.text.edition};
+      result.text.number={size:shared.numberSize,font:'serif',style:'bold',align:character?'left':shared.position,...shared.text.number};
     }else if(card.frontLayout?.independentFooter?.copiedShared){
       // These layers start from the shown shared footer. Older inherited text styles stay out of the copy.
       result.text.edition={...card.frontLayout.text?.edition};

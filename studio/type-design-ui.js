@@ -269,7 +269,9 @@
   function syncFooter(c) {
     const layout=front.values(c),styles=layout.text||{};
     const shared=front.usesSharedFooter(c);
-    $('cardFooterMode').value=shared?'shared':'custom';
+    $('cardCharacterFooter').hidden=$('cardCharacterFooter').disabled=c.family!=='Character';
+    $('cardFooterMode').value=front.footerMode(c);
+    $('footerSeparator').disabled=front.isSharedFooterLayer(c,'footerLine');
     for(const id of ['footerPosition','footerNumberFormat','footerNumberBadge','footerNumberSize','footerNumberFont',
       'footerCollectionSize','footerMarkSize','footerPrintCode','footerPrintEdition','footerCenterPreset','footerRightPreset','footerUseAll'])$(id).disabled=shared;
     for(const [id,key,fallback] of [['footerPosition','footerPosition','right'],['footerNumberFormat','numberFormat','fraction'],['footerNumberBadge','numberBadge','none'],
@@ -282,7 +284,7 @@
   $('cardFooterMode').onchange=()=>{
     const card=current();if(!card)return;
     front.setFooterMode(card,$('cardFooterMode').value,{copyShared:true});
-    changed();syncFooter(card);
+    changed();window.refreshStudio();
   };
   $('cardEditSharedFooter').onclick=()=>window.MNC_openSharedFooter({footerScope:'card'});
   for(const [id,key] of [['footerPosition','footerPosition'],['footerNumberFormat','numberFormat'],['footerNumberBadge','numberBadge'],

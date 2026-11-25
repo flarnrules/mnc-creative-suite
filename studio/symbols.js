@@ -74,11 +74,12 @@ globalThis.MNC_SYMBOLS = (() => {
 
   function cardSymbol(project,card,place='type') {
     const collection=place==='collection', id=collection?'collection':MNC_SET_PLAN.profileFor(card);
+    const promo=collection&&MNC_CARD_METADATA.isPromo(card,project.catalogCollections?.[card.collectionId]);
+    if(promo&&MNC_FRONT.footerMode(card)==='character')return {symbol:{...defaults(id),source:'builtin'},id};
     const policy=card[collection?'collectionSymbolMode':'typeSymbolMode'];
     if(policy==='hidden')return {symbol:{...defaults(id),source:'hidden'},id};
     const override=card[collection?'collectionSymbol':'typeSymbol'];
     if(override)return {symbol:normalize(override,id),id};
-    const promo=collection&&MNC_CARD_METADATA.isPromo(card,project.catalogCollections?.[card.collectionId]);
     const standard=promo?typeMark(project,MNC_SET_PLAN.profileFor(card)):profileSymbol(project,id);
     if(policy==='standard')return {symbol:standard,id};
     const assetId=collection?card.setGlyphAsset:card.typeIconAsset;
@@ -227,7 +228,7 @@ globalThis.MNC_SYMBOLS = (() => {
     if(s.source==='builtin'){
       const profile=s.builtinId||id;
       const builtin=MNC_SET_PLAN.profile(profile)?.builtin||profile;
-      if(MNC_TYPE_GLYPHS.sourceFor(builtin)||MNC_TYPE_GLYPHS.has(builtin)){
+      if(globalThis.MNC_TYPE_GLYPHS?.sourceFor(builtin)||globalThis.MNC_TYPE_GLYPHS?.has(builtin)){
         await MNC_TYPE_GLYPHS.draw(ctx,builtin,x,y,size,color);return true;
       }
     }
