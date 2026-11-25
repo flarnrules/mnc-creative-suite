@@ -341,10 +341,11 @@ main .leftPane > .card-list {
   #prism .inline-label select, #fractal .inline-label select {width: auto;max-width: min(100%, 13rem);}
   #prism .sectionhead button, #fractal .sectionhead button {min-height: 36px;}
 
+  #studio {container: card-designer / size;}
   #studio .workspace {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "preview" "edit";
-    grid-template-rows: minmax(0, 47fr) minmax(0, 53fr);
+    grid-template-rows: minmax(0, 57fr) minmax(0, 43fr);
     align-items: stretch;
     overflow: hidden;
     padding: 0;
@@ -372,6 +373,12 @@ main .leftPane > .card-list {
   #studio .inspector-tabs button {flex: 1 1 auto;min-height: 37px;padding: 5px 7px;}
   #studio .card-actions {gap: 4px;}
   #studio #cardSaveStatus {order: 1;}
+
+  /* Give the card and the active field room above the phone keyboard. */
+  @container card-designer (max-height: 420px) {
+    #studio:has(#rightPane :is(input:not([type]), input[type="text"], input[type="number"], textarea):focus)
+      :is(.card-designer-heading, .card-preview-bar) {display: none;}
+  }
 
   #layoutDesigner .ld-toolbar {
     position: relative;

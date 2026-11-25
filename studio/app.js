@@ -709,8 +709,10 @@ function openNewCard(card) {
   refreshAll();
   tab('studio');
   window.MNC_editCardSection?.('content');
-  $('c_title').focus({preventScroll:true});
-  $('c_title').select();
+  if(!compactWorkspace?.matches){
+    $('c_title').focus({preventScroll:true});
+    $('c_title').select();
+  }
   return card;
 }
 
@@ -1061,14 +1063,26 @@ function clipArtwork(ctx,path,mask){
  }
 }
 async function backCanvas(regNumber=null,project=state){
- const design=project.backMode==='designed'?backs.active(project):null;
- if(design)return window.MNC_renderBackDesign(design,project);
- let cv=document.createElement('canvas');cv.width=CW;cv.height=CH;let ctx=cv.getContext('2d');ctx.fillStyle='#171a2b';ctx.fillRect(0,0,CW,CH);ctx.save();let bg=ctx.createLinearGradient(0,0,CW,CH);bg.addColorStop(0,'#202f43');bg.addColorStop(.52,'#1c2134');bg.addColorStop(1,'#151727');ctx.fillStyle=bg;ctx.fillRect(0,0,CW,CH);for(let i=0;i<24;i++){ctx.lineWidth=2;ctx.strokeStyle='rgba(201,178,127,.08)';ctx.beginPath();ctx.ellipse(375,525,145+i*26,185+i*26,0,0,2*Math.PI);ctx.stroke()}
- ctx.strokeStyle='#d9b77c';ctx.lineWidth=12;ctx.strokeRect(27,27,CW-54,CH-54);ctx.lineWidth=2;ctx.strokeStyle='#9d9d8e';ctx.strokeRect(45,45,CW-90,CH-90);
- const logo=project.assets.find(a=>a.originalFilename==='movie_night_club_logo_july_2023_square.png');
- let custom=project.backMode==='custom'&&project.customBack?await imgLoad(project.customBack):null;
- if(custom){fitImage(ctx,custom,{x:50,y:50,w:650,h:950},'cover',1,0,0)}else{let im=await imgLoad(assetURI(logo));if(im){ctx.fillStyle='#f7f5ec';ctx.fillRect(170,287,410,410);fitImage(ctx,im,{x:180,y:297,w:390,h:390},'contain',1,0,0)}ctx.textAlign='center';ctx.fillStyle='#efd39a';ctx.font='bold 33px system-ui';ctx.fillText('MOVIE NIGHT CLUB',CW/2,780);ctx.font='bold 18px system-ui';ctx.fillText('COLLECT · PLAY · ARCHIVE',CW/2,822)}
- if(regNumber!=null){ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=8;ctx.font='bold 150px monospace';ctx.textAlign='center';ctx.strokeText(String(regNumber),CW/2,210);ctx.fillText(String(regNumber),CW/2,210)}ctx.restore();return cv}
+  const designed=project.backMode==='designed'?backs.active(project):null;
+  if(designed)return window.MNC_renderBackDesign(designed,project);
+
+  const standard=backs.newDesign('standard','MNC-STANDARD');
+  const custom=project.backMode==='custom'&&project.customBack?await imgLoad(project.customBack):null;
+  if(custom)standard.layers=[];
+  const canvas=await window.MNC_renderBackDesign(standard,project);
+  const ctx=canvas.getContext('2d');
+  if(custom)fitImage(ctx,custom,{x:50,y:50,w:650,h:950},'cover',1,0,0);
+  if(regNumber!=null){
+    ctx.fillStyle='#fff';
+    ctx.strokeStyle='#000';
+    ctx.lineWidth=8;
+    ctx.font='bold 150px monospace';
+    ctx.textAlign='center';
+    ctx.strokeText(String(regNumber),CW/2,210);
+    ctx.fillText(String(regNumber),CW/2,210);
+  }
+  return canvas;
+}
 let studioFrame=0,foilFrame=0;
 async function drawStudioPreview(){
   const c=cardById(currentId);
