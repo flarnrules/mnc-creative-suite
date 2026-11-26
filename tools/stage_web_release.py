@@ -23,6 +23,7 @@ symbols.js type-design-ui.js type-design.js type-glyphs.js workspace.css
 labs/fold-model.mjs labs/fractal-families.mjs labs/fractal-lab.css
 labs/loop-gif.mjs labs/mnc-foil-bridge.js labs/motion-model.mjs labs/palette.mjs
 """.split()
+SHARED_FRACTAL = ["labs/fractal-families.glsl", "labs/fractal-lab.mjs"]
 
 
 def read_shared_release(path):
@@ -35,7 +36,9 @@ def read_shared_release(path):
         if (not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
                 or manifest.get("format") != 1 or manifest.get("shared_studio") != 1):
             raise ValueError("Use a paired release with a three-part version, starting at 0.9.14.")
-        paths = [f"studio/{name}" for name in SHARED_STUDIO]
+        # Earlier versions of the Fractal Lab entry module embed local-only art paths.
+        shared = SHARED_STUDIO + (SHARED_FRACTAL if tuple(map(int, version.split("."))) >= (0, 9, 25) else [])
+        paths = [f"studio/{name}" for name in shared]
         for name in paths:
             if names.count(name) != 1:
                 raise ValueError(f"Expected exactly one {name} in the release.")

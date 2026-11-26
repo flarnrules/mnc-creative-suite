@@ -209,7 +209,7 @@
       const previous=controls.fractal.value;
       dropDownOptions(controls.fractal,state.assets.map(a=>[a.id,a.title]),
         state.assets.some(a=>a.id===previous)?previous:selected()?.sourceAssetId||state.assets[0]?.id);
-      if(!fullFractal.hasAttribute('src'))fullFractal.src='labs/fractal-lab.html?mnc=1&v=0.9.19';
+      if(!fullFractal.hasAttribute('src'))fullFractal.src='labs/fractal-lab.html?mnc=1&v=0.9.25';
       else if(fractalReady)post(fullFractal,'mnc:fractal-pause',{active:true});
     }else{
       dropDownOptions(controls.prism,state.cards.map(c=>[c.id,c.title]),currentId);

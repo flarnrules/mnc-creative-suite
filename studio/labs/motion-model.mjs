@@ -1,4 +1,4 @@
-import {controls} from './fold-model.mjs';
+import {controls} from './fold-model.mjs?v=0.9.25';
 export const cyclePeriods={hue:1,foldPhase:Math.PI/4,rotationZ:360,twist:360,recurrenceSpin:360,rotateXZ:360,rotateXW:360,rotateYW:360,rotateZW:360};
 export function trackSeam(t){if(t.mode!=='forward')return t.mode==='close'?'Smooth return connects the end to the start.':'Retraces the journey.';const period=cyclePeriods[t.key],delta=t.to-t.from;const joined=Math.abs(delta)<1e-8||(period&&Math.abs(delta/period-Math.round(delta/period))<1e-7);return joined?'Endpoints connect. Linear easing with no hold gives steady cyclic motion.':'Visible seam likely: end and start differ. Use a full cycle or smooth return.';}
 export const motionKeys=Object.keys(controls);
@@ -28,7 +28,7 @@ export function trackValue(track,seconds,duration){
    value=a.value+(b.value-a.value)*eased;
   }
  }
- if(['iterations','depth'].includes(track.key))value=Math.round(value);return value;
+ if(['iterations','depth','treeGenerations'].includes(track.key))value=Math.round(value);return value;
 }
 export function applyTracks(base,seconds,tracks,duration){const s={...base};for(const t of tracks)if(t.enabled)s[t.key]=trackValue(t,seconds,duration);return s;}
 export function cleanRecording(input){if(!Array.isArray(input)||input.length<2||input.length>1600)return null;const filtered=input.filter(p=>p&&typeof p==='object');const timed=filtered.length>1&&filtered[0].at===0&&filtered.every((p,i)=>Number.isFinite(p.at)&&p.at>=0&&p.at<1&&(!i||p.at>filtered[i-1].at));return filtered.map(p=>({...Object.fromEntries(motionKeys.filter(k=>Number.isFinite(p[k])).map(k=>[k,Math.max(controls[k][0],Math.min(k==='foldPhase'?30:controls[k][1],p[k]))])),...(timed?{at:p.at}:{})}));}
