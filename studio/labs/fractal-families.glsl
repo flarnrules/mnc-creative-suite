@@ -2,7 +2,7 @@ uniform int family, artMode;
 uniform float rotationZ, tiltX, tiltY, artMix, artWarp;
 uniform vec2 julia;
 uniform int depth;
-uniform sampler2D artwork, dragon;
+uniform sampler2D artwork, curveField;
 // Inverse perspective projection of an infinite plane rotated around X/Y/Z.
 vec2 planePoint(vec2 screen){
  float x=radians(tiltX),y=radians(tiltY),z=radians(rotationZ);
@@ -16,9 +16,15 @@ vec2 planePoint(vec2 screen){
  return mat2(cos(z),-sin(z),sin(z),cos(z))*p;
 }
 vec2 artUV(vec2 p){return 1.-abs(mod(p*.5+.5,2.)-1.);}
+float curveValue(vec2 p){
+ vec2 t=p/3.+.5;
+ float inBounds=step(0.,t.x)*step(t.x,1.)*step(0.,t.y)*step(t.y,1.);
+ return texture2D(curveField,t).r*inBounds;
+}
 __INTERNAL_FIELDS__
 float fractalValue(vec2 p,mat2 rot,out vec2 samplePoint){
  samplePoint=p;
+ if(family==10)return curveValue(p);
  if(family==9||((family==0||family==1||family==2||family>=6)&&(dimensionMix>0.||artMode>=4||recurrenceSpin!=0.||power!=2.||juliaMorph!=0.||gain!=1.||bailout!=8.)))return advancedField(p,rot,samplePoint);
  if(family==3&&(dimensionMix>0.||artMode>=4||recurrenceSpin!=0.)){vec4 q=liftInternal(p);vec3 memory=vec3(0.);for(int i=0;i<16;i++){if(i>=iterations)break;q=mix(q,rotateInternal(q),dimensionMix);q.xy=internalSpin(q.xy,recurrenceSpin);q=artInternal(q,float(i),memory);}p=q.xy;}
 
@@ -28,7 +34,7 @@ float fractalValue(vec2 p,mat2 rot,out vec2 samplePoint){
   samplePoint=q;
   return foldField(p,rot,iterations,offset,gain,trap,radius,scale,phase);
  }
- if(family==3){vec2 t=p/3.+.5;float inBounds=step(0.,t.x)*step(t.x,1.)*step(0.,t.y)*step(t.y,1.);return texture2D(dragon,t).r*inBounds;}
+ if(family==3)return curveValue(p);
  if(family==4){
   // Convert to triangle coordinates: x >= 0, y >= 0, x + y <= 1.
   vec2 q=vec2((p.x+1.25)/2.5-(p.y+1.1)/4.4,(p.y+1.1)/2.2);
